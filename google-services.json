@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "110830654425",
+    "project_id": "solo-levelling-system-6f2a6",
+    "storage_bucket": "solo-levelling-system-6f2a6.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:110830654425:android:2f891b9fc935bbe6a87fc8",
+        "android_client_info": {
+          "package_name": "com.abdul.sololevelling"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCDQm684EEoe-8cvhR64DcKpI2u8TBylVc"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

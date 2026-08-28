@@ -1,0 +1,11 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Per-user data: each user can only read/write their own data
+    // Path: /users/{userId}/{collectionName}/{docId}
+    match /users/{userId}/{collectionName}/{docId} {
+      allow read, write: if request.auth != null && request.auth.uid == userId;
+    }
+  }
+}

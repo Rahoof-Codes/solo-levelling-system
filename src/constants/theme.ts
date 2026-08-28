@@ -1,41 +1,75 @@
 /**
- * Below are the colors that are used in the app. The colors are defined in the light and dark mode.
- * There are many other ways to style your app. For example, [Nativewind](https://www.nativewind.dev/), [Tamagui](https://tamagui.dev/), [unistyles](https://reactnativeunistyles.vercel.app), etc.
+ * The System — Solo Leveling Theme & Design System
  */
-
-import '@/global.css';
 
 import { Platform } from 'react-native';
 
 export const Colors = {
   light: {
-    text: '#000000',
-    background: '#ffffff',
-    backgroundElement: '#F0F0F3',
-    backgroundSelected: '#E0E1E6',
-    textSecondary: '#60646C',
+    text: '#E0E8FF',
+    background: '#070B14',
+    backgroundCard: '#0D1424',
+    backgroundElement: '#131D33',
+    backgroundSelected: '#1A294A',
+    textSecondary: '#6B82A8',
+    border: '#172744',
+    glow: '#00A8FF',
+    glowDim: '#0055AA',
+    cyan: '#00F0FF',
+    danger: '#FF3366',
+    success: '#00FF88',
+    mana: '#0088FF',
+    gold: '#FFD700',
   },
   dark: {
-    text: '#ffffff',
-    background: '#000000',
-    backgroundElement: '#212225',
-    backgroundSelected: '#2E3135',
-    textSecondary: '#B0B4BA',
+    text: '#E0E8FF',
+    background: '#070B14',
+    backgroundCard: '#0D1424',
+    backgroundElement: '#131D33',
+    backgroundSelected: '#1A294A',
+    textSecondary: '#6B82A8',
+    border: '#172744',
+    glow: '#00A8FF',
+    glowDim: '#0055AA',
+    cyan: '#00F0FF',
+    danger: '#FF3366',
+    success: '#00FF88',
+    mana: '#0088FF',
+    gold: '#FFD700',
   },
 } as const;
 
 export type ThemeColor = keyof typeof Colors.light & keyof typeof Colors.dark;
 
+export const StatColors = {
+  STR: '#FF4444',
+  VIT: '#00FF88',
+  AGI: '#FFAA00',
+  INT: '#AA66FF',
+  PER: '#00F0FF',
+} as const;
+
+export const RankColors = {
+  E: '#7A8B9E',
+  D: '#38B000',
+  C: '#00A8FF',
+  B: '#9D4EDD',
+  A: '#FF9E00',
+  S: '#FF0055',
+} as const;
+
 export const Fonts = Platform.select({
   ios: {
-    /** iOS `UIFontDescriptorSystemDesignDefault` */
     sans: 'system-ui',
-    /** iOS `UIFontDescriptorSystemDesignSerif` */
     serif: 'ui-serif',
-    /** iOS `UIFontDescriptorSystemDesignRounded` */
     rounded: 'ui-rounded',
-    /** iOS `UIFontDescriptorSystemDesignMonospaced` */
     mono: 'ui-monospace',
+  },
+  android: {
+    sans: 'sans-serif',
+    serif: 'serif',
+    rounded: 'sans-serif-medium',
+    mono: 'monospace',
   },
   default: {
     sans: 'normal',
@@ -44,10 +78,10 @@ export const Fonts = Platform.select({
     mono: 'monospace',
   },
   web: {
-    sans: 'var(--font-display)',
-    serif: 'var(--font-serif)',
-    rounded: 'var(--font-rounded)',
-    mono: 'var(--font-mono)',
+    sans: 'Inter, system-ui, sans-serif',
+    serif: 'serif',
+    rounded: 'sans-serif',
+    mono: "'JetBrains Mono', monospace",
   },
 });
 
@@ -61,5 +95,5 @@ export const Spacing = {
   six: 64,
 } as const;
 
-export const BottomTabInset = Platform.select({ ios: 50, android: 80 }) ?? 0;
+export const BottomTabInset = Platform.select({ ios: 60, android: 80 }) ?? 70;
 export const MaxContentWidth = 800;

@@ -16,12 +16,23 @@ import { useFocusEffect } from 'expo-router';
 import { getQuestsForDate, completeQuest, createQuest } from '@/db/operations';
 import { type Quest, Stat, QuestCategory } from '@/types';
 import { StatColors, Fonts, Spacing } from '@/constants/theme';
+import { XPClaimModal } from '@/components/xp-claim-modal';
 
 export default function QuestsScreen() {
   const db = useSQLiteContext();
   const [quests, setQuests] = useState<Quest[]>([]);
   const [refreshing, setRefreshing] = useState(false);
   const [modalVisible, setModalVisible] = useState(false);
+
+  // XP Claim Modal State
+  const [claimModalVisible, setClaimModalVisible] = useState(false);
+  const [selectedQuest, setSelectedQuest] = useState<Quest | null>(null);
+  const [claimResult, setClaimResult] = useState<{
+    leveledUp: boolean;
+    newLevel?: number;
+    rankChanged: boolean;
+    newRank?: string;
+  } | null>(null);
 
   // New Quest Form State
   const [title, setTitle] = useState('');
@@ -51,22 +62,36 @@ export default function QuestsScreen() {
     setRefreshing(false);
   };
 
-  const handleComplete = async (quest: Quest) => {
+  const handleStartClaim = (quest: Quest) => {
+    setSelectedQuest(quest);
+    setClaimResult(null);
+    setClaimModalVisible(true);
+  };
+
+  const handleClaimQuestXP = async () => {
+    if (!selectedQuest) return;
+
     try {
-      const { xpResult } = await completeQuest(db, quest.id);
+      const { xpResult } = await completeQuest(db, selectedQuest.id);
       await loadQuests();
 
-      let msg = `+${quest.xp_reward} ${quest.stat_affected} XP earned!`;
-      if (xpResult.leveledUp) {
-        msg += `\n\n🎉 LEVEL UP! You reached Level ${xpResult.newProfile.level}!`;
-      }
-      if (xpResult.rankChanged) {
-        msg += `\n\n⭐ RANK PROMOTED! You are now Rank ${xpResult.newProfile.rank}!`;
-      }
-      Alert.alert('QUEST COMPLETED', msg);
+      setClaimResult({
+        leveledUp: xpResult.leveledUp,
+        newLevel: xpResult.newProfile.level,
+        rankChanged: xpResult.rankChanged,
+        newRank: xpResult.newProfile.rank,
+      });
     } catch (err: any) {
-      Alert.alert('Error', err?.message ?? 'Could not complete quest');
+      Alert.alert('System Error', err?.message ?? 'Could not claim quest reward');
+      setClaimModalVisible(false);
     }
+  };
+
+  const handleDismissClaim = () => {
+    setClaimModalVisible(false);
+    setSelectedQuest(null);
+    setClaimResult(null);
+    loadQuests();
   };
 
   const handleCreateQuest = async () => {
@@ -175,7 +200,7 @@ export default function QuestsScreen() {
                 ) : (
                   <TouchableOpacity
                     style={styles.completeBtn}
-                    onPress={() => handleComplete(quest)}
+                    onPress={() => handleStartClaim(quest)}
                   >
                     <Text style={styles.completeBtnText}>CLAIM EXP & COMPLETE →</Text>
                   </TouchableOpacity>
@@ -265,6 +290,19 @@ export default function QuestsScreen() {
           </View>
         </View>
       </Modal>
+
+      {/* LOCKED XP CLAIM MODAL FOR QUESTS */}
+      {selectedQuest && (
+        <XPClaimModal
+          visible={claimModalVisible}
+          xpAmount={selectedQuest.xp_reward}
+          stat={selectedQuest.stat_affected}
+          activityName={`QUEST: ${selectedQuest.title}`}
+          onClaim={handleClaimQuestXP}
+          onDismiss={handleDismissClaim}
+          claimResult={claimResult}
+        />
+      )}
     </SafeAreaView>
   );
 }

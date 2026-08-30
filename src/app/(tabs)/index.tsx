@@ -16,12 +16,16 @@ import {
   getQuestsForDate,
   getStreaks,
   updateProfileGoal,
+  checkAndUpdateDailyLoginStreak,
+  getPastWeekActivity,
+  type DayActivityStatus,
 } from '@/db/operations';
 import { type Profile, type DailyCalorieSummary, type Quest, type Streak, type GoalType } from '@/types';
 import { StatusWindow } from '@/components/status/status-window';
 import { HunterInfo } from '@/components/status/hunter-info';
 import { StatBars } from '@/components/status/stat-bars';
 import { DailySummary } from '@/components/status/daily-summary';
+import { DailyStreakCard } from '@/components/status/daily-streak-card';
 import { GOAL_CONFIG } from '@/lib/calculations/bmr';
 import { Fonts, Spacing } from '@/constants/theme';
 
@@ -65,11 +69,15 @@ export default function StatusScreen() {
   });
   const [quests, setQuests] = useState<Quest[]>([]);
   const [streaks, setStreaks] = useState<Streak[]>([]);
+  const [weekHistory, setWeekHistory] = useState<DayActivityStatus[]>([]);
   const [refreshing, setRefreshing] = useState(false);
   const [changingGoal, setChangingGoal] = useState(false);
 
   const loadData = useCallback(async () => {
     try {
+      // Automatically maintain daily login streak
+      await checkAndUpdateDailyLoginStreak(db);
+
       const p = await getProfile(db);
       setProfile(p);
 
@@ -82,6 +90,9 @@ export default function StatusScreen() {
 
         const s = await getStreaks(db);
         setStreaks(s);
+
+        const wh = await getPastWeekActivity(db);
+        setWeekHistory(wh);
       }
     } catch (err) {
       console.error('Error loading status data:', err);
@@ -181,6 +192,9 @@ export default function StatusScreen() {
           <StatusWindow title="HUNTER STATUS WINDOW">
             {/* Hunter Identity & XP */}
             <HunterInfo profile={profile} />
+
+            {/* Daily Streak & Resonance Buff */}
+            <DailyStreakCard streaks={streaks} weekHistory={weekHistory} />
 
             {/* Daily Calorie & Mana Energy Balance */}
             <DailySummary

@@ -16,6 +16,7 @@ import { useFocusEffect } from 'expo-router';
 import { getTodayMeals, logMeal, getDailyCalorieSummary, getProfile } from '@/db/operations';
 import { type Meal, type DailyCalorieSummary, type Profile } from '@/types';
 import { Fonts, Spacing } from '@/constants/theme';
+import { ManaReplenishModal } from '@/components/mana-replenish-modal';
 
 export default function MealLogScreen() {
   const db = useSQLiteContext();
@@ -32,6 +33,16 @@ export default function MealLogScreen() {
   });
   const [refreshing, setRefreshing] = useState(false);
   const [modalVisible, setModalVisible] = useState(false);
+
+  // Mana Replenish Animation Modal State
+  const [manaModalVisible, setManaModalVisible] = useState(false);
+  const [lastLoggedMeal, setLastLoggedMeal] = useState<{
+    name: string;
+    calories: number;
+    protein: number;
+    carbs: number;
+    fat: number;
+  } | null>(null);
 
   // Form State
   const [mealName, setMealName] = useState('');
@@ -71,13 +82,19 @@ export default function MealLogScreen() {
       return;
     }
 
+    const calsNum = parseFloat(calories) || 0;
+    const proteinNum = parseFloat(protein) || 0;
+    const carbsNum = parseFloat(carbs) || 0;
+    const fatNum = parseFloat(fat) || 0;
+    const nameStr = mealName.trim();
+
     try {
       await logMeal(db, {
-        name: mealName.trim(),
-        calories: parseFloat(calories) || 0,
-        protein_g: parseFloat(protein) || 0,
-        carbs_g: parseFloat(carbs) || 0,
-        fat_g: parseFloat(fat) || 0,
+        name: nameStr,
+        calories: calsNum,
+        protein_g: proteinNum,
+        carbs_g: carbsNum,
+        fat_g: fatNum,
       });
 
       setMealName('');
@@ -88,7 +105,16 @@ export default function MealLogScreen() {
       setModalVisible(false);
 
       await loadData();
-      Alert.alert('Ration Logged', 'Mana replenished successfully!');
+
+      // Show Mana Replenishment animation modal!
+      setLastLoggedMeal({
+        name: nameStr,
+        calories: calsNum,
+        protein: proteinNum,
+        carbs: carbsNum,
+        fat: fatNum,
+      });
+      setManaModalVisible(true);
     } catch (err: any) {
       Alert.alert('Error', err?.message ?? 'Could not log meal');
     }
@@ -312,6 +338,24 @@ export default function MealLogScreen() {
           </View>
         </View>
       </Modal>
+
+      {/* MANA REPLENISHMENT ANIMATION MODAL */}
+      {lastLoggedMeal && (
+        <ManaReplenishModal
+          visible={manaModalVisible}
+          mealName={lastLoggedMeal.name}
+          calories={lastLoggedMeal.calories}
+          protein={lastLoggedMeal.protein}
+          carbs={lastLoggedMeal.carbs}
+          fat={lastLoggedMeal.fat}
+          targetCalories={targetCalories}
+          totalCaloriesToday={summary.consumed}
+          onDismiss={() => {
+            setManaModalVisible(false);
+            setLastLoggedMeal(null);
+          }}
+        />
+      )}
     </SafeAreaView>
   );
 }

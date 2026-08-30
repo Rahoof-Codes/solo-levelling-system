@@ -1,7 +1,3 @@
-// ============================================================
-// XP Claim Modal — Animated locking XP overlay with Solo Leveling system theme
-// ============================================================
-
 import React, { useEffect, useCallback } from 'react';
 import {
   StyleSheet,
@@ -11,6 +7,7 @@ import {
   Modal,
   Dimensions,
 } from 'react-native';
+import { Image } from 'expo-image';
 import Animated, {
   useSharedValue,
   useAnimatedStyle,
@@ -22,9 +19,10 @@ import Animated, {
   SlideInUp,
   ZoomIn,
 } from 'react-native-reanimated';
-import { type Stat } from '@/types';
-import { StatColors, Fonts, Spacing } from '@/constants/theme';
+import { type Stat, Rank } from '@/types';
+import { StatColors, Fonts, Spacing, RankColors } from '@/constants/theme';
 import { STAT_INFO } from '@/lib/calculations/leveling';
+import { getRankImage } from '@/constants/rankImages';
 
 const { width, height } = Dimensions.get('window');
 
@@ -244,10 +242,18 @@ export function XPClaimModal({
 
                 {claimResult.rankChanged && (
                   <Animated.View entering={ZoomIn.delay(350)} style={styles.rankBanner}>
+                    <Image
+                      source={getRankImage(claimResult.newRank)}
+                      style={styles.rankBannerPortrait}
+                      contentFit="cover"
+                    />
+                    <View style={{ flex: 1, gap: 1 }}>
+                      <Text style={styles.rankBannerSubtitle}>HUNTER PROMOTION</Text>
+                      <Text style={styles.rankText}>
+                        RANK AWAKENED → {claimResult.newRank}-RANK
+                      </Text>
+                    </View>
                     <Text style={styles.rankEmoji}>⭐</Text>
-                    <Text style={styles.rankText}>
-                      RANK PROMOTED! → {claimResult.newRank}-RANK
-                    </Text>
                   </Animated.View>
                 )}
               </View>
@@ -449,25 +455,39 @@ const styles = StyleSheet.create({
   rankBanner: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
+    gap: 10,
     backgroundColor: 'rgba(255, 0, 85, 0.14)',
     borderWidth: 1.2,
     borderColor: '#FF0055',
-    borderRadius: 8,
+    borderRadius: 10,
     paddingVertical: 8,
-    paddingHorizontal: 14,
+    paddingHorizontal: 12,
     width: '100%',
-    justifyContent: 'center',
+  },
+  rankBannerPortrait: {
+    width: 36,
+    height: 36,
+    borderRadius: 8,
+    borderWidth: 1.5,
+    borderColor: '#FF0055',
+    backgroundColor: '#070C16',
+  },
+  rankBannerSubtitle: {
+    fontSize: 8,
+    fontFamily: Fonts.mono,
+    color: '#FF6699',
+    letterSpacing: 1,
+    fontWeight: '800',
   },
   rankEmoji: {
     fontSize: 18,
   },
   rankText: {
-    fontSize: 13,
+    fontSize: 12,
     fontWeight: '900',
     fontFamily: Fonts.mono,
     color: '#FF0055',
-    letterSpacing: 1,
+    letterSpacing: 0.5,
   },
   claimButton: {
     width: '100%',

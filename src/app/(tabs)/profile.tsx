@@ -18,7 +18,8 @@ import { type Profile } from '@/types';
 import { RankBadge } from '@/components/status/rank-badge';
 import { isFirebaseConfigured } from '@/lib/firebase';
 import { useAuth } from '@/contexts/AuthContext';
-import { Fonts, Spacing } from '@/constants/theme';
+import { Fonts, Spacing, RankColors } from '@/constants/theme';
+import { getRankImage } from '@/constants/rankImages';
 
 export default function ProfileScreen() {
   const router = useRouter();
@@ -90,6 +91,9 @@ export default function ProfileScreen() {
     );
   };
 
+  const rankColor = profile ? (RankColors[profile.rank] || RankColors.E) : '#00A8FF';
+  const rankImage = profile ? getRankImage(profile.rank) : null;
+
   return (
     <SafeAreaView style={styles.safeArea}>
       <ScrollView
@@ -144,16 +148,29 @@ export default function ProfileScreen() {
           </View>
         )}
 
-        {/* PROFILE CARD */}
+        {/* PROFILE CARD WITH RANK PORTRAIT */}
         {profile && (
-          <View style={styles.profileCard}>
+          <View style={[styles.profileCard, { borderColor: rankColor, shadowColor: rankColor }]}>
             <View style={styles.profileTop}>
-              <View style={{ flex: 1 }}>
-                <Text style={styles.hunterName}>{profile.username}</Text>
-                <Text style={styles.hunterTitle}>{profile.title || `${profile.rank}-Rank Hunter`}</Text>
-                <Text style={styles.totalXP}>TOTAL EXP: {profile.total_xp.toLocaleString()} PTS</Text>
+              <View style={[styles.hunterPortraitBox, { borderColor: rankColor }]}>
+                {rankImage && (
+                  <Image source={rankImage} style={styles.hunterPortraitImg} contentFit="cover" />
+                )}
+                <View style={[styles.rankBadgeCorner, { backgroundColor: rankColor }]}>
+                  <Text style={styles.rankBadgeCornerText}>{profile.rank}</Text>
+                </View>
               </View>
-              <RankBadge rank={profile.rank} size="large" />
+
+              <View style={{ flex: 1, gap: 2 }}>
+                <Text style={styles.hunterName}>{profile.username}</Text>
+                <Text style={[styles.hunterTitle, { color: rankColor }]}>
+                  {profile.title || `${profile.rank}-Rank Hunter`}
+                </Text>
+                <Text style={styles.totalXP}>TOTAL EXP: {profile.total_xp.toLocaleString()} PTS</Text>
+                <Text style={styles.hunterLevelText}>LEVEL {profile.level}</Text>
+              </View>
+
+              <RankBadge rank={profile.rank} size="medium" />
             </View>
           </View>
         )}
@@ -363,32 +380,68 @@ const styles = StyleSheet.create({
   profileCard: {
     backgroundColor: '#0D1424',
     borderWidth: 1.5,
-    borderColor: '#00A8FF',
-    borderRadius: 12,
+    borderRadius: 14,
     padding: Spacing.three,
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.4,
+    shadowRadius: 12,
+    elevation: 6,
   },
   profileTop: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
+    gap: 12,
+  },
+  hunterPortraitBox: {
+    width: 68,
+    height: 68,
+    borderRadius: 12,
+    borderWidth: 2,
+    overflow: 'hidden',
+    position: 'relative',
+    backgroundColor: '#070C16',
+  },
+  hunterPortraitImg: {
+    width: '100%',
+    height: '100%',
+  },
+  rankBadgeCorner: {
+    position: 'absolute',
+    bottom: 0,
+    right: 0,
+    borderTopLeftRadius: 6,
+    paddingHorizontal: 6,
+    paddingVertical: 1,
+  },
+  rankBadgeCornerText: {
+    fontSize: 10,
+    fontFamily: Fonts.mono,
+    fontWeight: '900',
+    color: '#070B14',
   },
   hunterName: {
-    fontSize: 20,
+    fontSize: 18,
     fontWeight: '900',
     color: '#E0E8FF',
   },
   hunterTitle: {
-    fontSize: 12,
-    fontFamily: Fonts.mono,
-    color: '#00F0FF',
-    letterSpacing: 1,
-    marginTop: 2,
-  },
-  totalXP: {
     fontSize: 11,
     fontFamily: Fonts.mono,
+    letterSpacing: 1,
+    marginTop: 1,
+    fontWeight: '700',
+  },
+  totalXP: {
+    fontSize: 10,
+    fontFamily: Fonts.mono,
     color: '#6582A6',
-    marginTop: 6,
+    marginTop: 2,
+  },
+  hunterLevelText: {
+    fontSize: 11,
+    fontFamily: Fonts.mono,
+    fontWeight: '800',
+    color: '#E0E8FF',
   },
   sectionCard: {
     backgroundColor: '#0D1424',

@@ -482,6 +482,12 @@ export async function getTodayActivities(db: SQLiteDatabase): Promise<Activity[]
 
 // --- STREAK MANAGEMENT ---
 
+export function getDayDifference(dateStr1: string, dateStr2: string): number {
+  const d1 = new Date(dateStr1.split('T')[0] + 'T00:00:00Z');
+  const d2 = new Date(dateStr2.split('T')[0] + 'T00:00:00Z');
+  return Math.round((d2.getTime() - d1.getTime()) / (1000 * 3600 * 24));
+}
+
 export async function updateStreak(db: SQLiteDatabase, type: string): Promise<Streak> {
   const streak = await db.getFirstAsync<Streak>('SELECT * FROM streaks WHERE type = ?;', [type]);
   const today = new Date().toISOString().split('T')[0];
@@ -503,11 +509,7 @@ export async function updateStreak(db: SQLiteDatabase, type: string): Promise<St
   }
 
   // Calculate day difference
-  const lastDate = streak.last_activity_date ? new Date(streak.last_activity_date) : null;
-  const currentDate = new Date(today);
-  const diffDays = lastDate
-    ? Math.floor((currentDate.getTime() - lastDate.getTime()) / (1000 * 3600 * 24))
-    : 999;
+  const diffDays = streak.last_activity_date ? getDayDifference(streak.last_activity_date, today) : 999;
 
   let newCurrent = streak.current_count;
   if (diffDays === 1) {
@@ -536,8 +538,67 @@ export async function updateStreak(db: SQLiteDatabase, type: string): Promise<St
   return (await db.getFirstAsync<Streak>('SELECT * FROM streaks WHERE id = ?;', [streak.id]))!;
 }
 
+export async function checkAndUpdateDailyLoginStreak(db: SQLiteDatabase): Promise<Streak> {
+  return await updateStreak(db, 'login');
+}
+
 export async function getStreaks(db: SQLiteDatabase): Promise<Streak[]> {
   return await db.getAllAsync<Streak>('SELECT * FROM streaks;');
+}
+
+export interface DayActivityStatus {
+  date: string;
+  dayLabel: string;
+  isCompleted: boolean;
+  isToday: boolean;
+}
+
+export async function getPastWeekActivity(db: SQLiteDatabase): Promise<DayActivityStatus[]> {
+  const dayNames = ['SUN', 'MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT'];
+  const today = new Date();
+  const todayStr = today.toISOString().split('T')[0];
+  const results: DayActivityStatus[] = [];
+
+  for (let i = 6; i >= 0; i--) {
+    const d = new Date();
+    d.setDate(today.getDate() - i);
+    const dateStr = d.toISOString().split('T')[0];
+    const dayLabel = dayNames[d.getDay()];
+    const isToday = dateStr === todayStr;
+
+    // Check if any quest, workout, activity, or meal was completed on this date
+    const questCount = await db.getFirstAsync<{ count: number }>(
+      'SELECT COUNT(*) as count FROM quest_logs WHERE date(completed_at) = date(?);',
+      [dateStr]
+    );
+    const workoutCount = await db.getFirstAsync<{ count: number }>(
+      'SELECT COUNT(*) as count FROM workout_logs WHERE date(completed_at) = date(?);',
+      [dateStr]
+    );
+    const actCount = await db.getFirstAsync<{ count: number }>(
+      'SELECT COUNT(*) as count FROM activities WHERE date(logged_at) = date(?);',
+      [dateStr]
+    );
+    const mealCount = await db.getFirstAsync<{ count: number }>(
+      'SELECT COUNT(*) as count FROM meals WHERE date(logged_at) = date(?);',
+      [dateStr]
+    );
+
+    const hasActivity =
+      (questCount?.count ?? 0) > 0 ||
+      (workoutCount?.count ?? 0) > 0 ||
+      (actCount?.count ?? 0) > 0 ||
+      (mealCount?.count ?? 0) > 0;
+
+    results.push({
+      date: dateStr,
+      dayLabel,
+      isCompleted: hasActivity,
+      isToday,
+    });
+  }
+
+  return results;
 }
 
 // --- SYNC ENGINE HELPERS ---

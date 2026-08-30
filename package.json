@@ -1,7 +1,30 @@
 {
-  "name": "solo",
-  "main": "expo-router/entry",
+  "name": "solo-levelling-system",
   "version": "1.0.0",
+  "description": "Solo Leveling inspired real-life gamified RPG fitness, workout tracker, and daily quest mobile app built with Expo and React Native.",
+  "author": "Abdul (Rahoof-Codes)",
+  "license": "MIT",
+  "homepage": "https://github.com/Rahoof-Codes/solo-levelling-system#readme",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Rahoof-Codes/solo-levelling-system.git"
+  },
+  "bugs": {
+    "url": "https://github.com/Rahoof-Codes/solo-levelling-system/issues"
+  },
+  "keywords": [
+    "solo-leveling",
+    "fitness-tracker",
+    "gamification",
+    "rpg-system",
+    "react-native",
+    "expo",
+    "sqlite",
+    "firebase",
+    "offline-first",
+    "workout-log"
+  ],
+  "main": "expo-router/entry",
   "dependencies": {
     "@expo/ui": "~57.0.11",
     "@react-native-async-storage/async-storage": "2.2.0",
@@ -41,6 +64,7 @@
   },
   "scripts": {
     "start": "expo start",
+    "typecheck": "tsc --noEmit",
     "reset-project": "node ./scripts/reset-project.js",
     "android": "expo run:android",
     "ios": "expo run:ios",

@@ -37,6 +37,8 @@ export const CREATE_TABLES_SQL = `
     int_xp INTEGER NOT NULL DEFAULT 0,
     per_xp INTEGER NOT NULL DEFAULT 0,
     title TEXT,
+    selected_plan TEXT,
+    plan_start_date TEXT,
     onboarding_complete INTEGER NOT NULL DEFAULT 0,
     updated_at TEXT NOT NULL,
     synced INTEGER NOT NULL DEFAULT 0
@@ -152,6 +154,19 @@ export const CREATE_TABLES_SQL = `
     synced INTEGER NOT NULL DEFAULT 0
   );
 
+  -- Daily Step Tracking
+  CREATE TABLE IF NOT EXISTS daily_steps (
+    id TEXT PRIMARY KEY NOT NULL,
+    date TEXT NOT NULL UNIQUE,
+    steps INTEGER NOT NULL DEFAULT 0,
+    target_steps INTEGER NOT NULL DEFAULT 10000,
+    distance_km REAL NOT NULL DEFAULT 0,
+    calories_burned REAL NOT NULL DEFAULT 0,
+    is_goal_reached INTEGER NOT NULL DEFAULT 0,
+    updated_at TEXT NOT NULL,
+    synced INTEGER NOT NULL DEFAULT 0
+  );
+
   -- Streak tracking
   CREATE TABLE IF NOT EXISTS streaks (
     id TEXT PRIMARY KEY NOT NULL,
@@ -170,9 +185,7 @@ export const CREATE_TABLES_SQL = `
   );
 `;
 
-/**
- * List of all syncable tables (excludes sync_metadata).
- */
+
 export const SYNCABLE_TABLES = [
   'profiles',
   'quests',
@@ -184,6 +197,7 @@ export const SYNCABLE_TABLES = [
   'activities',
   'stats_history',
   'streaks',
+  'daily_steps',
 ] as const;
 
 export type SyncableTable = (typeof SYNCABLE_TABLES)[number];

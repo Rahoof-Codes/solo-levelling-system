@@ -13,7 +13,7 @@ import {
 } from 'react-native';
 import { useSQLiteContext } from 'expo-sqlite';
 import { useFocusEffect } from 'expo-router';
-import { getQuestsForDate, completeQuest, createQuest } from '@/db/operations';
+import { getQuestsForDate, completeQuest, createQuest, getTodaySteps } from '@/db/operations';
 import { type Quest, Stat, QuestCategory } from '@/types';
 import { StatColors, Fonts, Spacing } from '@/constants/theme';
 import { XPClaimModal } from '@/components/xp-claim-modal';
@@ -21,6 +21,7 @@ import { XPClaimModal } from '@/components/xp-claim-modal';
 export default function QuestsScreen() {
   const db = useSQLiteContext();
   const [quests, setQuests] = useState<Quest[]>([]);
+  const [todaySteps, setTodaySteps] = useState(0);
   const [refreshing, setRefreshing] = useState(false);
   const [modalVisible, setModalVisible] = useState(false);
 
@@ -45,6 +46,9 @@ export default function QuestsScreen() {
     try {
       const q = await getQuestsForDate(db);
       setQuests(q);
+
+      const stepRec = await getTodaySteps(db);
+      setTodaySteps(stepRec.steps);
     } catch (err) {
       console.error('Error loading quests:', err);
     }
@@ -193,10 +197,42 @@ export default function QuestsScreen() {
                   <Text style={styles.questDesc}>{quest.description}</Text>
                 )}
 
+                {/* 10,000 STEPS LIVE PROGRESS HUD */}
+                {quest.title.toLowerCase().includes('step') && (
+                  <View style={styles.stepProgressContainer}>
+                    <View style={styles.stepProgressHeader}>
+                      <Text style={styles.stepProgressLabel}>MOTION STEP TRACKER</Text>
+                      <Text style={styles.stepProgressValue}>
+                        {todaySteps.toLocaleString()} / 10,000 ({Math.min(100, Math.round((todaySteps / 10000) * 100))}%)
+                      </Text>
+                    </View>
+                    <View style={styles.stepTrack}>
+                      <View
+                        style={[
+                          styles.stepFill,
+                          {
+                            width: `${Math.min(100, Math.max(3, (todaySteps / 10000) * 100))}%`,
+                            backgroundColor: todaySteps >= 10000 ? '#00FF88' : '#00F0FF',
+                          },
+                        ]}
+                      />
+                    </View>
+                  </View>
+                )}
+
                 {quest.is_completed === 1 ? (
                   <View style={styles.completedBadge}>
                     <Text style={styles.completedText}>✓ OBJECTIVE ACCOMPLISHED</Text>
                   </View>
+                ) : quest.title.toLowerCase().includes('step') && todaySteps < 10000 ? (
+                  <TouchableOpacity
+                    style={[styles.completeBtn, styles.stepIncompleteBtn]}
+                    onPress={() => handleStartClaim(quest)}
+                  >
+                    <Text style={styles.stepIncompleteText}>
+                      {(10000 - todaySteps).toLocaleString()} STEPS REMAINING (CLAIM EXP) →
+                    </Text>
+                  </TouchableOpacity>
                 ) : (
                   <TouchableOpacity
                     style={styles.completeBtn}
@@ -565,5 +601,53 @@ const styles = StyleSheet.create({
     fontWeight: '900',
     color: '#070B14',
     letterSpacing: 1,
+  },
+  stepProgressContainer: {
+    backgroundColor: '#090E1A',
+    borderWidth: 1,
+    borderColor: '#182C4A',
+    borderRadius: 8,
+    padding: 10,
+    gap: 6,
+    marginTop: 4,
+  },
+  stepProgressHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  stepProgressLabel: {
+    fontSize: 9,
+    fontFamily: Fonts.mono,
+    color: '#00A8FF',
+    fontWeight: '800',
+    letterSpacing: 0.5,
+  },
+  stepProgressValue: {
+    fontSize: 11,
+    fontFamily: Fonts.mono,
+    fontWeight: '800',
+    color: '#00F0FF',
+  },
+  stepTrack: {
+    height: 6,
+    backgroundColor: '#050810',
+    borderRadius: 3,
+    overflow: 'hidden',
+  },
+  stepFill: {
+    height: '100%',
+    borderRadius: 3,
+  },
+  stepIncompleteBtn: {
+    backgroundColor: '#0C182B',
+    borderColor: '#19335A',
+  },
+  stepIncompleteText: {
+    fontFamily: Fonts.mono,
+    fontSize: 10,
+    fontWeight: '800',
+    color: '#6F8FAF',
+    letterSpacing: 0.5,
   },
 });

@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import {
   StyleSheet,
   Text,
@@ -8,53 +8,30 @@ import {
   TouchableOpacity,
   RefreshControl,
 } from 'react-native';
-import { useRouter, useFocusEffect } from 'expo-router';
+import { useRouter, useFocusEffect, usePathname } from 'expo-router';
 import { useSQLiteContext } from 'expo-sqlite';
 import {
   getProfile,
   getDailyCalorieSummary,
   getQuestsForDate,
   getStreaks,
-  updateProfileGoal,
   checkAndUpdateDailyLoginStreak,
   getPastWeekActivity,
   type DayActivityStatus,
 } from '@/db/operations';
-import { type Profile, type DailyCalorieSummary, type Quest, type Streak, type GoalType } from '@/types';
+import { type Profile, type DailyCalorieSummary, type Quest, type Streak } from '@/types';
 import { StatusWindow } from '@/components/status/status-window';
 import { HunterInfo } from '@/components/status/hunter-info';
 import { StatBars } from '@/components/status/stat-bars';
 import { DailySummary } from '@/components/status/daily-summary';
 import { DailyStreakCard } from '@/components/status/daily-streak-card';
+import { StepTrackerCard } from '@/components/status/step-tracker-card';
 import { GOAL_CONFIG } from '@/lib/calculations/bmr';
 import { Fonts, Spacing } from '@/constants/theme';
 
-const GOAL_SECTIONS: { type: GoalType; title: string; emoji: string; offsetLabel: string; macroRatio: string }[] = [
-  {
-    type: 'lose_weight',
-    title: 'LOSS WEIGHT',
-    emoji: '🔥',
-    offsetLabel: '-500 kcal (Deficit)',
-    macroRatio: '35% P / 35% C / 30% F',
-  },
-  {
-    type: 'maintain',
-    title: 'WEIGHT MAINTAIN',
-    emoji: '⚖️',
-    offsetLabel: '0 kcal (Balance)',
-    macroRatio: '30% P / 40% C / 30% F',
-  },
-  {
-    type: 'gain_weight',
-    title: 'WEIGHT GAIN',
-    emoji: '💪',
-    offsetLabel: '+500 kcal (Surplus)',
-    macroRatio: '30% P / 45% C / 25% F',
-  },
-];
-
 export default function StatusScreen() {
   const router = useRouter();
+  const pathname = usePathname();
   const db = useSQLiteContext();
 
   const [profile, setProfile] = useState<Profile | null>(null);
@@ -71,7 +48,6 @@ export default function StatusScreen() {
   const [streaks, setStreaks] = useState<Streak[]>([]);
   const [weekHistory, setWeekHistory] = useState<DayActivityStatus[]>([]);
   const [refreshing, setRefreshing] = useState(false);
-  const [changingGoal, setChangingGoal] = useState(false);
 
   const loadData = useCallback(async () => {
     try {
@@ -99,6 +75,10 @@ export default function StatusScreen() {
     }
   }, [db]);
 
+  useEffect(() => {
+    loadData();
+  }, [pathname, loadData]);
+
   useFocusEffect(
     useCallback(() => {
       loadData();
@@ -109,19 +89,6 @@ export default function StatusScreen() {
     setRefreshing(true);
     await loadData();
     setRefreshing(false);
-  };
-
-  const handleSelectGoal = async (newGoal: GoalType) => {
-    if (profile?.goal_type === newGoal || changingGoal) return;
-    try {
-      setChangingGoal(true);
-      await updateProfileGoal(db, newGoal);
-      await loadData();
-    } catch (err) {
-      console.error('Error updating goal directive:', err);
-    } finally {
-      setChangingGoal(false);
-    }
   };
 
   const completedQuestsCount = quests.filter((q) => q.is_completed).length;
@@ -149,43 +116,38 @@ export default function StatusScreen() {
           </TouchableOpacity>
         )}
 
-        {/* 3 WEIGHT GOAL DIRECTIVE SECTIONS */}
-        <View style={styles.goalSectionContainer}>
-          <View style={styles.goalHeaderRow}>
-            <Text style={styles.goalSectionTitle}>PHYSICAL DIRECTIVE</Text>
-            <Text style={styles.goalActiveIndicator}>
-              ACTIVE: {profile?.goal_type ? GOAL_CONFIG[profile.goal_type]?.label?.toUpperCase() : 'MAINTAIN'}
-            </Text>
-          </View>
+        {/* ACTIVE PHYSICAL DIRECTIVE (LOCKED — RECALIBRATION ONLY) */}
+        {profile && (
+          <View style={styles.activeDirectiveBanner}>
+            <View style={styles.directiveTop}>
+              <Text style={styles.directiveSystemTag}>[ PHYSICAL DIRECTIVE: LOCKED ]</Text>
+              <TouchableOpacity
+                style={styles.recalibrateBtn}
+                onPress={() => router.push('/onboarding')}
+                activeOpacity={0.7}
+              >
+                <Text style={styles.recalibrateBtnText}>RECALIBRATE ⚙️</Text>
+              </TouchableOpacity>
+            </View>
 
-          <View style={styles.goalGrid}>
-            {GOAL_SECTIONS.map((sec) => {
-              const isActive = (profile?.goal_type || 'maintain') === sec.type;
-              return (
-                <TouchableOpacity
-                  key={sec.type}
-                  style={[styles.goalCard, isActive && styles.goalCardActive]}
-                  onPress={() => handleSelectGoal(sec.type)}
-                  activeOpacity={0.7}
-                >
-                  <View style={styles.goalCardTop}>
-                    <Text style={styles.goalCardEmoji}>{sec.emoji}</Text>
-                    {isActive && (
-                      <View style={styles.activeDot} />
-                    )}
-                  </View>
-                  <Text style={[styles.goalCardTitle, isActive && styles.goalCardTitleActive]}>
-                    {sec.title}
-                  </Text>
-                  <Text style={[styles.goalCardOffset, isActive && styles.goalCardOffsetActive]}>
-                    {sec.offsetLabel}
-                  </Text>
-                  <Text style={styles.goalCardMacros}>{sec.macroRatio}</Text>
-                </TouchableOpacity>
-              );
-            })}
+            <View style={styles.directiveBody}>
+              <Text style={styles.directiveEmoji}>
+                {GOAL_CONFIG[profile.goal_type]?.emoji || '⚖️'}
+              </Text>
+              <View style={{ flex: 1, gap: 2 }}>
+                <Text style={styles.directiveTitle}>
+                  {GOAL_CONFIG[profile.goal_type]?.label?.toUpperCase() || 'MAINTAIN WEIGHT'}
+                </Text>
+                <Text style={styles.directiveSub}>
+                  {GOAL_CONFIG[profile.goal_type]?.calorieOffset === 0
+                    ? 'TDEE Match (Energy Balance)'
+                    : `${GOAL_CONFIG[profile.goal_type]?.calorieOffset > 0 ? '+' : ''}${GOAL_CONFIG[profile.goal_type]?.calorieOffset} kcal/day`}
+                  {' • '}Daily Target: {Math.round(profile.daily_calories ?? 2000)} kcal
+                </Text>
+              </View>
+            </View>
           </View>
-        </View>
+        )}
 
         {/* MAIN SOLO LEVELING STATUS WINDOW */}
         {profile ? (
@@ -212,6 +174,9 @@ export default function StatusScreen() {
             <Text style={styles.loadingText}>INITIALIZING SYSTEM MATRIX...</Text>
           </View>
         )}
+
+        {/* 10,000 STEPS DAILY DIRECTIVE & MOTION HUD */}
+        <StepTrackerCard onQuestClaimed={loadData} />
 
         {/* QUICK ACCESS ACTION ROW */}
         <View style={styles.actionsRow}>
@@ -324,95 +289,57 @@ const styles = StyleSheet.create({
     color: '#90B4E0',
     letterSpacing: 1,
   },
-  goalSectionContainer: {
-    backgroundColor: 'rgba(13, 20, 36, 0.75)',
+  activeDirectiveBanner: {
+    backgroundColor: '#0D1424',
     borderWidth: 1,
-    borderColor: '#1A2E50',
+    borderColor: '#19315A',
     borderRadius: 12,
     padding: Spacing.three,
     gap: 10,
   },
-  goalHeaderRow: {
+  directiveTop: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
   },
-  goalSectionTitle: {
-    fontSize: 11,
+  directiveSystemTag: {
+    fontSize: 10,
     fontFamily: Fonts.mono,
-    fontWeight: '800',
     color: '#00A8FF',
     letterSpacing: 1.5,
-  },
-  goalActiveIndicator: {
-    fontSize: 9,
-    fontFamily: Fonts.mono,
-    color: '#00FF88',
-    fontWeight: '700',
-  },
-  goalGrid: {
-    flexDirection: 'row',
-    gap: 8,
-  },
-  goalCard: {
-    flex: 1,
-    backgroundColor: '#080E1A',
-    borderWidth: 1,
-    borderColor: '#172744',
-    borderRadius: 10,
-    padding: 10,
-    gap: 4,
-  },
-  goalCardActive: {
-    borderColor: '#00F0FF',
-    backgroundColor: 'rgba(0, 240, 255, 0.09)',
-    shadowColor: '#00F0FF',
-    shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 4,
-  },
-  goalCardTop: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  goalCardEmoji: {
-    fontSize: 18,
-  },
-  activeDot: {
-    width: 6,
-    height: 6,
-    borderRadius: 3,
-    backgroundColor: '#00FF88',
-    shadowColor: '#00FF88',
-    shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 1,
-    shadowRadius: 4,
-  },
-  goalCardTitle: {
-    fontSize: 11,
     fontWeight: '800',
-    fontFamily: Fonts.mono,
-    color: '#8AABCE',
-    marginTop: 2,
   },
-  goalCardTitleActive: {
-    color: '#00F0FF',
+  recalibrateBtn: {
+    backgroundColor: 'rgba(0, 168, 255, 0.1)',
+    borderWidth: 1,
+    borderColor: '#00A8FF',
+    borderRadius: 6,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
   },
-  goalCardOffset: {
+  recalibrateBtnText: {
     fontSize: 9,
     fontFamily: Fonts.mono,
-    color: '#556F91',
-    fontWeight: '700',
+    color: '#00F0FF',
+    fontWeight: '800',
   },
-  goalCardOffsetActive: {
-    color: '#FFAA00',
+  directiveBody: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
   },
-  goalCardMacros: {
-    fontSize: 8,
+  directiveEmoji: {
+    fontSize: 26,
+  },
+  directiveTitle: {
+    fontSize: 14,
+    fontWeight: '900',
+    color: '#E0E8FF',
+    letterSpacing: 0.5,
+  },
+  directiveSub: {
+    fontSize: 11,
     fontFamily: Fonts.mono,
-    color: '#4B6588',
-    marginTop: 2,
+    color: '#6582A6',
   },
 });

@@ -3,13 +3,24 @@ import { Stack, useRouter, useSegments } from 'expo-router';
 import { SQLiteProvider, useSQLiteContext } from 'expo-sqlite';
 import * as SplashScreen from 'expo-splash-screen';
 import { StatusBar } from 'expo-status-bar';
-import { View, Text, StyleSheet } from 'react-native';
+import { View, Text, StyleSheet, Platform, TouchableOpacity } from 'react-native';
+import { setVisibilityAsync } from 'expo-navigation-bar';
 import { initializeDatabase, DATABASE_NAME } from '@/db/database';
 import { useNetworkSync } from '@/services/networkMonitor';
 import { AuthProvider, useAuth } from '@/contexts/AuthContext';
+import { Fonts } from '@/constants/theme';
 
 // Prevent auto-hiding native splash until JS loads
 SplashScreen.preventAutoHideAsync().catch(() => {});
+
+// Enable full-screen immersive mode on Android
+if (Platform.OS === 'android') {
+  try {
+    setVisibilityAsync('hidden').catch(() => {});
+  } catch {
+    // ignore on non-supported environments
+  }
+}
 
 /**
  * Handles redirecting users based on authentication state
@@ -43,9 +54,19 @@ function MainNavigation() {
   const userId = user?.uid ?? null;
   useNetworkSync(db, userId);
 
+  useEffect(() => {
+    if (Platform.OS === 'android') {
+      try {
+        setVisibilityAsync('hidden').catch(() => {});
+      } catch {
+        // ignore on non-supported environments
+      }
+    }
+  }, []);
+
   return (
     <>
-      <StatusBar style="light" />
+      <StatusBar hidden={true} style="light" />
       <AuthRoutingHandler />
       <Stack
         screenOptions={{
@@ -60,6 +81,72 @@ function MainNavigation() {
       </Stack>
     </>
   );
+}
+
+interface ErrorBoundaryProps {
+  children: React.ReactNode;
+}
+
+interface ErrorBoundaryState {
+  hasError: boolean;
+  error: Error | null;
+}
+
+class SQLiteErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBoundaryState> {
+  constructor(props: ErrorBoundaryProps) {
+    super(props);
+    this.state = { hasError: false, error: null };
+  }
+
+  static getDerivedStateFromError(error: Error): ErrorBoundaryState {
+    return { hasError: true, error };
+  }
+
+  componentDidCatch(error: Error, errorInfo: React.ErrorInfo) {
+    console.error('[SQLiteErrorBoundary] Caught database error:', error, errorInfo);
+  }
+
+  render() {
+    if (this.state.hasError) {
+      const isLockError =
+        this.state.error?.message?.includes('createSyncAccessHandle') ||
+        this.state.error?.name === 'NoModificationAllowedError';
+
+      return (
+        <View style={errorStyles.container}>
+          <Text style={errorStyles.icon}>{isLockError ? '🔒' : '⚠️'}</Text>
+          <Text style={errorStyles.title}>
+            {isLockError ? 'DATABASE LOCKED // MULTIPLE TABS' : 'SYSTEM DATABASE ERROR'}
+          </Text>
+          <Text style={errorStyles.message}>
+            {isLockError
+              ? 'Another browser tab or window has the database open. Web SQLite requires an exclusive lock on the database file.'
+              : this.state.error?.message || 'Database initialization failed'}
+          </Text>
+          <Text style={errorStyles.hint}>
+            {isLockError
+              ? 'Please close other localhost:8081 tabs and tap Reload below.'
+              : 'Try restarting the app or clearing cache.'}
+          </Text>
+          {Platform.OS === 'web' && (
+            <TouchableOpacity
+              style={errorStyles.reloadBtn}
+              onPress={() => {
+                if (typeof window !== 'undefined') {
+                  window.location.reload();
+                }
+              }}
+              activeOpacity={0.7}
+            >
+              <Text style={errorStyles.reloadBtnText}>🔄 RELOAD PAGE</Text>
+            </TouchableOpacity>
+          )}
+        </View>
+      );
+    }
+
+    return this.props.children;
+  }
 }
 
 /**
@@ -91,9 +178,11 @@ function DatabaseProvider({ children }: { children: React.ReactNode }) {
   }
 
   return (
-    <SQLiteProvider databaseName={DATABASE_NAME} onInit={handleInit}>
-      {children}
-    </SQLiteProvider>
+    <SQLiteErrorBoundary>
+      <SQLiteProvider databaseName={DATABASE_NAME} onInit={handleInit}>
+        {children}
+      </SQLiteProvider>
+    </SQLiteErrorBoundary>
   );
 }
 
@@ -142,5 +231,22 @@ const errorStyles = StyleSheet.create({
     fontSize: 10,
     color: '#4B6282',
     marginTop: 8,
+    textAlign: 'center',
+  },
+  reloadBtn: {
+    backgroundColor: '#0055AA',
+    borderWidth: 1,
+    borderColor: '#00A8FF',
+    borderRadius: 8,
+    paddingHorizontal: 20,
+    paddingVertical: 12,
+    marginTop: 12,
+  },
+  reloadBtnText: {
+    fontFamily: Fonts.mono,
+    fontSize: 13,
+    fontWeight: '900',
+    color: '#00F0FF',
+    letterSpacing: 1,
   },
 });

@@ -7,8 +7,23 @@
     "icon": "./assets/images/icon.png",
     "scheme": "solo",
     "userInterfaceStyle": "automatic",
+    "androidStatusBar": {
+      "hidden": true,
+      "translucent": true,
+      "backgroundColor": "#070B14"
+    },
+    "androidNavigationBar": {
+      "visible": "sticky-immersive",
+      "backgroundColor": "#070B14",
+      "barStyle": "light-content"
+    },
     "ios": {
-      "icon": "./assets/expo.icon"
+      "icon": "./assets/expo.icon",
+      "infoPlist": {
+        "UIStatusBarHidden": true,
+        "UIViewControllerBasedStatusBarAppearance": false,
+        "NSMotionUsageDescription": "Allow SOLO to access your device motion and pedometer to track your daily 10,000 steps quest."
+      }
     },
     "android": {
       "package": "com.abdul.sololevelling",
@@ -19,7 +34,12 @@
         "backgroundImage": "./assets/images/android-icon-background.png",
         "monochromeImage": "./assets/images/android-icon-monochrome.png"
       },
-      "predictiveBackGestureEnabled": false
+      "predictiveBackGestureEnabled": false,
+      "permissions": [
+        "android.permission.ACTIVITY_RECOGNITION",
+        "android.permission.BODY_SENSORS",
+        "android.permission.HIGH_SAMPLING_RATE_SENSORS"
+      ]
     },
     "web": {
       "output": "static",
@@ -36,7 +56,20 @@
         }
       ],
       "expo-sqlite",
-      "@react-native-google-signin/google-signin"
+      "@react-native-google-signin/google-signin",
+      [
+        "expo-sensors",
+        {
+          "motionPermission": "Allow SOLO to access your device motion and pedometer to track your daily 10,000 steps quest."
+        }
+      ],
+      [
+        "expo-navigation-bar",
+        {
+          "hidden": true,
+          "style": "dark"
+        }
+      ]
     ],
     "experiments": {
       "typedRoutes": true,

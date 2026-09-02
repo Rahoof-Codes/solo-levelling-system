@@ -52,11 +52,13 @@ export type ActivityLevel =
   | 'very_active'
   | 'exceedingly_active';
 
-export type StreakType = 'daily_quest' | 'workout' | 'login' | 'meal_log';
+export type StreakType = 'daily_quest' | 'workout' | 'login' | 'meal_log' | 'steps';
 
-export type SourceType = 'quest' | 'workout' | 'activity' | 'meal';
+export type SourceType = 'quest' | 'workout' | 'activity' | 'meal' | 'steps';
 
 export type Difficulty = 'beginner' | 'intermediate' | 'advanced';
+
+export type PlanType = '100day' | '365day';
 
 // --- Database Row Interfaces ---
 // Every table (except sync_metadata) has: id, updated_at, synced
@@ -85,6 +87,8 @@ export interface Profile {
   int_xp: number;
   per_xp: number;
   title: string | null;
+  selected_plan: PlanType | null;
+  plan_start_date: string | null; // ISO date string
   onboarding_complete: number; // 0 or 1
   updated_at: string;
   synced: number; // 0 or 1
@@ -205,6 +209,18 @@ export interface Streak {
   synced: number;
 }
 
+export interface DailySteps {
+  id: string;
+  date: string;
+  steps: number;
+  target_steps: number;
+  distance_km: number;
+  calories_burned: number;
+  is_goal_reached: number; // 0 or 1
+  updated_at: string;
+  synced: number;
+}
+
 export interface SyncMetadata {
   key: string;
   value: string;
@@ -245,4 +261,5 @@ export interface OnboardingData {
   sex: Sex;
   activity_level: ActivityLevel;
   goal_type: GoalType;
+  selected_plan: PlanType;
 }

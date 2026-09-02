@@ -18,6 +18,7 @@ export function DailySummary({
 }: DailySummaryProps) {
   const questStreak = streaks.find((s) => s.type === 'daily_quest')?.current_count ?? 0;
   const workoutStreak = streaks.find((s) => s.type === 'workout')?.current_count ?? 0;
+  const stepsStreak = streaks.find((s) => s.type === 'steps')?.current_count ?? 0;
 
   // Mana / Energy bar percentage
   const manaTarget = Math.max(1000, calorieSummary.target);
@@ -76,11 +77,20 @@ export function DailySummary({
           </View>
         </View>
 
+        {/* Steps Streak */}
+        <View style={styles.card}>
+          <Text style={styles.cardIcon}>⚡</Text>
+          <View>
+            <Text style={styles.cardLabel}>10K STREAK</Text>
+            <Text style={styles.cardValue}>{stepsStreak}d</Text>
+          </View>
+        </View>
+
         {/* Quest Streak */}
         <View style={styles.card}>
           <Text style={styles.cardIcon}>🔥</Text>
           <View>
-            <Text style={styles.cardLabel}>QUEST STREAK</Text>
+            <Text style={styles.cardLabel}>QUESTS</Text>
             <Text style={styles.cardValue}>{questStreak}d</Text>
           </View>
         </View>

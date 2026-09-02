@@ -1,11 +1,6 @@
-// ============================================================
-// Database Initialization & Seeding (expo-sqlite modern API)
-// ============================================================
-
 import { type SQLiteDatabase } from 'expo-sqlite';
 import * as Crypto from 'expo-crypto';
 import { CREATE_TABLES_SQL } from './schema';
-import { WORKOUT_PLANS } from '@/data/workoutPlans';
 import { Rank, Stat, QuestCategory } from '@/types';
 
 export const DATABASE_NAME = 'thesystem.db';
@@ -13,25 +8,31 @@ export const DATABASE_NAME = 'thesystem.db';
 /**
  * Initialize SQLite database:
  * 1. Execute DDL statements (creates all 11 tables + metadata)
- * 2. Seed initial profile if none exists
- * 3. Seed 3 workout plans if none exist
+ * 2. Run column migrations for existing installs
+ * 3. Seed initial profile if none exists
  * 4. Seed initial streak counters if none exist
  * 5. Seed default daily quests if none exist
+ *
+ * NOTE: Workout plans are now seeded during onboarding when the
+ * hunter selects their training plan (100-day or 365-day).
  */
 export async function initializeDatabase(db: SQLiteDatabase): Promise<void> {
   // 1. Run all table migrations
   await db.execAsync(CREATE_TABLES_SQL);
 
-  // 1b. Migration: Add goal_type column if missing (for existing installs)
-  try {
-    const colCheck = await db.getFirstAsync<{ cnt: number }>(
-      `SELECT COUNT(*) as cnt FROM pragma_table_info('profiles') WHERE name = 'goal_type';`
-    );
-    if (!colCheck || colCheck.cnt === 0) {
-      await db.execAsync(`ALTER TABLE profiles ADD COLUMN goal_type TEXT NOT NULL DEFAULT 'maintain';`);
+  // 1b. Defensive column migrations (direct ALTER TABLE — safe to ignore error if column already exists)
+  const migrations = [
+    'ALTER TABLE profiles ADD COLUMN goal_type TEXT NOT NULL DEFAULT "maintain";',
+    'ALTER TABLE profiles ADD COLUMN selected_plan TEXT;',
+    'ALTER TABLE profiles ADD COLUMN plan_start_date TEXT;',
+    'ALTER TABLE profiles ADD COLUMN onboarding_complete INTEGER NOT NULL DEFAULT 0;',
+  ];
+  for (const sql of migrations) {
+    try {
+      await db.execAsync(sql);
+    } catch {
+      // Column already exists or already migrated
     }
-  } catch {
-    // Column already exists or table doesn't exist yet — safe to ignore
   }
 
   const now = new Date().toISOString();
@@ -65,49 +66,10 @@ export async function initializeDatabase(db: SQLiteDatabase): Promise<void> {
     );
   }
 
-  // 3. Check & seed workout plans
-  const existingPlans = await db.getFirstAsync<{ count: number }>('SELECT COUNT(*) as count FROM workout_plans;');
-  if (!existingPlans || existingPlans.count === 0) {
-    for (const plan of WORKOUT_PLANS) {
-      await db.runAsync(
-        `INSERT INTO workout_plans (id, name, description, difficulty, weeks, focus_stats, updated_at, synced)
-         VALUES (?, ?, ?, ?, ?, ?, ?, 0);`,
-        [
-          plan.id,
-          plan.name,
-          plan.description,
-          plan.difficulty,
-          plan.weeks,
-          JSON.stringify(plan.focusStats),
-          now,
-        ]
-      );
-
-      for (const workout of plan.workouts) {
-        await db.runAsync(
-          `INSERT INTO workouts (id, plan_id, name, week, day, exercises_json, difficulty, xp_value, stats, updated_at, synced)
-           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0);`,
-          [
-            workout.id,
-            plan.id,
-            workout.name,
-            workout.week,
-            workout.day,
-            JSON.stringify(workout.exercises),
-            workout.difficulty,
-            workout.xpValue,
-            JSON.stringify(workout.stats),
-            now,
-          ]
-        );
-      }
-    }
-  }
-
   // 4. Seed initial streak records
   const existingStreaks = await db.getFirstAsync<{ count: number }>('SELECT COUNT(*) as count FROM streaks;');
   if (!existingStreaks || existingStreaks.count === 0) {
-    const streakTypes = ['daily_quest', 'workout', 'login', 'meal_log'];
+    const streakTypes = ['daily_quest', 'workout', 'login', 'meal_log', 'steps'];
     for (const type of streakTypes) {
       await db.runAsync(
         `INSERT INTO streaks (id, type, current_count, longest_count, last_activity_date, updated_at, synced)
@@ -122,6 +84,13 @@ export async function initializeDatabase(db: SQLiteDatabase): Promise<void> {
   const existingQuests = await db.getFirstAsync<{ count: number }>('SELECT COUNT(*) as count FROM quests WHERE due_date = ?;', [today]);
   if (!existingQuests || existingQuests.count === 0) {
     const defaultQuests = [
+      {
+        title: '10,000 Steps Daily Quest',
+        description: 'Complete 10,000 steps of movement today to boost AGI & VIT stats',
+        category: QuestCategory.FITNESS,
+        stat: Stat.AGI,
+        xp: 50,
+      },
       {
         title: 'Drink 2L Water',
         description: 'Stay hydrated for physical & mental alertness',
@@ -159,5 +128,15 @@ export async function initializeDatabase(db: SQLiteDatabase): Promise<void> {
         [Crypto.randomUUID(), q.title, q.description, q.category, q.xp, q.stat, today, now]
       );
     }
+  }
+
+  // 6. Check & initialize today's daily_steps row
+  const existingSteps = await db.getFirstAsync<{ count: number }>('SELECT COUNT(*) as count FROM daily_steps WHERE date = ?;', [today]);
+  if (!existingSteps || existingSteps.count === 0) {
+    await db.runAsync(
+      `INSERT INTO daily_steps (id, date, steps, target_steps, distance_km, calories_burned, is_goal_reached, updated_at, synced)
+       VALUES (?, ?, 0, 10000, 0, 0, 0, ?, 0);`,
+      [Crypto.randomUUID(), today, now]
+    );
   }
 }

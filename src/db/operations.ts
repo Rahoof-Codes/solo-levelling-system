@@ -12,11 +12,13 @@ import {
   type StatsHistory,
   type Streak,
   type DailyCalorieSummary,
+  type DailySteps,
   type OnboardingData,
   type WorkoutPlan,
   type Workout,
   type WorkoutLog,
   type GoalType,
+  type PlanType,
   Stat,
   Rank,
   QuestCategory,
@@ -26,6 +28,7 @@ import {
 import { computeOnboardingResults } from '@/lib/calculations/bmr';
 import { calculateLevel, calculateRank, RANK_INFO } from '@/lib/calculations/leveling';
 import { calculateCaloriesBurned, calculateActivityXP, getMETValue, getActivityStat } from '@/lib/calculations/met';
+import { generateWorkoutsForPlan, PLAN_METADATA, getPlanPhaseInfo } from '@/data/workoutPlans';
 
 // --- PROFILE OPERATIONS ---
 
@@ -39,43 +42,109 @@ export async function updateProfileOnboarding(
 ): Promise<Profile> {
   const { bmr, tdee, macros } = computeOnboardingResults(data);
   const now = new Date().toISOString();
+  const today = now.split('T')[0];
+  const effectivePlan: PlanType = data.selected_plan === '365day' ? '365day' : '100day';
 
-  await db.runAsync(
-    `UPDATE profiles SET
-      username = COALESCE(?, username),
-      age = ?,
-      height_cm = ?,
-      weight_kg = ?,
-      sex = ?,
-      activity_level = ?,
-      goal_type = ?,
-      bmr = ?,
-      tdee = ?,
-      daily_calories = ?,
-      protein_g = ?,
-      carbs_g = ?,
-      fat_g = ?,
-      onboarding_complete = 1,
-      updated_at = ?,
-      synced = 0
-    WHERE id = (SELECT id FROM profiles LIMIT 1);`,
-    [
-      data.username ?? null,
-      data.age,
-      data.height_cm,
-      data.weight_kg,
-      data.sex,
-      data.activity_level,
-      data.goal_type,
-      bmr,
-      tdee,
-      macros.daily_calories,
-      macros.protein_g,
-      macros.carbs_g,
-      macros.fat_g,
-      now,
-    ]
-  );
+  // 1. Defensive column migration: ensure all columns exist without depending on PRAGMA
+  const columns = [
+    'ALTER TABLE profiles ADD COLUMN goal_type TEXT NOT NULL DEFAULT "maintain";',
+    'ALTER TABLE profiles ADD COLUMN selected_plan TEXT;',
+    'ALTER TABLE profiles ADD COLUMN plan_start_date TEXT;',
+    'ALTER TABLE profiles ADD COLUMN onboarding_complete INTEGER NOT NULL DEFAULT 0;',
+  ];
+  for (const sql of columns) {
+    try {
+      await db.execAsync(sql);
+    } catch {
+      // Column already exists
+    }
+  }
+
+  // 2. Check if a profile exists; if not, INSERT; if yes, UPDATE
+  const existing = await db.getFirstAsync<{ id: string }>('SELECT id FROM profiles LIMIT 1;');
+  if (!existing) {
+    let newId = `hunter-${Date.now()}`;
+    try {
+      if (typeof Crypto !== 'undefined' && Crypto.randomUUID) {
+        newId = Crypto.randomUUID();
+      }
+    } catch {}
+
+    await db.runAsync(
+      `INSERT INTO profiles (
+        id, username, age, height_cm, weight_kg, sex, activity_level, goal_type,
+        bmr, tdee, daily_calories, protein_g, carbs_g, fat_g,
+        level, total_xp, rank, str_xp, vit_xp, agi_xp, int_xp, per_xp,
+        title, selected_plan, plan_start_date, onboarding_complete, updated_at, synced
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1, 0, 'E', 0, 0, 0, 0, 0, 'E-Rank Hunter', ?, ?, 1, ?, 0);`,
+      [
+        newId,
+        data.username || 'Sung Jin-Woo',
+        data.age,
+        data.height_cm,
+        data.weight_kg,
+        data.sex,
+        data.activity_level,
+        data.goal_type,
+        bmr,
+        tdee,
+        macros.daily_calories,
+        macros.protein_g,
+        macros.carbs_g,
+        macros.fat_g,
+        effectivePlan,
+        today,
+        now,
+      ]
+    );
+  } else {
+    await db.runAsync(
+      `UPDATE profiles SET
+        username = COALESCE(?, username),
+        age = ?,
+        height_cm = ?,
+        weight_kg = ?,
+        sex = ?,
+        activity_level = ?,
+        goal_type = ?,
+        bmr = ?,
+        tdee = ?,
+        daily_calories = ?,
+        protein_g = ?,
+        carbs_g = ?,
+        fat_g = ?,
+        selected_plan = ?,
+        plan_start_date = ?,
+        onboarding_complete = 1,
+        updated_at = ?,
+        synced = 0;`,
+      [
+        data.username ?? null,
+        data.age,
+        data.height_cm,
+        data.weight_kg,
+        data.sex,
+        data.activity_level,
+        data.goal_type,
+        bmr,
+        tdee,
+        macros.daily_calories,
+        macros.protein_g,
+        macros.carbs_g,
+        macros.fat_g,
+        effectivePlan,
+        today,
+        now,
+      ]
+    );
+  }
+
+  // 3. Fast batched seed of workouts for the selected plan (non-fatal)
+  try {
+    await seedWorkoutsForPlan(db, effectivePlan, today);
+  } catch (seedErr) {
+    console.error('[DB] seedWorkoutsForPlan non-fatal error:', seedErr);
+  }
 
   const profile = await getProfile(db);
   if (!profile) throw new Error('Profile not found after onboarding update');
@@ -176,8 +245,40 @@ export async function awardXP(
 
 // --- QUESTS OPERATIONS ---
 
+export async function ensureDaily10kStepQuest(db: SQLiteDatabase, dateStr?: string): Promise<Quest> {
+  const date = dateStr ?? new Date().toISOString().split('T')[0];
+  const now = new Date().toISOString();
+
+  let quest = await db.getFirstAsync<Quest>(
+    "SELECT * FROM quests WHERE due_date = ? AND title LIKE '%10,000 Steps%' LIMIT 1;",
+    [date]
+  );
+
+  if (!quest) {
+    const id = Crypto.randomUUID();
+    await db.runAsync(
+      `INSERT INTO quests (id, title, description, category, xp_reward, stat_affected, due_date, is_completed, is_auto_generated, updated_at, synced)
+       VALUES (?, ?, ?, ?, ?, ?, ?, 0, 1, ?, 0);`,
+      [
+        id,
+        '10,000 Steps Daily Quest',
+        'Complete 10,000 steps of movement today to boost AGI & VIT stats',
+        QuestCategory.FITNESS,
+        50,
+        Stat.AGI,
+        date,
+        now,
+      ]
+    );
+    quest = await db.getFirstAsync<Quest>('SELECT * FROM quests WHERE id = ?;', [id]);
+  }
+
+  return quest!;
+}
+
 export async function getQuestsForDate(db: SQLiteDatabase, dateStr?: string): Promise<Quest[]> {
   const date = dateStr ?? new Date().toISOString().split('T')[0];
+  await ensureDaily10kStepQuest(db, date);
   return await db.getAllAsync<Quest>(
     'SELECT * FROM quests WHERE due_date = ? ORDER BY is_completed ASC, xp_reward DESC;',
     [date]
@@ -246,6 +347,234 @@ export async function completeQuest(
 
 // --- WORKOUT OPERATIONS ---
 
+// --- WORKOUT PLAN OPERATIONS (Calendar-Based) ---
+
+/**
+ * Seed all workouts for a selected plan into the database.
+ * Uses fast multi-row batch inserts in chunks of 20 to complete in <100ms.
+ */
+export async function seedWorkoutsForPlan(
+  db: SQLiteDatabase,
+  planType: PlanType,
+  startDate: string
+): Promise<void> {
+  const effectivePlan: PlanType = planType === '365day' ? '365day' : '100day';
+  const now = new Date().toISOString();
+  const meta = PLAN_METADATA[effectivePlan];
+  const workoutSeeds = generateWorkoutsForPlan(effectivePlan);
+
+  try {
+    await db.execAsync('PRAGMA foreign_keys = OFF;');
+    await db.execAsync('DELETE FROM workouts;');
+    await db.execAsync('DELETE FROM workout_plans;');
+    await db.execAsync('PRAGMA foreign_keys = ON;');
+  } catch (e) {
+    console.warn('[DB] Clear workouts warning:', e);
+  }
+
+  // Insert plan metadata
+  await db.runAsync(
+    `INSERT OR REPLACE INTO workout_plans (id, name, description, difficulty, weeks, focus_stats, updated_at, synced)
+     VALUES (?, ?, ?, ?, ?, ?, ?, 0);`,
+    [
+      meta.id,
+      meta.name,
+      meta.description,
+      meta.difficulty,
+      Math.ceil(meta.totalDays / 7),
+      JSON.stringify(meta.focusStats),
+      now,
+    ]
+  );
+
+  // Fast chunked insert (20 rows per SQL statement)
+  for (let i = 0; i < workoutSeeds.length; i += 20) {
+    const chunk = workoutSeeds.slice(i, i + 20);
+    const placeholders = chunk.map(() => '(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0)').join(', ');
+    const params: any[] = [];
+    for (const w of chunk) {
+      params.push(
+        w.id,
+        w.planId,
+        w.name,
+        w.week,
+        w.dayNumber, // Use dayNumber as the 'day' field (absolute day 1–365)
+        JSON.stringify(w.exercises),
+        w.difficulty,
+        w.xpValue,
+        JSON.stringify(w.stats),
+        now
+      );
+    }
+    await db.runAsync(
+      `INSERT OR REPLACE INTO workouts (id, plan_id, name, week, day, exercises_json, difficulty, xp_value, stats, updated_at, synced)
+       VALUES ${placeholders};`,
+      params
+    );
+  }
+}
+
+/**
+ * Activate or switch a workout plan directly.
+ * Ensures profile columns exist, updates selected_plan and plan_start_date, and seeds the workouts.
+ */
+export async function activateWorkoutPlan(
+  db: SQLiteDatabase,
+  planType: PlanType
+): Promise<void> {
+  const now = new Date().toISOString();
+  const today = now.split('T')[0];
+  const effectivePlan: PlanType = planType === '365day' ? '365day' : '100day';
+
+  // Defensive migration
+  const columns = [
+    'ALTER TABLE profiles ADD COLUMN selected_plan TEXT;',
+    'ALTER TABLE profiles ADD COLUMN plan_start_date TEXT;',
+    'ALTER TABLE profiles ADD COLUMN onboarding_complete INTEGER NOT NULL DEFAULT 0;',
+  ];
+  for (const sql of columns) {
+    try {
+      await db.execAsync(sql);
+    } catch {}
+  }
+
+  // Update profile unconditionally
+  await db.runAsync(
+    `UPDATE profiles SET
+      selected_plan = ?,
+      plan_start_date = COALESCE(plan_start_date, ?),
+      onboarding_complete = 1,
+      updated_at = ?,
+      synced = 0;`,
+    [effectivePlan, today, now]
+  );
+
+  // Seed workouts (non-fatal)
+  try {
+    await seedWorkoutsForPlan(db, effectivePlan, today);
+  } catch (seedErr) {
+    console.error('[DB] seedWorkoutsForPlan in activatePlan error:', seedErr);
+  }
+}
+
+/**
+ * Get the current plan's metadata.
+ */
+export async function getActivePlan(db: SQLiteDatabase): Promise<WorkoutPlan | null> {
+  return await db.getFirstAsync<WorkoutPlan>('SELECT * FROM workout_plans LIMIT 1;');
+}
+
+/**
+ * Calculate the current day number based on plan start date.
+ */
+export function calculateCurrentDayNumber(planStartDate: string): number {
+  const start = new Date(planStartDate + 'T00:00:00');
+  const now = new Date();
+  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const diffMs = today.getTime() - start.getTime();
+  const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+  return diffDays + 1; // Day 1 is the start date
+}
+
+/**
+ * Get today's workout based on the plan start date.
+ */
+export async function getTodayWorkout(
+  db: SQLiteDatabase,
+  planStartDate: string
+): Promise<Workout | null> {
+  const dayNumber = calculateCurrentDayNumber(planStartDate);
+  return await db.getFirstAsync<Workout>(
+    'SELECT * FROM workouts WHERE day = ? LIMIT 1;',
+    [dayNumber]
+  );
+}
+
+/**
+ * Get workouts for a specific week number.
+ */
+export async function getWeekWorkouts(
+  db: SQLiteDatabase,
+  weekNumber: number
+): Promise<Workout[]> {
+  return await db.getAllAsync<Workout>(
+    'SELECT * FROM workouts WHERE week = ? ORDER BY day ASC;',
+    [weekNumber]
+  );
+}
+
+/**
+ * Get all workouts in a day range (for calendar view).
+ */
+export async function getWorkoutsInRange(
+  db: SQLiteDatabase,
+  startDay: number,
+  endDay: number
+): Promise<Workout[]> {
+  return await db.getAllAsync<Workout>(
+    'SELECT * FROM workouts WHERE day >= ? AND day <= ? ORDER BY day ASC;',
+    [startDay, endDay]
+  );
+}
+
+/**
+ * Get all completed workout log IDs for checking completion status.
+ */
+export async function getCompletedWorkoutIds(db: SQLiteDatabase): Promise<Set<string>> {
+  const logs = await db.getAllAsync<{ workout_id: string }>(
+    'SELECT DISTINCT workout_id FROM workout_logs;'
+  );
+  return new Set(logs.map((l) => l.workout_id));
+}
+
+/**
+ * Get progress info for the current plan.
+ */
+export async function getCurrentPlanProgress(
+  db: SQLiteDatabase
+): Promise<{
+  planType: PlanType | null;
+  planName: string;
+  currentDay: number;
+  totalDays: number;
+  currentWeek: number;
+  totalWeeks: number;
+  phase: string;
+  difficulty: string;
+  completedCount: number;
+  progressPercent: number;
+} | null> {
+  const profile = await getProfile(db);
+  if (!profile?.selected_plan || !profile?.plan_start_date) return null;
+
+  const planType = profile.selected_plan as PlanType;
+  const meta = PLAN_METADATA[planType];
+  const currentDay = calculateCurrentDayNumber(profile.plan_start_date);
+  const clampedDay = Math.min(currentDay, meta.totalDays);
+  const currentWeek = Math.ceil(clampedDay / 7);
+  const totalWeeks = Math.ceil(meta.totalDays / 7);
+  const phaseInfo = getPlanPhaseInfo(planType, clampedDay);
+
+  const completedResult = await db.getFirstAsync<{ count: number }>(
+    'SELECT COUNT(*) as count FROM workout_logs;'
+  );
+  const completedCount = completedResult?.count ?? 0;
+
+  return {
+    planType,
+    planName: meta.name,
+    currentDay: clampedDay,
+    totalDays: meta.totalDays,
+    currentWeek,
+    totalWeeks,
+    phase: phaseInfo.name,
+    difficulty: phaseInfo.difficulty,
+    completedCount,
+    progressPercent: Math.round((clampedDay / meta.totalDays) * 100),
+  };
+}
+
+// Legacy compatibility wrappers
 export async function getWorkoutPlans(db: SQLiteDatabase): Promise<WorkoutPlan[]> {
   return await db.getAllAsync<WorkoutPlan>('SELECT * FROM workout_plans ORDER BY weeks ASC;');
 }
@@ -584,11 +913,17 @@ export async function getPastWeekActivity(db: SQLiteDatabase): Promise<DayActivi
       [dateStr]
     );
 
+    const stepCount = await db.getFirstAsync<{ count: number }>(
+      'SELECT COUNT(*) as count FROM daily_steps WHERE date = ? AND (steps >= 1000 OR is_goal_reached = 1);',
+      [dateStr]
+    );
+
     const hasActivity =
       (questCount?.count ?? 0) > 0 ||
       (workoutCount?.count ?? 0) > 0 ||
       (actCount?.count ?? 0) > 0 ||
-      (mealCount?.count ?? 0) > 0;
+      (mealCount?.count ?? 0) > 0 ||
+      (stepCount?.count ?? 0) > 0;
 
     results.push({
       date: dateStr,
@@ -599,6 +934,77 @@ export async function getPastWeekActivity(db: SQLiteDatabase): Promise<DayActivi
   }
 
   return results;
+}
+
+// --- DAILY STEPS OPERATIONS ---
+
+export async function getTodaySteps(db: SQLiteDatabase, dateStr?: string): Promise<DailySteps> {
+  const date = dateStr ?? new Date().toISOString().split('T')[0];
+  const now = new Date().toISOString();
+
+  let stepRecord = await db.getFirstAsync<DailySteps>(
+    'SELECT * FROM daily_steps WHERE date = ? LIMIT 1;',
+    [date]
+  );
+
+  if (!stepRecord) {
+    const id = Crypto.randomUUID();
+    await db.runAsync(
+      `INSERT INTO daily_steps (id, date, steps, target_steps, distance_km, calories_burned, is_goal_reached, updated_at, synced)
+       VALUES (?, ?, 0, 10000, 0, 0, 0, ?, 0);`,
+      [id, date, now]
+    );
+    stepRecord = await db.getFirstAsync<DailySteps>('SELECT * FROM daily_steps WHERE id = ?;', [id]);
+  }
+
+  return stepRecord!;
+}
+
+export async function updateTodaySteps(
+  db: SQLiteDatabase,
+  steps: number,
+  distance_km?: number,
+  calories_burned?: number,
+  dateStr?: string
+): Promise<{ stepRecord: DailySteps; goalJustReached: boolean }> {
+  const date = dateStr ?? new Date().toISOString().split('T')[0];
+  const now = new Date().toISOString();
+
+  const current = await getTodaySteps(db, date);
+  const target = current.target_steps || 10000;
+  const isGoalReached = steps >= target ? 1 : 0;
+  const goalJustReached = current.is_goal_reached === 0 && isGoalReached === 1;
+
+  // Conversions if not provided
+  const dist = distance_km !== undefined ? distance_km : Number(((steps * 0.762) / 1000).toFixed(2));
+  const cal = calories_burned !== undefined ? calories_burned : Number((steps * 0.04).toFixed(1));
+
+  await db.runAsync(
+    `UPDATE daily_steps SET
+      steps = ?,
+      distance_km = ?,
+      calories_burned = ?,
+      is_goal_reached = ?,
+      updated_at = ?,
+      synced = 0
+     WHERE id = ?;`,
+    [steps, dist, cal, isGoalReached, now, current.id]
+  );
+
+  if (isGoalReached === 1) {
+    // Update step streak when 10k goal is reached
+    await updateStreak(db, 'steps');
+  }
+
+  const updated = (await getTodaySteps(db, date))!;
+  return { stepRecord: updated, goalJustReached };
+}
+
+export async function getStepsHistory(db: SQLiteDatabase, limitDays: number = 7): Promise<DailySteps[]> {
+  return await db.getAllAsync<DailySteps>(
+    'SELECT * FROM daily_steps ORDER BY date DESC LIMIT ?;',
+    [limitDays]
+  );
 }
 
 // --- SYNC ENGINE HELPERS ---

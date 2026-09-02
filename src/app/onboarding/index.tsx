@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   StyleSheet,
   Text,
@@ -8,10 +8,11 @@ import {
   ScrollView,
   SafeAreaView,
   Alert,
+  Platform,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useSQLiteContext } from 'expo-sqlite';
-import { type ActivityLevel, type GoalType, type Sex } from '@/types';
+import { type ActivityLevel, type GoalType, type Sex, type PlanType } from '@/types';
 import {
   ACTIVITY_LEVEL_OPTIONS,
   GOAL_CONFIG,
@@ -19,7 +20,7 @@ import {
   calculateTDEE,
   calculateMacros,
 } from '@/lib/calculations/bmr';
-import { updateProfileOnboarding } from '@/db/operations';
+import { updateProfileOnboarding, getProfile } from '@/db/operations';
 import { Fonts, Spacing } from '@/constants/theme';
 
 const GOAL_OPTIONS: { value: GoalType; title: string; emoji: string; subtitle: string; tag: string }[] = [
@@ -32,16 +33,16 @@ const GOAL_OPTIONS: { value: GoalType; title: string; emoji: string; subtitle: s
   },
   {
     value: 'maintain',
-    title: 'MAINTAIN WEIGHT (BALANCE)',
+    title: 'MAINTAIN WEIGHT (ENERGY BALANCE)',
     emoji: '⚖️',
-    subtitle: 'Equal energy balance (0 offset) to maintain current weight and optimize performance.',
+    subtitle: 'Balanced caloric maintenance to sustain current weight and build steady physical baseline.',
     tag: 'TDEE MATCH',
   },
   {
     value: 'gain_weight',
-    title: 'GAIN WEIGHT (SURPLUS)',
-    emoji: '💪',
-    subtitle: 'Calorie surplus (+500 kcal) with high carbohydrates to build mass and power.',
+    title: 'GAIN WEIGHT (BULK)',
+    emoji: '⚔️',
+    subtitle: 'Caloric surplus (+500 kcal) paired with combat stimulus to build massive strength & size.',
     tag: '+500 KCAL / DAY',
   },
 ];
@@ -50,7 +51,7 @@ export default function OnboardingScreen() {
   const router = useRouter();
   const db = useSQLiteContext();
 
-  const [step, setStep] = useState<1 | 2 | 3 | 4>(1);
+  const [step, setStep] = useState<1 | 2 | 3 | 4 | 5>(1);
 
   // Form State
   const [username, setUsername] = useState('Sung Jin-Woo');
@@ -60,6 +61,29 @@ export default function OnboardingScreen() {
   const [weightKg, setWeightKg] = useState('75');
   const [activityLevel, setActivityLevel] = useState<ActivityLevel>('moderately_active');
   const [goalType, setGoalType] = useState<GoalType>('maintain');
+  const [selectedPlan, setSelectedPlan] = useState<PlanType>('100day');
+
+  // Preload existing profile for seamless recalibration
+  useEffect(() => {
+    async function loadExisting() {
+      try {
+        const p = await getProfile(db);
+        if (p) {
+          if (p.username) setUsername(p.username);
+          if (p.sex) setSex(p.sex);
+          if (p.age) setAge(String(p.age));
+          if (p.height_cm) setHeightCm(String(p.height_cm));
+          if (p.weight_kg) setWeightKg(String(p.weight_kg));
+          if (p.activity_level) setActivityLevel(p.activity_level);
+          if (p.goal_type) setGoalType(p.goal_type);
+          if (p.selected_plan) setSelectedPlan(p.selected_plan);
+        }
+      } catch (err) {
+        console.warn('Failed to load profile for recalibration:', err);
+      }
+    }
+    loadExisting();
+  }, [db]);
 
   // Computed results
   const parsedAge = parseInt(age, 10) || 25;
@@ -81,11 +105,17 @@ export default function OnboardingScreen() {
       setStep(3);
     } else if (step === 3) {
       setStep(4);
+    } else if (step === 4) {
+      setStep(5);
     }
   };
 
+  const [saving, setSaving] = useState(false);
+
   const handleFinish = async () => {
+    if (saving) return;
     try {
+      setSaving(true);
       await updateProfileOnboarding(db, {
         username: username.trim() || 'Hunter',
         age: parsedAge,
@@ -94,11 +124,20 @@ export default function OnboardingScreen() {
         sex,
         activity_level: activityLevel,
         goal_type: goalType,
+        selected_plan: selectedPlan,
       });
 
-      router.replace('/(tabs)');
+      // On Web, force a direct reload to root so all SQLite cache and tab screens refresh immediately
+      if (Platform.OS === 'web' && typeof window !== 'undefined') {
+        window.location.href = '/';
+      } else {
+        router.replace('/(tabs)');
+      }
     } catch (err: any) {
+      console.error('[Onboarding] handleFinish error:', err);
       Alert.alert('Initialization Failed', err?.message ?? 'Could not initialize Hunter profile');
+    } finally {
+      setSaving(false);
     }
   };
 
@@ -109,10 +148,11 @@ export default function OnboardingScreen() {
         <View style={styles.header}>
           <Text style={styles.systemTitle}>[ SYSTEM CALIBRATION ]</Text>
           <Text style={styles.systemSubtitle}>
-            {step === 1 && 'STEP 1/4: SCANNING HUNTER PHYSIQUE'}
-            {step === 2 && 'STEP 2/4: ANALYZING COMBAT ACTIVITY'}
-            {step === 3 && 'STEP 3/4: SELECT PRIMARY DIRECTIVE'}
-            {step === 4 && 'STEP 4/4: SYSTEM INITIALIZATION READY'}
+            {step === 1 && 'STEP 1/5: SCANNING HUNTER PHYSIQUE'}
+            {step === 2 && 'STEP 2/5: ANALYZING COMBAT ACTIVITY'}
+            {step === 3 && 'STEP 3/5: SELECT PRIMARY DIRECTIVE'}
+            {step === 4 && 'STEP 4/5: SELECT TRAINING PROTOCOL'}
+            {step === 5 && 'STEP 5/5: SYSTEM INITIALIZATION READY'}
           </Text>
         </View>
 
@@ -266,8 +306,73 @@ export default function OnboardingScreen() {
           </View>
         )}
 
-        {/* STEP 4: RESULTS / SYSTEM CONFIRMATION */}
+        {/* STEP 4: TRAINING PLAN SELECTION */}
         {step === 4 && (
+          <View style={styles.card}>
+            <Text style={styles.cardHeader}>TRAINING PROTOCOL</Text>
+
+            <View style={styles.planList}>
+              {/* 100-Day Plan */}
+              <TouchableOpacity
+                style={[styles.planOption, selectedPlan === '100day' && styles.planOptionActive]}
+                onPress={() => setSelectedPlan('100day')}
+                activeOpacity={0.8}
+              >
+                <View style={styles.planTopRow}>
+                  <View style={styles.planTitleGroup}>
+                    <Text style={styles.planEmoji}>⚡</Text>
+                    <Text style={[styles.planTitle, selectedPlan === '100day' && styles.planTitleActive]}>
+                      SHADOW AWAKENING
+                    </Text>
+                  </View>
+                  <View style={[styles.planDaysBadge, selectedPlan === '100day' && styles.planDaysBadgeActive]}>
+                    <Text style={[styles.planDaysText, selectedPlan === '100day' && styles.planDaysTextActive]}>
+                      100 DAYS
+                    </Text>
+                  </View>
+                </View>
+                <Text style={styles.planSubtitle}>
+                  Fast-track home transformation. 14 weeks of escalating bodyweight training from
+                  foundation to explosive power. 6 days on, 1 day recovery.
+                </Text>
+                <View style={styles.planPhases}>
+                  <Text style={styles.planPhaseTag}>Foundation → Strength → Power → Final Trial</Text>
+                </View>
+              </TouchableOpacity>
+
+              {/* 365-Day Plan */}
+              <TouchableOpacity
+                style={[styles.planOption, selectedPlan === '365day' && styles.planOptionActive]}
+                onPress={() => setSelectedPlan('365day')}
+                activeOpacity={0.8}
+              >
+                <View style={styles.planTopRow}>
+                  <View style={styles.planTitleGroup}>
+                    <Text style={styles.planEmoji}>👑</Text>
+                    <Text style={[styles.planTitle, selectedPlan === '365day' && styles.planTitleActive]}>
+                      MONARCH'S ASCENSION
+                    </Text>
+                  </View>
+                  <View style={[styles.planDaysBadge, selectedPlan === '365day' && styles.planDaysBadgeActive]}>
+                    <Text style={[styles.planDaysText, selectedPlan === '365day' && styles.planDaysTextActive]}>
+                      365 DAYS
+                    </Text>
+                  </View>
+                </View>
+                <Text style={styles.planSubtitle}>
+                  The full year journey. 52 weeks of progressive home training — evolve from E-Rank
+                  to S-Rank worthy. Master every physical discipline.
+                </Text>
+                <View style={styles.planPhases}>
+                  <Text style={styles.planPhaseTag}>Awakening → Hunter → Shadow Soldier → Elite → Monarch</Text>
+                </View>
+              </TouchableOpacity>
+            </View>
+          </View>
+        )}
+
+        {/* STEP 5: RESULTS / SYSTEM CONFIRMATION */}
+        {step === 5 && (
           <View style={styles.card}>
             <Text style={styles.cardHeader}>CALIBRATION COMPLETE</Text>
 
@@ -284,6 +389,22 @@ export default function OnboardingScreen() {
               </View>
               <Text style={styles.selectedGoalOffset}>
                 {GOAL_CONFIG[goalType].calorieOffset > 0 ? `+${GOAL_CONFIG[goalType].calorieOffset}` : GOAL_CONFIG[goalType].calorieOffset} kcal
+              </Text>
+            </View>
+
+            {/* Selected Plan Banner */}
+            <View style={styles.selectedPlanBanner}>
+              <Text style={styles.selectedGoalEmoji}>
+                {selectedPlan === '100day' ? '⚡' : '👑'}
+              </Text>
+              <View style={{ flex: 1 }}>
+                <Text style={styles.selectedGoalTag}>TRAINING PROTOCOL</Text>
+                <Text style={styles.selectedGoalName}>
+                  {selectedPlan === '100day' ? 'SHADOW AWAKENING' : "MONARCH'S ASCENSION"}
+                </Text>
+              </View>
+              <Text style={styles.selectedPlanDays}>
+                {selectedPlan === '100day' ? '100' : '365'} DAYS
               </Text>
             </View>
 
@@ -334,13 +455,19 @@ export default function OnboardingScreen() {
             </TouchableOpacity>
           )}
 
-          {step < 4 ? (
+          {step < 5 ? (
             <TouchableOpacity style={styles.nextBtn} onPress={handleNext}>
               <Text style={styles.nextBtnText}>NEXT STEP →</Text>
             </TouchableOpacity>
           ) : (
-            <TouchableOpacity style={styles.awakenBtn} onPress={handleFinish}>
-              <Text style={styles.awakenBtnText}>⚔️ AWAKEN AS HUNTER</Text>
+            <TouchableOpacity
+              style={[styles.awakenBtn, saving && { opacity: 0.6 }]}
+              onPress={handleFinish}
+              disabled={saving}
+            >
+              <Text style={styles.awakenBtnText}>
+                {saving ? '⚡ INITIALIZING PROTOCOL...' : '⚔️ AWAKEN AS HUNTER'}
+              </Text>
             </TouchableOpacity>
           )}
         </View>
@@ -707,5 +834,105 @@ const styles = StyleSheet.create({
     fontWeight: '900',
     fontSize: 15,
     letterSpacing: 1.5,
+  },
+  // Plan selection styles
+  planList: {
+    gap: Spacing.two,
+  },
+  planOption: {
+    backgroundColor: '#090E1A',
+    borderWidth: 1.5,
+    borderColor: '#172B4C',
+    borderRadius: 10,
+    padding: 14,
+    gap: 8,
+  },
+  planOptionActive: {
+    borderColor: '#00F0FF',
+    backgroundColor: 'rgba(0, 240, 255, 0.08)',
+    shadowColor: '#00F0FF',
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 4,
+  },
+  planTopRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  planTitleGroup: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    flex: 1,
+  },
+  planEmoji: {
+    fontSize: 20,
+  },
+  planTitle: {
+    fontSize: 14,
+    fontWeight: '900',
+    color: '#B0C8E8',
+    fontFamily: Fonts.mono,
+    letterSpacing: 0.5,
+  },
+  planTitleActive: {
+    color: '#00F0FF',
+  },
+  planDaysBadge: {
+    backgroundColor: '#0E1729',
+    borderWidth: 1,
+    borderColor: '#1D355E',
+    borderRadius: 6,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+  },
+  planDaysBadgeActive: {
+    borderColor: '#00F0FF',
+    backgroundColor: 'rgba(0, 240, 255, 0.15)',
+  },
+  planDaysText: {
+    fontSize: 10,
+    fontFamily: Fonts.mono,
+    color: '#5E7D9E',
+    fontWeight: '800',
+  },
+  planDaysTextActive: {
+    color: '#00F0FF',
+  },
+  planSubtitle: {
+    fontSize: 11,
+    color: '#6582A6',
+    lineHeight: 16,
+  },
+  planPhases: {
+    backgroundColor: '#0A0F1C',
+    borderRadius: 6,
+    paddingVertical: 6,
+    paddingHorizontal: 10,
+    alignSelf: 'flex-start',
+  },
+  planPhaseTag: {
+    fontSize: 9,
+    fontFamily: Fonts.mono,
+    color: '#00A8FF',
+    letterSpacing: 0.5,
+  },
+  selectedPlanBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(0, 240, 255, 0.06)',
+    borderWidth: 1,
+    borderColor: '#00F0FF',
+    borderRadius: 8,
+    padding: 10,
+    gap: 10,
+  },
+  selectedPlanDays: {
+    fontSize: 11,
+    fontFamily: Fonts.mono,
+    fontWeight: '800',
+    color: '#00F0FF',
   },
 });

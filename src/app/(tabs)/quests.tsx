@@ -135,20 +135,20 @@ export default function QuestsScreen() {
         {/* HEADER */}
         <View style={styles.header}>
           <View>
-            <Text style={styles.systemTag}>DAILY DIRECTIVES</Text>
-            <Text style={styles.title}>SYSTEM QUESTS</Text>
+            <Text style={styles.systemTag}>Daily</Text>
+            <Text style={styles.title}>Quests</Text>
           </View>
           <TouchableOpacity style={styles.addBtn} onPress={() => setModalVisible(true)}>
-            <Text style={styles.addBtnText}>+ CUSTOM QUEST</Text>
+            <Text style={styles.addBtnText}>+ New Quest</Text>
           </TouchableOpacity>
         </View>
 
         {/* PROGRESS OVERVIEW */}
         <View style={styles.progressCard}>
           <View style={styles.progressRow}>
-            <Text style={styles.progressLabel}>TODAY'S OBJECTIVES</Text>
+            <Text style={styles.progressLabel}>Today's progress</Text>
             <Text style={styles.progressValue}>
-              {completedCount} / {quests.length} COMPLETED
+              {completedCount} / {quests.length} done
             </Text>
           </View>
           <View style={styles.barTrack}>
@@ -222,7 +222,7 @@ export default function QuestsScreen() {
 
                 {quest.is_completed === 1 ? (
                   <View style={styles.completedBadge}>
-                    <Text style={styles.completedText}>✓ OBJECTIVE ACCOMPLISHED</Text>
+                    <Text style={styles.completedText}>✓ Done</Text>
                   </View>
                 ) : quest.title.toLowerCase().includes('step') && todaySteps < 10000 ? (
                   <TouchableOpacity
@@ -230,7 +230,7 @@ export default function QuestsScreen() {
                     onPress={() => handleStartClaim(quest)}
                   >
                     <Text style={styles.stepIncompleteText}>
-                      {(10000 - todaySteps).toLocaleString()} STEPS REMAINING (CLAIM EXP) →
+                      {(10000 - todaySteps).toLocaleString()} steps remaining
                     </Text>
                   </TouchableOpacity>
                 ) : (
@@ -238,7 +238,7 @@ export default function QuestsScreen() {
                     style={styles.completeBtn}
                     onPress={() => handleStartClaim(quest)}
                   >
-                    <Text style={styles.completeBtnText}>CLAIM EXP & COMPLETE →</Text>
+                    <Text style={styles.completeBtnText}>Complete Quest</Text>
                   </TouchableOpacity>
                 )}
               </View>
@@ -251,11 +251,11 @@ export default function QuestsScreen() {
       <Modal visible={modalVisible} animationType="slide" transparent>
         <View style={styles.modalOverlay}>
           <View style={styles.modalContent}>
-            <Text style={styles.modalTitle}>[ CREATE CUSTOM QUEST ]</Text>
+            <Text style={styles.modalTitle}>New Quest</Text>
 
             <View style={styles.modalForm}>
               <View style={styles.inputGroup}>
-                <Text style={styles.inputLabel}>QUEST TITLE</Text>
+                <Text style={styles.inputLabel}>Quest title</Text>
                 <TextInput
                   style={styles.textInput}
                   placeholder="e.g. Read 20 pages"
@@ -266,7 +266,7 @@ export default function QuestsScreen() {
               </View>
 
               <View style={styles.inputGroup}>
-                <Text style={styles.inputLabel}>DESCRIPTION (OPTIONAL)</Text>
+                <Text style={styles.inputLabel}>Description (optional)</Text>
                 <TextInput
                   style={styles.textInput}
                   placeholder="Details or requirements"
@@ -278,7 +278,7 @@ export default function QuestsScreen() {
 
               {/* STAT TARGET */}
               <View style={styles.inputGroup}>
-                <Text style={styles.inputLabel}>REWARD STAT</Text>
+                <Text style={styles.inputLabel}>Reward stat</Text>
                 <View style={styles.statSelector}>
                   {[Stat.STR, Stat.VIT, Stat.AGI, Stat.INT, Stat.PER].map((s) => (
                     <TouchableOpacity
@@ -299,7 +299,7 @@ export default function QuestsScreen() {
 
               {/* XP REWARD */}
               <View style={styles.inputGroup}>
-                <Text style={styles.inputLabel}>EXP REWARD (10-100)</Text>
+                <Text style={styles.inputLabel}>EXP reward (10–100)</Text>
                 <TextInput
                   style={styles.textInput}
                   keyboardType="numeric"
@@ -316,11 +316,11 @@ export default function QuestsScreen() {
                 style={styles.cancelBtn}
                 onPress={() => setModalVisible(false)}
               >
-                <Text style={styles.cancelBtnText}>CANCEL</Text>
+                <Text style={styles.cancelBtnText}>Cancel</Text>
               </TouchableOpacity>
 
               <TouchableOpacity style={styles.createBtn} onPress={handleCreateQuest}>
-                <Text style={styles.createBtnText}>INITIALIZE QUEST</Text>
+                <Text style={styles.createBtnText}>Create Quest</Text>
               </TouchableOpacity>
             </View>
           </View>
@@ -346,11 +346,11 @@ export default function QuestsScreen() {
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: '#070B14',
+    backgroundColor: '#0B1120',
   },
   container: {
-    padding: Spacing.three,
-    gap: Spacing.three,
+    padding: Spacing.threeHalf,
+    gap: Spacing.threeHalf,
     paddingBottom: Spacing.six,
   },
   header: {
@@ -360,63 +360,62 @@ const styles = StyleSheet.create({
     marginTop: Spacing.two,
   },
   systemTag: {
-    fontSize: 10,
-    fontFamily: Fonts.mono,
+    fontSize: 12,
+    fontFamily: Fonts.sans,
     color: '#00A8FF',
-    letterSpacing: 1.5,
+    fontWeight: '600',
   },
   title: {
-    fontSize: 22,
-    fontWeight: '900',
-    color: '#E0E8FF',
-    letterSpacing: 1,
+    fontSize: 24,
+    fontWeight: '700',
+    fontFamily: Fonts.sans,
+    color: '#E8ECF4',
   },
   addBtn: {
-    backgroundColor: '#0D1424',
+    backgroundColor: '#111827',
     borderWidth: 1,
-    borderColor: '#00A8FF',
-    borderRadius: 8,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
+    borderColor: 'rgba(0, 168, 255, 0.3)',
+    borderRadius: 10,
+    paddingHorizontal: 14,
+    paddingVertical: 9,
   },
   addBtnText: {
-    fontSize: 11,
-    fontFamily: Fonts.mono,
-    fontWeight: '800',
-    color: '#00F0FF',
-    letterSpacing: 0.5,
+    fontSize: 13,
+    fontFamily: Fonts.sans,
+    fontWeight: '600',
+    color: '#00A8FF',
   },
   progressCard: {
-    backgroundColor: '#0D1424',
+    backgroundColor: '#111827',
     borderWidth: 1,
-    borderColor: '#19315A',
-    borderRadius: 10,
-    padding: Spacing.three,
-    gap: 8,
+    borderColor: '#1E293B',
+    borderRadius: 14,
+    padding: Spacing.threeHalf,
+    gap: 10,
   },
   progressRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
   },
   progressLabel: {
-    fontSize: 10,
-    fontFamily: Fonts.mono,
-    color: '#6582A6',
-    letterSpacing: 1,
+    fontSize: 12,
+    fontFamily: Fonts.sans,
+    color: '#8896AB',
+    fontWeight: '500',
   },
   progressValue: {
-    fontSize: 12,
+    fontSize: 13,
     fontFamily: Fonts.mono,
-    fontWeight: '800',
-    color: '#00F0FF',
+    fontWeight: '700',
+    color: '#00A8FF',
   },
   barTrack: {
     height: 8,
-    backgroundColor: '#090E1A',
+    backgroundColor: '#0E1726',
     borderRadius: 4,
     overflow: 'hidden',
     borderWidth: 1,
-    borderColor: '#14223A',
+    borderColor: '#1E293B',
   },
   barFill: {
     height: '100%',
@@ -424,18 +423,18 @@ const styles = StyleSheet.create({
     borderRadius: 3,
   },
   questList: {
-    gap: Spacing.two,
+    gap: Spacing.three,
   },
   questCard: {
-    backgroundColor: '#0D1424',
-    borderWidth: 1.5,
-    borderColor: '#1A2E50',
-    borderRadius: 10,
-    padding: Spacing.three,
-    gap: 8,
+    backgroundColor: '#111827',
+    borderWidth: 1,
+    borderColor: '#1E293B',
+    borderRadius: 14,
+    padding: Spacing.threeHalf,
+    gap: 10,
   },
   questCardCompleted: {
-    borderColor: '#122438',
+    borderColor: '#1A2332',
     opacity: 0.7,
   },
   questHeader: {
@@ -445,128 +444,127 @@ const styles = StyleSheet.create({
   },
   statTag: {
     borderWidth: 1,
-    borderRadius: 6,
-    paddingHorizontal: 8,
-    paddingVertical: 2,
-    backgroundColor: '#090E1A',
+    borderRadius: 8,
+    paddingHorizontal: 10,
+    paddingVertical: 3,
+    backgroundColor: '#0E1726',
   },
   statTagText: {
     fontSize: 11,
     fontFamily: Fonts.mono,
-    fontWeight: '900',
+    fontWeight: '800',
   },
   categoryTag: {
-    fontSize: 10,
-    fontFamily: Fonts.mono,
-    color: '#556F91',
-    letterSpacing: 1,
+    fontSize: 11,
+    fontFamily: Fonts.sans,
+    color: '#6B7B8F',
+    fontWeight: '500',
   },
   questTitle: {
     fontSize: 16,
-    fontWeight: '800',
-    color: '#E0E8FF',
+    fontWeight: '700',
+    fontFamily: Fonts.sans,
+    color: '#E8ECF4',
   },
   questTitleCompleted: {
     textDecorationLine: 'line-through',
-    color: '#6582A6',
+    color: '#8896AB',
   },
   questDesc: {
-    fontSize: 12,
-    color: '#7A96BA',
+    fontSize: 13,
+    fontFamily: Fonts.sans,
+    color: '#8896AB',
   },
   completedBadge: {
-    backgroundColor: 'rgba(0, 255, 136, 0.1)',
+    backgroundColor: 'rgba(0, 255, 136, 0.06)',
     borderWidth: 1,
-    borderColor: '#00FF88',
-    borderRadius: 6,
-    paddingVertical: 8,
-    alignItems: 'center',
-  },
-  completedText: {
-    fontFamily: Fonts.mono,
-    fontSize: 11,
-    fontWeight: '800',
-    color: '#00FF88',
-    letterSpacing: 1,
-  },
-  completeBtn: {
-    backgroundColor: '#0055AA',
-    borderWidth: 1,
-    borderColor: '#00A8FF',
-    borderRadius: 6,
+    borderColor: 'rgba(0, 255, 136, 0.25)',
+    borderRadius: 10,
     paddingVertical: 10,
     alignItems: 'center',
   },
+  completedText: {
+    fontFamily: Fonts.sans,
+    fontSize: 13,
+    fontWeight: '600',
+    color: '#00FF88',
+  },
+  completeBtn: {
+    backgroundColor: '#0066BB',
+    borderWidth: 1,
+    borderColor: '#00A8FF',
+    borderRadius: 12,
+    paddingVertical: 12,
+    alignItems: 'center',
+  },
   completeBtnText: {
-    fontFamily: Fonts.mono,
-    fontSize: 12,
-    fontWeight: '900',
+    fontFamily: Fonts.sans,
+    fontSize: 14,
+    fontWeight: '700',
     color: '#FFFFFF',
-    letterSpacing: 1,
   },
   modalOverlay: {
     flex: 1,
     backgroundColor: 'rgba(0,0,0,0.85)',
     justifyContent: 'center',
-    padding: Spacing.three,
+    padding: Spacing.threeHalf,
   },
   modalContent: {
-    backgroundColor: '#0D1424',
-    borderWidth: 1.5,
-    borderColor: '#00A8FF',
-    borderRadius: 14,
+    backgroundColor: '#111827',
+    borderWidth: 1,
+    borderColor: '#1E293B',
+    borderRadius: 18,
     padding: Spacing.four,
     gap: Spacing.three,
   },
   modalTitle: {
-    fontSize: 15,
-    fontWeight: '900',
-    fontFamily: Fonts.mono,
-    color: '#00F0FF',
+    fontSize: 18,
+    fontWeight: '700',
+    fontFamily: Fonts.sans,
+    color: '#E8ECF4',
     textAlign: 'center',
-    letterSpacing: 1.5,
   },
   modalForm: {
-    gap: Spacing.two,
+    gap: Spacing.three,
   },
   inputGroup: {
     gap: 6,
   },
   inputLabel: {
-    fontSize: 10,
-    fontFamily: Fonts.mono,
-    color: '#7A96BA',
-    letterSpacing: 1,
+    fontSize: 12,
+    fontFamily: Fonts.sans,
+    color: '#8896AB',
+    fontWeight: '500',
   },
   textInput: {
-    backgroundColor: '#090E1A',
+    backgroundColor: '#0E1726',
     borderWidth: 1,
-    borderColor: '#1C335C',
-    borderRadius: 8,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-    color: '#E0E8FF',
-    fontFamily: Fonts.mono,
-    fontSize: 14,
+    borderColor: '#1E293B',
+    borderRadius: 10,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    color: '#E8ECF4',
+    fontFamily: Fonts.sans,
+    fontSize: 15,
   },
   statSelector: {
     flexDirection: 'row',
-    gap: 6,
+    gap: 8,
   },
   statOption: {
     flex: 1,
-    backgroundColor: '#090E1A',
+    backgroundColor: '#0E1726',
     borderWidth: 1,
-    borderColor: '#1C335C',
-    borderRadius: 6,
-    paddingVertical: 8,
+    borderColor: '#1E293B',
+    borderRadius: 10,
+    paddingVertical: 10,
     alignItems: 'center',
   },
   statOptionText: {
-    fontSize: 12,
+    fontSize: 13,
     fontFamily: Fonts.mono,
-    fontWeight: '900',
-    color: '#556F91',
+    fontWeight: '800',
+    color: '#6B7B8F',
   },
   modalButtons: {
     flexDirection: 'row',
@@ -575,39 +573,38 @@ const styles = StyleSheet.create({
   },
   cancelBtn: {
     flex: 1,
-    backgroundColor: '#090E1A',
+    backgroundColor: '#0E1726',
     borderWidth: 1,
-    borderColor: '#1C335C',
-    borderRadius: 8,
-    paddingVertical: 12,
+    borderColor: '#1E293B',
+    borderRadius: 12,
+    paddingVertical: 14,
     alignItems: 'center',
   },
   cancelBtnText: {
-    fontFamily: Fonts.mono,
-    fontSize: 12,
-    fontWeight: '700',
-    color: '#7A96BA',
+    fontFamily: Fonts.sans,
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#8896AB',
   },
   createBtn: {
     flex: 2,
     backgroundColor: '#00A8FF',
-    borderRadius: 8,
-    paddingVertical: 12,
+    borderRadius: 12,
+    paddingVertical: 14,
     alignItems: 'center',
   },
   createBtnText: {
-    fontFamily: Fonts.mono,
-    fontSize: 12,
-    fontWeight: '900',
-    color: '#070B14',
-    letterSpacing: 1,
+    fontFamily: Fonts.sans,
+    fontSize: 14,
+    fontWeight: '700',
+    color: '#0B1120',
   },
   stepProgressContainer: {
-    backgroundColor: '#090E1A',
+    backgroundColor: '#0E1726',
     borderWidth: 1,
-    borderColor: '#182C4A',
-    borderRadius: 8,
-    padding: 10,
+    borderColor: '#1E293B',
+    borderRadius: 10,
+    padding: 12,
     gap: 6,
     marginTop: 4,
   },
@@ -617,21 +614,20 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   stepProgressLabel: {
-    fontSize: 9,
-    fontFamily: Fonts.mono,
+    fontSize: 11,
+    fontFamily: Fonts.sans,
     color: '#00A8FF',
-    fontWeight: '800',
-    letterSpacing: 0.5,
+    fontWeight: '600',
   },
   stepProgressValue: {
-    fontSize: 11,
+    fontSize: 12,
     fontFamily: Fonts.mono,
-    fontWeight: '800',
-    color: '#00F0FF',
+    fontWeight: '700',
+    color: '#00A8FF',
   },
   stepTrack: {
     height: 6,
-    backgroundColor: '#050810',
+    backgroundColor: '#0B1120',
     borderRadius: 3,
     overflow: 'hidden',
   },
@@ -640,14 +636,13 @@ const styles = StyleSheet.create({
     borderRadius: 3,
   },
   stepIncompleteBtn: {
-    backgroundColor: '#0C182B',
-    borderColor: '#19335A',
+    backgroundColor: '#0E1726',
+    borderColor: '#1E293B',
   },
   stepIncompleteText: {
-    fontFamily: Fonts.mono,
-    fontSize: 10,
-    fontWeight: '800',
-    color: '#6F8FAF',
-    letterSpacing: 0.5,
+    fontFamily: Fonts.sans,
+    fontSize: 12,
+    fontWeight: '500',
+    color: '#8896AB',
   },
 });

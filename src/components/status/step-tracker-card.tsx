@@ -1,5 +1,5 @@
 // ============================================================
-// Step Tracker Card — 10k Steps Daily Directive & Motion HUD
+// Step Tracker Card — 10k Steps Daily Goal & Motion Tracker
 // ============================================================
 
 import React, { useState } from 'react';
@@ -56,7 +56,7 @@ export function StepTrackerCard({ onQuestClaimed }: StepTrackerCardProps) {
       });
       if (onQuestClaimed) onQuestClaimed();
     } else {
-      Alert.alert('System Notice', res.message || 'Could not complete 10k steps quest');
+      Alert.alert('Notice', res.message || 'Could not complete 10k steps quest');
       setClaimModalVisible(false);
     }
   };
@@ -72,8 +72,8 @@ export function StepTrackerCard({ onQuestClaimed }: StepTrackerCardProps) {
       {/* CARD HEADER */}
       <View style={styles.headerRow}>
         <View style={styles.titleGroup}>
-          <Text style={styles.systemTag}>[ PHYSICAL DIRECTIVE ]</Text>
-          <Text style={styles.mainTitle}>10,000 STEPS DAILY MARCH</Text>
+          <Text style={styles.systemTag}>Daily Goal</Text>
+          <Text style={styles.mainTitle}>10,000 Steps</Text>
         </View>
 
         {/* MOTION SENSOR STATUS BADGE */}
@@ -95,7 +95,7 @@ export function StepTrackerCard({ onQuestClaimed }: StepTrackerCardProps) {
               motion.isMoving ? styles.motionTextActive : styles.motionTextIdle,
             ]}
           >
-            {motion.isMoving ? `MOTION: ${motion.cadenceSPM} SPM` : 'MOTION: READY'}
+            {motion.isMoving ? `${motion.cadenceSPM} SPM` : 'Ready'}
           </Text>
         </View>
       </View>
@@ -104,7 +104,7 @@ export function StepTrackerCard({ onQuestClaimed }: StepTrackerCardProps) {
       <View style={styles.heroRow}>
         <View style={styles.stepsCountBlock}>
           <Text style={styles.bigStepNumber}>{steps.toLocaleString()}</Text>
-          <Text style={styles.targetStepLabel}>/ {targetSteps.toLocaleString()} STEPS</Text>
+          <Text style={styles.targetStepLabel}>/ {targetSteps.toLocaleString()} steps</Text>
         </View>
 
         <View style={styles.percentageBadge}>
@@ -112,14 +112,14 @@ export function StepTrackerCard({ onQuestClaimed }: StepTrackerCardProps) {
         </View>
       </View>
 
-      {/* GLOWING PROGRESS BAR */}
+      {/* PROGRESS BAR */}
       <View style={styles.progressBarTrack}>
         <View
           style={[
             styles.progressBarFill,
             {
               width: `${Math.max(3, percentDisplay)}%`,
-              backgroundColor: isGoalReached ? '#00FF88' : '#00F0FF',
+              backgroundColor: isGoalReached ? '#00FF88' : '#00A8FF',
               shadowColor: isGoalReached ? '#00FF88' : '#00A8FF',
             },
           ]}
@@ -131,7 +131,7 @@ export function StepTrackerCard({ onQuestClaimed }: StepTrackerCardProps) {
         <View style={styles.metricItem}>
           <Text style={styles.metricIcon}>📍</Text>
           <View>
-            <Text style={styles.metricLabel}>DISTANCE</Text>
+            <Text style={styles.metricLabel}>Distance</Text>
             <Text style={styles.metricValue}>{distanceKm} km</Text>
           </View>
         </View>
@@ -141,7 +141,7 @@ export function StepTrackerCard({ onQuestClaimed }: StepTrackerCardProps) {
         <View style={styles.metricItem}>
           <Text style={styles.metricIcon}>🔥</Text>
           <View>
-            <Text style={styles.metricLabel}>ENERGY</Text>
+            <Text style={styles.metricLabel}>Burned</Text>
             <Text style={styles.metricValue}>{caloriesBurned} kcal</Text>
           </View>
         </View>
@@ -151,7 +151,7 @@ export function StepTrackerCard({ onQuestClaimed }: StepTrackerCardProps) {
         <View style={styles.metricItem}>
           <Text style={styles.metricIcon}>⚡</Text>
           <View>
-            <Text style={styles.metricLabel}>INTENSITY</Text>
+            <Text style={styles.metricLabel}>Intensity</Text>
             <Text style={styles.metricValue}>
               {Math.round(motion.intensity * 100)}%
             </Text>
@@ -162,7 +162,7 @@ export function StepTrackerCard({ onQuestClaimed }: StepTrackerCardProps) {
       {/* QUEST ACTION BUTTON / COMPLETION BADGE */}
       {isQuestCompleted ? (
         <View style={styles.completedBanner}>
-          <Text style={styles.completedText}>✓ 10,000 STEPS QUEST COMPLETE (+50 AGI EXP)</Text>
+          <Text style={styles.completedText}>✓ 10K steps complete (+50 AGI EXP)</Text>
         </View>
       ) : isGoalReached ? (
         <TouchableOpacity
@@ -170,12 +170,12 @@ export function StepTrackerCard({ onQuestClaimed }: StepTrackerCardProps) {
           onPress={() => setClaimModalVisible(true)}
           activeOpacity={0.8}
         >
-          <Text style={styles.claimButtonText}>⚡ 10K GOAL REACHED! CLAIM +50 EXP →</Text>
+          <Text style={styles.claimButtonText}>⚡ Goal reached! Claim +50 EXP</Text>
         </TouchableOpacity>
       ) : (
         <View style={styles.remainingBanner}>
           <Text style={styles.remainingText}>
-            [ {(targetSteps - steps).toLocaleString()} STEPS REMAINING FOR QUEST REWARD ]
+            {(targetSteps - steps).toLocaleString()} steps remaining
           </Text>
         </View>
       )}
@@ -187,7 +187,7 @@ export function StepTrackerCard({ onQuestClaimed }: StepTrackerCardProps) {
           style={styles.simToggle}
         >
           <Text style={styles.simToggleText}>
-            {showSimControls ? '▼ HIDE MOTION TEST' : '⚙ TEST MOTION SENSOR'}
+            {showSimControls ? '▼ Hide test controls' : '⚙ Test motion sensor'}
           </Text>
         </TouchableOpacity>
 
@@ -197,21 +197,21 @@ export function StepTrackerCard({ onQuestClaimed }: StepTrackerCardProps) {
               style={styles.simBtn}
               onPress={() => simulateSteps(50)}
             >
-              <Text style={styles.simBtnText}>+50 STEPS</Text>
+              <Text style={styles.simBtnText}>+50</Text>
             </TouchableOpacity>
 
             <TouchableOpacity
               style={styles.simBtn}
               onPress={() => simulateSteps(500)}
             >
-              <Text style={styles.simBtnText}>+500 STEPS</Text>
+              <Text style={styles.simBtnText}>+500</Text>
             </TouchableOpacity>
 
             <TouchableOpacity
               style={[styles.simBtn, styles.simBtnPrimary]}
               onPress={() => simulateSteps(2000)}
             >
-              <Text style={styles.simBtnPrimaryText}>+2,000 STEPS</Text>
+              <Text style={styles.simBtnPrimaryText}>+2,000</Text>
             </TouchableOpacity>
           </View>
         )}
@@ -222,7 +222,7 @@ export function StepTrackerCard({ onQuestClaimed }: StepTrackerCardProps) {
         visible={claimModalVisible}
         xpAmount={50}
         stat={Stat.AGI}
-        activityName="10,000 STEPS DAILY DIRECTIVE"
+        activityName="10,000 Steps Goal"
         onClaim={handleClaim}
         onDismiss={handleDismissModal}
         claimResult={claimResult}
@@ -233,15 +233,15 @@ export function StepTrackerCard({ onQuestClaimed }: StepTrackerCardProps) {
 
 const styles = StyleSheet.create({
   cardContainer: {
-    backgroundColor: '#0D1424',
-    borderWidth: 1.5,
-    borderColor: '#193560',
-    borderRadius: 12,
-    padding: Spacing.three,
-    gap: 12,
-    shadowColor: '#00A8FF',
-    shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 0.18,
+    backgroundColor: '#111827',
+    borderWidth: 1,
+    borderColor: '#1E293B',
+    borderRadius: 16,
+    padding: Spacing.threeHalf,
+    gap: 14,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.15,
     shadowRadius: 10,
     elevation: 4,
   },
@@ -254,34 +254,33 @@ const styles = StyleSheet.create({
     gap: 2,
   },
   systemTag: {
-    fontSize: 9,
-    fontFamily: Fonts.mono,
+    fontSize: 11,
+    fontFamily: Fonts.sans,
     color: '#00A8FF',
-    letterSpacing: 1.5,
-    fontWeight: '800',
+    fontWeight: '600',
   },
   mainTitle: {
-    fontSize: 14,
-    fontWeight: '900',
-    color: '#E0E8FF',
-    letterSpacing: 0.8,
+    fontSize: 16,
+    fontWeight: '700',
+    fontFamily: Fonts.sans,
+    color: '#E8ECF4',
   },
   motionBadge: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 6,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 8,
     borderWidth: 1,
   },
   motionBadgeActive: {
-    backgroundColor: 'rgba(0, 240, 255, 0.12)',
-    borderColor: '#00F0FF',
+    backgroundColor: 'rgba(0, 168, 255, 0.08)',
+    borderColor: 'rgba(0, 168, 255, 0.3)',
   },
   motionBadgeIdle: {
-    backgroundColor: 'rgba(25, 49, 90, 0.5)',
-    borderColor: '#1C355E',
+    backgroundColor: 'rgba(30, 41, 59, 0.5)',
+    borderColor: '#1E293B',
   },
   motionPulseDot: {
     width: 6,
@@ -292,23 +291,22 @@ const styles = StyleSheet.create({
     backgroundColor: '#00FF88',
     shadowColor: '#00FF88',
     shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 1,
-    shadowRadius: 5,
+    shadowOpacity: 0.8,
+    shadowRadius: 4,
   },
   motionDotIdle: {
-    backgroundColor: '#556F91',
+    backgroundColor: '#6B7B8F',
   },
   motionText: {
-    fontSize: 9,
+    fontSize: 10,
     fontFamily: Fonts.mono,
-    fontWeight: '800',
-    letterSpacing: 0.5,
+    fontWeight: '700',
   },
   motionTextActive: {
-    color: '#00F0FF',
+    color: '#00A8FF',
   },
   motionTextIdle: {
-    color: '#6582A6',
+    color: '#8896AB',
   },
   heroRow: {
     flexDirection: 'row',
@@ -325,56 +323,56 @@ const styles = StyleSheet.create({
     fontSize: 32,
     fontWeight: '900',
     fontFamily: Fonts.mono,
-    color: '#00F0FF',
+    color: '#00A8FF',
     letterSpacing: 1,
-    textShadowColor: 'rgba(0, 240, 255, 0.4)',
+    textShadowColor: 'rgba(0, 168, 255, 0.25)',
     textShadowOffset: { width: 0, height: 0 },
     textShadowRadius: 8,
   },
   targetStepLabel: {
     fontSize: 13,
-    fontFamily: Fonts.mono,
-    color: '#6582A6',
-    fontWeight: '700',
+    fontFamily: Fonts.sans,
+    color: '#8896AB',
+    fontWeight: '500',
   },
   percentageBadge: {
-    backgroundColor: '#090E1A',
+    backgroundColor: '#0E1726',
     borderWidth: 1,
-    borderColor: '#193560',
-    borderRadius: 6,
-    paddingHorizontal: 8,
-    paddingVertical: 3,
+    borderColor: '#1E293B',
+    borderRadius: 8,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
   },
   percentageText: {
-    fontSize: 12,
+    fontSize: 13,
     fontFamily: Fonts.mono,
-    fontWeight: '900',
+    fontWeight: '800',
     color: '#00FF88',
   },
   progressBarTrack: {
     height: 10,
-    backgroundColor: '#090E1A',
+    backgroundColor: '#0E1726',
     borderRadius: 5,
     overflow: 'hidden',
     borderWidth: 1,
-    borderColor: '#15294A',
+    borderColor: '#1E293B',
   },
   progressBarFill: {
     height: '100%',
     borderRadius: 4,
     shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 0.9,
-    shadowRadius: 6,
+    shadowOpacity: 0.6,
+    shadowRadius: 4,
     elevation: 3,
   },
   metricsRow: {
     flexDirection: 'row',
-    backgroundColor: '#090E1A',
-    borderRadius: 8,
+    backgroundColor: '#0E1726',
+    borderRadius: 10,
     borderWidth: 1,
-    borderColor: '#15294A',
-    paddingVertical: 8,
-    paddingHorizontal: 12,
+    borderColor: '#1E293B',
+    paddingVertical: 10,
+    paddingHorizontal: 14,
     justifyContent: 'space-between',
     alignItems: 'center',
   },
@@ -388,71 +386,68 @@ const styles = StyleSheet.create({
     fontSize: 15,
   },
   metricLabel: {
-    fontSize: 8,
-    fontFamily: Fonts.mono,
-    color: '#556F91',
-    letterSpacing: 0.5,
+    fontSize: 10,
+    fontFamily: Fonts.sans,
+    color: '#6B7B8F',
+    fontWeight: '500',
   },
   metricValue: {
     fontSize: 12,
     fontFamily: Fonts.mono,
-    fontWeight: '800',
-    color: '#DCE8FF',
+    fontWeight: '700',
+    color: '#D2E0F5',
   },
   metricDivider: {
     width: 1,
     height: 20,
-    backgroundColor: '#15294A',
+    backgroundColor: '#1E293B',
     marginHorizontal: 4,
   },
   claimButton: {
-    backgroundColor: '#0077CC',
-    borderWidth: 1.5,
-    borderColor: '#00F0FF',
-    borderRadius: 8,
-    paddingVertical: 12,
+    backgroundColor: '#0066BB',
+    borderWidth: 1,
+    borderColor: '#00A8FF',
+    borderRadius: 12,
+    paddingVertical: 14,
     alignItems: 'center',
-    shadowColor: '#00F0FF',
-    shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 0.6,
-    shadowRadius: 10,
+    shadowColor: '#00A8FF',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
     elevation: 5,
   },
   claimButtonText: {
-    fontFamily: Fonts.mono,
-    fontSize: 12,
-    fontWeight: '900',
+    fontFamily: Fonts.sans,
+    fontSize: 14,
+    fontWeight: '700',
     color: '#FFFFFF',
-    letterSpacing: 1,
   },
   completedBanner: {
-    backgroundColor: 'rgba(0, 255, 136, 0.1)',
+    backgroundColor: 'rgba(0, 255, 136, 0.08)',
     borderWidth: 1,
-    borderColor: '#00FF88',
-    borderRadius: 8,
-    paddingVertical: 10,
+    borderColor: 'rgba(0, 255, 136, 0.3)',
+    borderRadius: 10,
+    paddingVertical: 12,
     alignItems: 'center',
   },
   completedText: {
-    fontFamily: Fonts.mono,
-    fontSize: 11,
-    fontWeight: '800',
+    fontFamily: Fonts.sans,
+    fontSize: 13,
+    fontWeight: '600',
     color: '#00FF88',
-    letterSpacing: 0.8,
   },
   remainingBanner: {
-    backgroundColor: 'rgba(9, 14, 26, 0.6)',
+    backgroundColor: 'rgba(14, 23, 38, 0.6)',
     borderWidth: 1,
-    borderColor: '#172B4C',
-    borderRadius: 8,
-    paddingVertical: 8,
+    borderColor: '#1E293B',
+    borderRadius: 10,
+    paddingVertical: 10,
     alignItems: 'center',
   },
   remainingText: {
-    fontFamily: Fonts.mono,
-    fontSize: 10,
-    color: '#708EAE',
-    letterSpacing: 0.5,
+    fontFamily: Fonts.sans,
+    fontSize: 12,
+    color: '#8896AB',
   },
   simContainer: {
     gap: 6,
@@ -460,42 +455,41 @@ const styles = StyleSheet.create({
   },
   simToggle: {
     alignSelf: 'center',
-    paddingVertical: 2,
+    paddingVertical: 4,
     paddingHorizontal: 8,
   },
   simToggleText: {
-    fontSize: 9,
-    fontFamily: Fonts.mono,
-    color: '#4B678C',
-    letterSpacing: 1,
+    fontSize: 10,
+    fontFamily: Fonts.sans,
+    color: '#6B7B8F',
   },
   simButtonsRow: {
     flexDirection: 'row',
-    gap: 6,
+    gap: 8,
   },
   simBtn: {
     flex: 1,
-    backgroundColor: '#090E1A',
+    backgroundColor: '#0E1726',
     borderWidth: 1,
-    borderColor: '#1C355E',
-    borderRadius: 6,
-    paddingVertical: 6,
+    borderColor: '#1E293B',
+    borderRadius: 8,
+    paddingVertical: 8,
     alignItems: 'center',
   },
   simBtnText: {
-    fontSize: 9,
+    fontSize: 11,
     fontFamily: Fonts.mono,
-    color: '#7A9BBE',
+    color: '#8896AB',
     fontWeight: '700',
   },
   simBtnPrimary: {
     borderColor: '#00A8FF',
-    backgroundColor: 'rgba(0, 168, 255, 0.1)',
+    backgroundColor: 'rgba(0, 168, 255, 0.08)',
   },
   simBtnPrimaryText: {
-    fontSize: 9,
+    fontSize: 11,
     fontFamily: Fonts.mono,
-    color: '#00F0FF',
-    fontWeight: '800',
+    color: '#00A8FF',
+    fontWeight: '700',
   },
 });

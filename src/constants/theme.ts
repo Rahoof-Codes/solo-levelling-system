@@ -1,18 +1,19 @@
 /**
  * The System — Solo Leveling Theme & Design System
+ * Humanized: warmer darks, softer text, more breathing room
  */
 
 import { Platform } from 'react-native';
 
 export const Colors = {
   light: {
-    text: '#E0E8FF',
-    background: '#070B14',
-    backgroundCard: '#0D1424',
-    backgroundElement: '#131D33',
-    backgroundSelected: '#1A294A',
-    textSecondary: '#6B82A8',
-    border: '#172744',
+    text: '#E8ECF4',
+    background: '#0B1120',
+    backgroundCard: '#111827',
+    backgroundElement: '#1A2332',
+    backgroundSelected: '#1E3050',
+    textSecondary: '#8896AB',
+    border: '#1E293B',
     glow: '#00A8FF',
     glowDim: '#0055AA',
     cyan: '#00F0FF',
@@ -22,13 +23,13 @@ export const Colors = {
     gold: '#FFD700',
   },
   dark: {
-    text: '#E0E8FF',
-    background: '#070B14',
-    backgroundCard: '#0D1424',
-    backgroundElement: '#131D33',
-    backgroundSelected: '#1A294A',
-    textSecondary: '#6B82A8',
-    border: '#172744',
+    text: '#E8ECF4',
+    background: '#0B1120',
+    backgroundCard: '#111827',
+    backgroundElement: '#1A2332',
+    backgroundSelected: '#1E3050',
+    textSecondary: '#8896AB',
+    border: '#1E293B',
     glow: '#00A8FF',
     glowDim: '#0055AA',
     cyan: '#00F0FF',
@@ -60,7 +61,7 @@ export const RankColors = {
 
 export const Fonts = Platform.select({
   ios: {
-    sans: 'system-ui',
+    sans: 'System',
     serif: 'ui-serif',
     rounded: 'ui-rounded',
     mono: 'ui-monospace',
@@ -72,15 +73,15 @@ export const Fonts = Platform.select({
     mono: 'monospace',
   },
   default: {
-    sans: 'normal',
+    sans: 'System',
     serif: 'serif',
-    rounded: 'normal',
+    rounded: 'System',
     mono: 'monospace',
   },
   web: {
-    sans: 'Inter, system-ui, sans-serif',
+    sans: 'Inter, system-ui, -apple-system, sans-serif',
     serif: 'serif',
-    rounded: 'sans-serif',
+    rounded: 'Inter, system-ui, sans-serif',
     mono: "'JetBrains Mono', monospace",
   },
 });
@@ -90,6 +91,7 @@ export const Spacing = {
   one: 4,
   two: 8,
   three: 16,
+  threeHalf: 20,
   four: 24,
   five: 32,
   six: 64,

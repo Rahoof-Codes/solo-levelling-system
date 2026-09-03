@@ -8,60 +8,53 @@ interface StatusWindowProps {
 }
 
 export function StatusWindow({
-  title = 'SYSTEM STATUS WINDOW',
+  title = 'Your Status',
   children,
 }: StatusWindowProps) {
   return (
     <View style={styles.windowFrame}>
-      {/* Top HUD Title Bar */}
+      {/* Title Bar */}
       <View style={styles.titleBar}>
         <View style={styles.titleLeft}>
           <View style={styles.statusDot} />
           <Text style={styles.titleText}>{title}</Text>
         </View>
-        <Text style={styles.systemTag}>SYS.VER 1.0.4</Text>
+        <Text style={styles.systemTag}>Active</Text>
       </View>
 
       {/* Main Content Area */}
       <View style={styles.content}>{children}</View>
-
-      {/* Bottom HUD Footer Accent */}
-      <View style={styles.footerBar}>
-        <View style={styles.footerLine} />
-        <Text style={styles.footerText}>HUNTER ASSOCIATION SYNCED</Text>
-        <View style={styles.footerLine} />
-      </View>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
   windowFrame: {
-    backgroundColor: '#070B14',
-    borderRadius: 14,
-    borderWidth: 1.5,
-    borderColor: '#00A8FF',
+    backgroundColor: '#111827',
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: '#1E293B',
     overflow: 'hidden',
-    shadowColor: '#00A8FF',
-    shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 0.6,
-    shadowRadius: 16,
-    elevation: 10,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.2,
+    shadowRadius: 12,
+    elevation: 8,
   },
   titleBar: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    backgroundColor: 'rgba(0, 168, 255, 0.12)',
-    paddingVertical: 10,
-    paddingHorizontal: Spacing.three,
+    backgroundColor: 'rgba(0, 168, 255, 0.06)',
+    paddingVertical: 12,
+    paddingHorizontal: Spacing.threeHalf,
     borderBottomWidth: 1,
-    borderBottomColor: '#00A8FF',
+    borderBottomColor: '#1E293B',
   },
   titleLeft: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
+    gap: 10,
   },
   statusDot: {
     width: 8,
@@ -70,46 +63,25 @@ const styles = StyleSheet.create({
     backgroundColor: '#00FF88',
     shadowColor: '#00FF88',
     shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 1,
+    shadowOpacity: 0.6,
     shadowRadius: 4,
     elevation: 3,
   },
   titleText: {
-    fontSize: 13,
-    fontWeight: '900',
-    fontFamily: Fonts.mono,
-    color: '#00F0FF',
-    letterSpacing: 2,
+    fontSize: 16,
+    fontWeight: '700',
+    fontFamily: Fonts.sans,
+    color: '#E8ECF4',
+    letterSpacing: 0.3,
   },
   systemTag: {
-    fontSize: 9,
+    fontSize: 11,
     fontFamily: Fonts.mono,
-    color: '#496A94',
-    letterSpacing: 1,
+    color: '#4B6282',
+    letterSpacing: 0.5,
   },
   content: {
-    padding: Spacing.two,
-    gap: Spacing.two,
-  },
-  footerBar: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 6,
-    paddingHorizontal: Spacing.three,
-    gap: 8,
-    borderTopWidth: 1,
-    borderTopColor: '#12233E',
-  },
-  footerLine: {
-    flex: 1,
-    height: 1,
-    backgroundColor: '#162C4E',
-  },
-  footerText: {
-    fontSize: 8,
-    fontFamily: Fonts.mono,
-    color: '#3B577D',
-    letterSpacing: 1,
+    padding: Spacing.three,
+    gap: Spacing.three,
   },
 });

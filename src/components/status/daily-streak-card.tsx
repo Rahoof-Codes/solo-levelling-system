@@ -102,10 +102,10 @@ export function DailyStreakCard({ streaks, weekHistory = [] }: DailyStreakCardPr
             <Text style={styles.flameEmoji}>🔥</Text>
           </Animated.View>
           <View>
-            <Text style={styles.systemTag}>DAILY HUNTER STREAK</Text>
+            <Text style={styles.systemTag}>Daily Streak</Text>
             <View style={styles.streakCountRow}>
               <Text style={styles.streakCount}>{primaryStreak}</Text>
-              <Text style={styles.streakLabel}>DAYS AWAKENED</Text>
+              <Text style={styles.streakLabel}>days</Text>
             </View>
           </View>
         </View>
@@ -115,16 +115,16 @@ export function DailyStreakCard({ streaks, weekHistory = [] }: DailyStreakCardPr
           onPress={() => setModalVisible(true)}
           activeOpacity={0.7}
         >
-          <Text style={styles.detailsBtnText}>MATRIX ↗</Text>
+          <Text style={styles.detailsBtnText}>Details ↗</Text>
         </TouchableOpacity>
       </View>
 
-      {/* HUNTER BUFF BAR */}
+      {/* EXP BUFF BAR */}
       <View style={styles.buffBadge}>
         <Text style={styles.buffIcon}>⚡</Text>
         <Text style={styles.buffText}>
-          HUNTER RESONANCE BUFF:{' '}
-          <Text style={styles.buffHighlight}>+{expBuffPercent}% EXP BOOST</Text>
+          Resonance Buff:{' '}
+          <Text style={styles.buffHighlight}>+{expBuffPercent}% EXP</Text>
         </Text>
       </View>
 
@@ -182,9 +182,9 @@ export function DailyStreakCard({ streaks, weekHistory = [] }: DailyStreakCardPr
       {/* FOOTER INFO */}
       <View style={styles.footerRow}>
         <Text style={styles.longestStreak}>
-          👑 Longest Streak: <Text style={styles.longestVal}>{longestLogin} Days</Text>
+          👑 Best: <Text style={styles.longestVal}>{longestLogin} days</Text>
         </Text>
-        <Text style={styles.streakHint}>Complete daily quests to maintain</Text>
+        <Text style={styles.streakHint}>Complete quests to maintain</Text>
       </View>
 
       {/* MULTI-STREAK BREAKDOWN MODAL */}
@@ -196,8 +196,8 @@ export function DailyStreakCard({ streaks, weekHistory = [] }: DailyStreakCardPr
           >
             <View style={styles.modalHeader}>
               <View>
-                <Text style={styles.modalTag}>SYSTEM DIRECTIVE</Text>
-                <Text style={styles.modalTitle}>HUNTER STREAK MATRIX</Text>
+                <Text style={styles.modalTag}>Streaks</Text>
+                <Text style={styles.modalTitle}>Streak Details</Text>
               </View>
               <TouchableOpacity
                 style={styles.closeBtn}
@@ -213,13 +213,13 @@ export function DailyStreakCard({ streaks, weekHistory = [] }: DailyStreakCardPr
                 <View style={styles.streakItemLeft}>
                   <Text style={styles.streakItemIcon}>⚡</Text>
                   <View>
-                    <Text style={styles.streakItemTitle}>HUNTER LOGIN</Text>
-                    <Text style={styles.streakItemSub}>Daily presence in the System</Text>
+                    <Text style={styles.streakItemTitle}>Daily Login</Text>
+                    <Text style={styles.streakItemSub}>Days opened the app</Text>
                   </View>
                 </View>
                 <View style={styles.streakItemRight}>
                   <Text style={styles.streakItemVal}>{loginStreak}d</Text>
-                  <Text style={styles.streakItemRecord}>Max {longestLogin}d</Text>
+                  <Text style={styles.streakItemRecord}>Best {longestLogin}d</Text>
                 </View>
               </View>
 
@@ -228,12 +228,12 @@ export function DailyStreakCard({ streaks, weekHistory = [] }: DailyStreakCardPr
                 <View style={styles.streakItemLeft}>
                   <Text style={styles.streakItemIcon}>📜</Text>
                   <View>
-                    <Text style={styles.streakItemTitle}>DAILY QUESTS</Text>
+                    <Text style={styles.streakItemTitle}>Daily Quests</Text>
                     <Text style={styles.streakItemSub}>Consecutive quest completion</Text>
                   </View>
                 </View>
                 <View style={styles.streakItemRight}>
-                  <Text style={[styles.streakItemVal, { color: '#00F0FF' }]}>
+                  <Text style={[styles.streakItemVal, { color: '#00A8FF' }]}>
                     {questStreak}d
                   </Text>
                   <Text style={styles.streakItemRecord}>Active</Text>
@@ -245,7 +245,7 @@ export function DailyStreakCard({ streaks, weekHistory = [] }: DailyStreakCardPr
                 <View style={styles.streakItemLeft}>
                   <Text style={styles.streakItemIcon}>⚔️</Text>
                   <View>
-                    <Text style={styles.streakItemTitle}>TRAINING & COMBAT</Text>
+                    <Text style={styles.streakItemTitle}>Training</Text>
                     <Text style={styles.streakItemSub}>Consecutive workout days</Text>
                   </View>
                 </View>
@@ -262,8 +262,8 @@ export function DailyStreakCard({ streaks, weekHistory = [] }: DailyStreakCardPr
                 <View style={styles.streakItemLeft}>
                   <Text style={styles.streakItemIcon}>🍽️</Text>
                   <View>
-                    <Text style={styles.streakItemTitle}>MANA INTAKE (MEALS)</Text>
-                    <Text style={styles.streakItemSub}>Daily nutrition logging</Text>
+                    <Text style={styles.streakItemTitle}>Meal Logging</Text>
+                    <Text style={styles.streakItemSub}>Daily nutrition tracking</Text>
                   </View>
                 </View>
                 <View style={styles.streakItemRight}>
@@ -279,7 +279,7 @@ export function DailyStreakCard({ streaks, weekHistory = [] }: DailyStreakCardPr
               style={styles.modalDoneBtn}
               onPress={() => setModalVisible(false)}
             >
-              <Text style={styles.modalDoneBtnText}>CONFIRM MATRIX</Text>
+              <Text style={styles.modalDoneBtnText}>Done</Text>
             </TouchableOpacity>
           </Animated.View>
         </View>
@@ -290,17 +290,17 @@ export function DailyStreakCard({ streaks, weekHistory = [] }: DailyStreakCardPr
 
 const styles = StyleSheet.create({
   container: {
-    backgroundColor: '#0D1424',
-    borderWidth: 1.5,
+    backgroundColor: '#111827',
+    borderWidth: 1,
     borderColor: '#FFAA00',
-    borderRadius: 14,
-    padding: Spacing.three,
-    gap: 12,
+    borderRadius: 16,
+    padding: Spacing.threeHalf,
+    gap: 14,
     position: 'relative',
     overflow: 'hidden',
     shadowColor: '#FFAA00',
-    shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 0.25,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.15,
     shadowRadius: 10,
     elevation: 5,
   },
@@ -311,7 +311,7 @@ const styles = StyleSheet.create({
     width: 140,
     height: 140,
     borderRadius: 70,
-    backgroundColor: 'rgba(255, 170, 0, 0.15)',
+    backgroundColor: 'rgba(255, 170, 0, 0.1)',
   },
   header: {
     flexDirection: 'row',
@@ -321,15 +321,15 @@ const styles = StyleSheet.create({
   titleRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 10,
+    gap: 12,
   },
   flameBox: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    backgroundColor: 'rgba(255, 170, 0, 0.15)',
-    borderWidth: 1.2,
-    borderColor: '#FFAA00',
+    width: 46,
+    height: 46,
+    borderRadius: 23,
+    backgroundColor: 'rgba(255, 170, 0, 0.1)',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 170, 0, 0.4)',
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -337,11 +337,10 @@ const styles = StyleSheet.create({
     fontSize: 22,
   },
   systemTag: {
-    fontSize: 9,
-    fontFamily: Fonts.mono,
+    fontSize: 12,
+    fontFamily: Fonts.sans,
     color: '#FFAA00',
-    letterSpacing: 1.5,
-    fontWeight: '800',
+    fontWeight: '600',
   },
   streakCountRow: {
     flexDirection: 'row',
@@ -349,55 +348,54 @@ const styles = StyleSheet.create({
     gap: 6,
   },
   streakCount: {
-    fontSize: 24,
+    fontSize: 26,
     fontWeight: '900',
     fontFamily: Fonts.mono,
-    color: '#E0E8FF',
+    color: '#E8ECF4',
   },
   streakLabel: {
-    fontSize: 11,
-    fontFamily: Fonts.mono,
-    color: '#8AABCE',
-    fontWeight: '800',
+    fontSize: 13,
+    fontFamily: Fonts.sans,
+    color: '#8896AB',
+    fontWeight: '600',
   },
   detailsBtn: {
-    backgroundColor: 'rgba(255, 170, 0, 0.1)',
+    backgroundColor: 'rgba(255, 170, 0, 0.08)',
     borderWidth: 1,
-    borderColor: '#FFAA00',
-    borderRadius: 6,
-    paddingHorizontal: 8,
-    paddingVertical: 4,
+    borderColor: 'rgba(255, 170, 0, 0.35)',
+    borderRadius: 8,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
   },
   detailsBtnText: {
-    fontSize: 9,
-    fontFamily: Fonts.mono,
-    fontWeight: '800',
+    fontSize: 11,
+    fontFamily: Fonts.sans,
+    fontWeight: '600',
     color: '#FFAA00',
-    letterSpacing: 1,
   },
   buffBadge: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
-    backgroundColor: 'rgba(0, 240, 255, 0.08)',
+    backgroundColor: 'rgba(0, 168, 255, 0.06)',
     borderWidth: 1,
-    borderColor: '#00F0FF',
-    borderRadius: 8,
-    paddingVertical: 6,
-    paddingHorizontal: 10,
+    borderColor: 'rgba(0, 240, 255, 0.2)',
+    borderRadius: 10,
+    paddingVertical: 8,
+    paddingHorizontal: 12,
   },
   buffIcon: {
     fontSize: 13,
   },
   buffText: {
-    fontSize: 10,
-    fontFamily: Fonts.mono,
-    color: '#90B4E0',
-    fontWeight: '700',
+    fontSize: 12,
+    fontFamily: Fonts.sans,
+    color: '#8896AB',
+    fontWeight: '500',
   },
   buffHighlight: {
-    color: '#00F0FF',
-    fontWeight: '900',
+    color: '#00A8FF',
+    fontWeight: '700',
   },
   weekContainer: {
     flexDirection: 'row',
@@ -406,46 +404,46 @@ const styles = StyleSheet.create({
   },
   dayNode: {
     alignItems: 'center',
-    gap: 5,
+    gap: 6,
   },
   dayLabel: {
-    fontSize: 9,
-    fontFamily: Fonts.mono,
-    color: '#556F91',
-    fontWeight: '700',
+    fontSize: 10,
+    fontFamily: Fonts.sans,
+    color: '#6B7B8F',
+    fontWeight: '600',
   },
   dayLabelToday: {
-    color: '#00F0FF',
-    fontWeight: '900',
+    color: '#00A8FF',
+    fontWeight: '700',
   },
   nodeCircle: {
-    width: 28,
-    height: 28,
-    borderRadius: 14,
-    backgroundColor: '#070C16',
+    width: 30,
+    height: 30,
+    borderRadius: 15,
+    backgroundColor: '#0E1726',
     borderWidth: 1.5,
-    borderColor: '#192C4D',
+    borderColor: '#1E293B',
     justifyContent: 'center',
     alignItems: 'center',
   },
   nodeCircleCompleted: {
-    backgroundColor: 'rgba(255, 170, 0, 0.2)',
+    backgroundColor: 'rgba(255, 170, 0, 0.15)',
     borderColor: '#FFAA00',
     shadowColor: '#FFAA00',
     shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 0.6,
-    shadowRadius: 6,
+    shadowOpacity: 0.4,
+    shadowRadius: 4,
   },
   nodeCircleToday: {
-    backgroundColor: 'rgba(0, 240, 255, 0.18)',
-    borderColor: '#00F0FF',
-    shadowColor: '#00F0FF',
+    backgroundColor: 'rgba(0, 168, 255, 0.12)',
+    borderColor: '#00A8FF',
+    shadowColor: '#00A8FF',
     shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 0.8,
-    shadowRadius: 6,
+    shadowOpacity: 0.5,
+    shadowRadius: 4,
   },
   nodeCircleFuture: {
-    borderColor: '#121E33',
+    borderColor: '#1A2332',
   },
   nodeCheck: {
     fontSize: 12,
@@ -454,86 +452,85 @@ const styles = StyleSheet.create({
   },
   nodeCurrent: {
     fontSize: 12,
-    color: '#00F0FF',
+    color: '#00A8FF',
   },
   nodeLocked: {
     fontSize: 10,
-    color: '#344966',
+    color: '#3A4A5F',
   },
   footerRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     borderTopWidth: 1,
-    borderTopColor: '#172744',
-    paddingTop: 8,
+    borderTopColor: '#1E293B',
+    paddingTop: 10,
   },
   longestStreak: {
-    fontSize: 10,
-    fontFamily: Fonts.mono,
-    color: '#6582A6',
+    fontSize: 11,
+    fontFamily: Fonts.sans,
+    color: '#8896AB',
   },
   longestVal: {
-    color: '#E0E8FF',
-    fontWeight: '800',
+    color: '#E8ECF4',
+    fontWeight: '700',
   },
   streakHint: {
-    fontSize: 9,
-    fontFamily: Fonts.mono,
-    color: '#4B6282',
+    fontSize: 10,
+    fontFamily: Fonts.sans,
+    color: '#6B7B8F',
   },
   modalOverlay: {
     flex: 1,
-    backgroundColor: 'rgba(5, 8, 16, 0.92)',
+    backgroundColor: 'rgba(5, 8, 16, 0.9)',
     justifyContent: 'center',
-    padding: Spacing.three,
+    padding: Spacing.threeHalf,
   },
   modalContent: {
-    backgroundColor: '#0D1424',
-    borderWidth: 1.8,
+    backgroundColor: '#111827',
+    borderWidth: 1,
     borderColor: '#FFAA00',
-    borderRadius: 16,
+    borderRadius: 18,
     padding: Spacing.four,
     gap: Spacing.three,
     shadowColor: '#FFAA00',
-    shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 0.4,
-    shadowRadius: 20,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.2,
+    shadowRadius: 16,
   },
   modalHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
     borderBottomWidth: 1,
-    borderBottomColor: '#1A2E50',
-    paddingBottom: 10,
+    borderBottomColor: '#1E293B',
+    paddingBottom: 12,
   },
   modalTag: {
-    fontSize: 9,
-    fontFamily: Fonts.mono,
+    fontSize: 11,
+    fontFamily: Fonts.sans,
     color: '#FFAA00',
-    letterSpacing: 2,
-    fontWeight: '800',
+    fontWeight: '600',
   },
   modalTitle: {
-    fontSize: 16,
-    fontWeight: '900',
-    fontFamily: Fonts.mono,
-    color: '#E0E8FF',
+    fontSize: 18,
+    fontWeight: '700',
+    fontFamily: Fonts.sans,
+    color: '#E8ECF4',
   },
   closeBtn: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    backgroundColor: '#080E1A',
+    width: 34,
+    height: 34,
+    borderRadius: 17,
+    backgroundColor: '#0E1726',
     borderWidth: 1,
-    borderColor: '#192C4D',
+    borderColor: '#1E293B',
     justifyContent: 'center',
     alignItems: 'center',
   },
   closeBtnText: {
-    fontSize: 13,
-    color: '#8AABCE',
-    fontWeight: '800',
+    fontSize: 14,
+    color: '#8896AB',
+    fontWeight: '700',
   },
   streakGrid: {
     gap: 10,
@@ -543,30 +540,31 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    backgroundColor: '#080D1A',
+    backgroundColor: '#0E1726',
     borderWidth: 1,
-    borderColor: '#182C4E',
-    borderRadius: 10,
-    padding: 12,
+    borderColor: '#1E293B',
+    borderRadius: 12,
+    padding: 14,
   },
   streakItemLeft: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 10,
+    gap: 12,
     flex: 1,
   },
   streakItemIcon: {
     fontSize: 20,
   },
   streakItemTitle: {
-    fontSize: 12,
-    fontWeight: '800',
-    fontFamily: Fonts.mono,
-    color: '#E0E8FF',
+    fontSize: 14,
+    fontWeight: '700',
+    fontFamily: Fonts.sans,
+    color: '#E8ECF4',
   },
   streakItemSub: {
-    fontSize: 9,
-    color: '#6582A6',
+    fontSize: 11,
+    fontFamily: Fonts.sans,
+    color: '#8896AB',
     marginTop: 2,
   },
   streakItemRight: {
@@ -579,21 +577,20 @@ const styles = StyleSheet.create({
     color: '#FFAA00',
   },
   streakItemRecord: {
-    fontSize: 8,
-    fontFamily: Fonts.mono,
-    color: '#4B6588',
+    fontSize: 10,
+    fontFamily: Fonts.sans,
+    color: '#6B7B8F',
   },
   modalDoneBtn: {
     backgroundColor: '#FFAA00',
-    borderRadius: 8,
-    paddingVertical: 12,
+    borderRadius: 12,
+    paddingVertical: 14,
     alignItems: 'center',
   },
   modalDoneBtnText: {
-    fontSize: 12,
-    fontFamily: Fonts.mono,
-    fontWeight: '900',
-    color: '#070B14',
-    letterSpacing: 1.5,
+    fontSize: 14,
+    fontFamily: Fonts.sans,
+    fontWeight: '700',
+    color: '#0B1120',
   },
 });

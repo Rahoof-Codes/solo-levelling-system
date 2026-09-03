@@ -136,11 +136,11 @@ export default function MealLogScreen() {
         {/* HEADER */}
         <View style={styles.header}>
           <View>
-            <Text style={styles.systemTag}>ENERGY INTAKE</Text>
-            <Text style={styles.title}>MEAL LOG</Text>
+            <Text style={styles.systemTag}>Nutrition</Text>
+            <Text style={styles.title}>Meal Log</Text>
           </View>
           <TouchableOpacity style={styles.addBtn} onPress={() => setModalVisible(true)}>
-            <Text style={styles.addBtnText}>+ LOG RATION</Text>
+            <Text style={styles.addBtnText}>+ Log Meal</Text>
           </TouchableOpacity>
         </View>
 
@@ -228,7 +228,7 @@ export default function MealLogScreen() {
 
         {/* LOGGED MEALS LIST */}
         <View style={styles.mealSection}>
-          <Text style={styles.sectionTitle}>TODAY'S RATIONS ({meals.length})</Text>
+          <Text style={styles.sectionTitle}>Today's Meals ({meals.length})</Text>
 
           {meals.length === 0 ? (
             <View style={styles.emptyCard}>
@@ -261,11 +261,11 @@ export default function MealLogScreen() {
       <Modal visible={modalVisible} animationType="slide" transparent>
         <View style={styles.modalOverlay}>
           <View style={styles.modalContent}>
-            <Text style={styles.modalTitle}>[ LOG ENERGY RATION ]</Text>
+            <Text style={styles.modalTitle}>Log a Meal</Text>
 
             <View style={styles.modalForm}>
               <View style={styles.inputGroup}>
-                <Text style={styles.inputLabel}>MEAL / FOOD NAME</Text>
+                <Text style={styles.inputLabel}>Meal / food name</Text>
                 <TextInput
                   style={styles.textInput}
                   placeholder="e.g. Grilled Chicken & Rice"
@@ -276,7 +276,7 @@ export default function MealLogScreen() {
               </View>
 
               <View style={styles.inputGroup}>
-                <Text style={styles.inputLabel}>CALORIES (KCAL)</Text>
+                <Text style={styles.inputLabel}>Calories (kcal)</Text>
                 <TextInput
                   style={styles.textInput}
                   keyboardType="numeric"
@@ -289,7 +289,7 @@ export default function MealLogScreen() {
 
               <View style={styles.row}>
                 <View style={[styles.inputGroup, { flex: 1 }]}>
-                  <Text style={styles.inputLabel}>PROTEIN (G)</Text>
+                  <Text style={styles.inputLabel}>Protein (g)</Text>
                   <TextInput
                     style={styles.textInput}
                     keyboardType="numeric"
@@ -301,7 +301,7 @@ export default function MealLogScreen() {
                 </View>
 
                 <View style={[styles.inputGroup, { flex: 1 }]}>
-                  <Text style={styles.inputLabel}>CARBS (G)</Text>
+                  <Text style={styles.inputLabel}>Carbs (g)</Text>
                   <TextInput
                     style={styles.textInput}
                     keyboardType="numeric"
@@ -313,7 +313,7 @@ export default function MealLogScreen() {
                 </View>
 
                 <View style={[styles.inputGroup, { flex: 1 }]}>
-                  <Text style={styles.inputLabel}>FAT (G)</Text>
+                  <Text style={styles.inputLabel}>Fat (g)</Text>
                   <TextInput
                     style={styles.textInput}
                     keyboardType="numeric"
@@ -328,11 +328,11 @@ export default function MealLogScreen() {
 
             <View style={styles.modalButtons}>
               <TouchableOpacity style={styles.cancelBtn} onPress={() => setModalVisible(false)}>
-                <Text style={styles.cancelBtnText}>CANCEL</Text>
+                <Text style={styles.cancelBtnText}>Cancel</Text>
               </TouchableOpacity>
 
               <TouchableOpacity style={styles.createBtn} onPress={handleLogMeal}>
-                <Text style={styles.createBtnText}>LOG MEAL</Text>
+                <Text style={styles.createBtnText}>Save Meal</Text>
               </TouchableOpacity>
             </View>
           </View>
@@ -363,11 +363,11 @@ export default function MealLogScreen() {
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: '#070B14',
+    backgroundColor: '#0B1120',
   },
   container: {
-    padding: Spacing.three,
-    gap: Spacing.three,
+    padding: Spacing.threeHalf,
+    gap: Spacing.threeHalf,
     paddingBottom: Spacing.six,
   },
   header: {
@@ -377,61 +377,60 @@ const styles = StyleSheet.create({
     marginTop: Spacing.two,
   },
   systemTag: {
-    fontSize: 10,
-    fontFamily: Fonts.mono,
+    fontSize: 12,
+    fontFamily: Fonts.sans,
     color: '#00A8FF',
-    letterSpacing: 1.5,
+    fontWeight: '600',
   },
   title: {
-    fontSize: 22,
-    fontWeight: '900',
-    color: '#E0E8FF',
-    letterSpacing: 1,
+    fontSize: 24,
+    fontWeight: '700',
+    fontFamily: Fonts.sans,
+    color: '#E8ECF4',
   },
   addBtn: {
-    backgroundColor: '#0D1424',
+    backgroundColor: '#111827',
     borderWidth: 1,
-    borderColor: '#00A8FF',
-    borderRadius: 8,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
+    borderColor: 'rgba(0, 168, 255, 0.3)',
+    borderRadius: 10,
+    paddingHorizontal: 14,
+    paddingVertical: 9,
   },
   addBtnText: {
-    fontSize: 11,
-    fontFamily: Fonts.mono,
-    fontWeight: '800',
-    color: '#00F0FF',
-    letterSpacing: 0.5,
+    fontSize: 13,
+    fontFamily: Fonts.sans,
+    fontWeight: '600',
+    color: '#00A8FF',
   },
   summaryCard: {
-    backgroundColor: '#0D1424',
-    borderWidth: 1.5,
-    borderColor: '#19315A',
-    borderRadius: 12,
-    padding: Spacing.three,
-    gap: Spacing.two,
+    backgroundColor: '#111827',
+    borderWidth: 1,
+    borderColor: '#1E293B',
+    borderRadius: 14,
+    padding: Spacing.threeHalf,
+    gap: Spacing.three,
   },
   summaryTop: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     borderBottomWidth: 1,
-    borderBottomColor: '#172744',
-    paddingBottom: 8,
+    borderBottomColor: '#1E293B',
+    paddingBottom: 10,
   },
   summaryLabel: {
-    fontSize: 10,
-    fontFamily: Fonts.mono,
-    color: '#6582A6',
-    letterSpacing: 1,
+    fontSize: 11,
+    fontFamily: Fonts.sans,
+    color: '#8896AB',
+    fontWeight: '500',
   },
   summaryBigNum: {
-    fontSize: 20,
-    fontWeight: '900',
+    fontSize: 22,
+    fontWeight: '800',
     fontFamily: Fonts.mono,
-    color: '#E0E8FF',
+    color: '#E8ECF4',
   },
   macrosSection: {
-    gap: 8,
+    gap: 10,
     marginTop: 4,
   },
   macroRow: {
@@ -442,18 +441,18 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
   },
   macroKey: {
-    fontSize: 10,
-    fontFamily: Fonts.mono,
-    fontWeight: '800',
+    fontSize: 12,
+    fontFamily: Fonts.sans,
+    fontWeight: '600',
   },
   macroVal: {
-    fontSize: 10,
+    fontSize: 11,
     fontFamily: Fonts.mono,
-    color: '#7A96BA',
+    color: '#8896AB',
   },
   macroTrack: {
     height: 6,
-    backgroundColor: '#090E1A',
+    backgroundColor: '#0E1726',
     borderRadius: 3,
     overflow: 'hidden',
   },
@@ -462,44 +461,45 @@ const styles = StyleSheet.create({
     borderRadius: 3,
   },
   mealSection: {
-    gap: Spacing.two,
+    gap: Spacing.three,
   },
   sectionTitle: {
-    fontSize: 12,
-    fontFamily: Fonts.mono,
-    fontWeight: '800',
+    fontSize: 14,
+    fontFamily: Fonts.sans,
+    fontWeight: '700',
     color: '#00A8FF',
-    letterSpacing: 1,
   },
   emptyCard: {
-    backgroundColor: '#0D1424',
-    borderRadius: 10,
+    backgroundColor: '#111827',
+    borderRadius: 14,
     borderWidth: 1,
-    borderColor: '#162846',
+    borderColor: '#1E293B',
     padding: Spacing.four,
     alignItems: 'center',
-    gap: 6,
+    gap: 8,
   },
   emptyEmoji: {
     fontSize: 28,
   },
   emptyText: {
-    fontSize: 14,
+    fontSize: 15,
     fontWeight: '700',
-    color: '#B0C8E8',
+    fontFamily: Fonts.sans,
+    color: '#D2E0F5',
   },
   emptySub: {
-    fontSize: 11,
-    color: '#556F91',
+    fontSize: 12,
+    fontFamily: Fonts.sans,
+    color: '#8896AB',
     textAlign: 'center',
   },
   mealCard: {
-    backgroundColor: '#0D1424',
+    backgroundColor: '#111827',
     borderWidth: 1,
-    borderColor: '#1A2E50',
-    borderRadius: 8,
-    padding: Spacing.three,
-    gap: 6,
+    borderColor: '#1E293B',
+    borderRadius: 12,
+    padding: Spacing.threeHalf,
+    gap: 8,
   },
   mealMain: {
     flexDirection: 'row',
@@ -508,74 +508,74 @@ const styles = StyleSheet.create({
   },
   mealName: {
     fontSize: 15,
-    fontWeight: '800',
-    color: '#E0E8FF',
+    fontWeight: '700',
+    fontFamily: Fonts.sans,
+    color: '#E8ECF4',
   },
   mealCalories: {
     fontSize: 14,
-    fontWeight: '900',
+    fontWeight: '800',
     fontFamily: Fonts.mono,
-    color: '#00F0FF',
+    color: '#00A8FF',
   },
   mealMacros: {
     flexDirection: 'row',
     gap: 12,
   },
   mealMacroText: {
-    fontSize: 10,
+    fontSize: 11,
     fontFamily: Fonts.mono,
-    color: '#6582A6',
+    color: '#8896AB',
   },
   mealTime: {
-    fontSize: 10,
-    fontFamily: Fonts.mono,
-    color: '#4B6282',
+    fontSize: 11,
+    fontFamily: Fonts.sans,
+    color: '#6B7B8F',
     marginLeft: 'auto',
   },
   modalOverlay: {
     flex: 1,
     backgroundColor: 'rgba(0,0,0,0.85)',
     justifyContent: 'center',
-    padding: Spacing.three,
+    padding: Spacing.threeHalf,
   },
   modalContent: {
-    backgroundColor: '#0D1424',
-    borderWidth: 1.5,
-    borderColor: '#00A8FF',
-    borderRadius: 14,
+    backgroundColor: '#111827',
+    borderWidth: 1,
+    borderColor: '#1E293B',
+    borderRadius: 18,
     padding: Spacing.four,
     gap: Spacing.three,
   },
   modalTitle: {
-    fontSize: 15,
-    fontWeight: '900',
-    fontFamily: Fonts.mono,
-    color: '#00F0FF',
+    fontSize: 18,
+    fontWeight: '700',
+    fontFamily: Fonts.sans,
+    color: '#E8ECF4',
     textAlign: 'center',
-    letterSpacing: 1.5,
   },
   modalForm: {
-    gap: Spacing.two,
+    gap: Spacing.three,
   },
   inputGroup: {
     gap: 6,
   },
   inputLabel: {
-    fontSize: 10,
-    fontFamily: Fonts.mono,
-    color: '#7A96BA',
-    letterSpacing: 1,
+    fontSize: 12,
+    fontFamily: Fonts.sans,
+    color: '#8896AB',
+    fontWeight: '500',
   },
   textInput: {
-    backgroundColor: '#090E1A',
+    backgroundColor: '#0E1726',
     borderWidth: 1,
-    borderColor: '#1C335C',
-    borderRadius: 8,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-    color: '#E0E8FF',
-    fontFamily: Fonts.mono,
-    fontSize: 14,
+    borderColor: '#1E293B',
+    borderRadius: 10,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    color: '#E8ECF4',
+    fontFamily: Fonts.sans,
+    fontSize: 15,
   },
   row: {
     flexDirection: 'row',
@@ -588,31 +588,30 @@ const styles = StyleSheet.create({
   },
   cancelBtn: {
     flex: 1,
-    backgroundColor: '#090E1A',
+    backgroundColor: '#0E1726',
     borderWidth: 1,
-    borderColor: '#1C335C',
-    borderRadius: 8,
-    paddingVertical: 12,
+    borderColor: '#1E293B',
+    borderRadius: 12,
+    paddingVertical: 14,
     alignItems: 'center',
   },
   cancelBtnText: {
-    fontFamily: Fonts.mono,
-    fontSize: 12,
-    fontWeight: '700',
-    color: '#7A96BA',
+    fontFamily: Fonts.sans,
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#8896AB',
   },
   createBtn: {
     flex: 2,
     backgroundColor: '#00A8FF',
-    borderRadius: 8,
-    paddingVertical: 12,
+    borderRadius: 12,
+    paddingVertical: 14,
     alignItems: 'center',
   },
   createBtnText: {
-    fontFamily: Fonts.mono,
-    fontSize: 12,
-    fontWeight: '900',
-    color: '#070B14',
-    letterSpacing: 1,
+    fontFamily: Fonts.sans,
+    fontSize: 14,
+    fontWeight: '700',
+    color: '#0B1120',
   },
 });

@@ -172,10 +172,10 @@ export function XPClaimModal({
         >
           {/* Header */}
           <View style={styles.header}>
-            <Text style={styles.headerTag}>SYSTEM NOTIFICATION</Text>
-            <Text style={styles.activityName}>{activityName.toUpperCase()}</Text>
+            <Text style={styles.headerTag}>Reward Available</Text>
+            <Text style={styles.activityName}>{activityName}</Text>
             {calories ? (
-              <Text style={styles.caloriesText}>🔥 {Math.round(calories)} KCAL EXPENDED</Text>
+              <Text style={styles.caloriesText}>🔥 {Math.round(calories)} kcal burned</Text>
             ) : null}
           </View>
 
@@ -206,11 +206,11 @@ export function XPClaimModal({
               <View style={styles.lockIconBox}>
                 <Text style={styles.lockIcon}>🔒</Text>
               </View>
-              <Text style={styles.lockedStateLabel}>LOCKED REWARD</Text>
+              <Text style={styles.lockedStateLabel}>Locked Reward</Text>
               <Text style={[styles.lockedXPText, { color: statColor }]}>
                 +{xpAmount} XP
               </Text>
-              <Text style={styles.lockedStatText}>{statInfo?.label || stat} XP</Text>
+              <Text style={styles.lockedStatText}>{statInfo?.label || stat}</Text>
             </Animated.View>
 
             {/* XP Counter */}
@@ -220,7 +220,7 @@ export function XPClaimModal({
                 +{xpAmount}
               </Text>
               <Text style={[styles.xpStatLabel, { color: statColor }]}>
-                {statInfo?.label || stat} STAT XP
+                {statInfo?.label || stat} XP
               </Text>
             </Animated.View>
           </View>
@@ -229,13 +229,13 @@ export function XPClaimModal({
           {claimResult && (
             <Animated.View style={[styles.claimedBannerWrapper, claimedBannerStyle]}>
               <View style={styles.claimedContainer}>
-                <Text style={styles.claimedText}>✓ XP SYNCHRONIZED</Text>
+                <Text style={styles.claimedText}>✓ XP Claimed!</Text>
 
                 {claimResult.leveledUp && (
                   <Animated.View entering={ZoomIn.delay(200)} style={styles.levelUpBanner}>
                     <Text style={styles.levelUpEmoji}>🎉</Text>
                     <Text style={styles.levelUpText}>
-                      LEVEL UP! → LEVEL {claimResult.newLevel}
+                      Level Up! → Level {claimResult.newLevel}
                     </Text>
                   </Animated.View>
                 )}
@@ -247,10 +247,10 @@ export function XPClaimModal({
                       style={styles.rankBannerPortrait}
                       contentFit="cover"
                     />
-                    <View style={{ flex: 1, gap: 1 }}>
-                      <Text style={styles.rankBannerSubtitle}>HUNTER PROMOTION</Text>
+                    <View style={{ flex: 1, gap: 2 }}>
+                      <Text style={styles.rankBannerSubtitle}>Rank Up!</Text>
                       <Text style={styles.rankText}>
-                        RANK AWAKENED → {claimResult.newRank}-RANK
+                        Promoted to {claimResult.newRank}-Rank
                       </Text>
                     </View>
                     <Text style={styles.rankEmoji}>⭐</Text>
@@ -267,7 +267,7 @@ export function XPClaimModal({
               onPress={handleClaim}
               activeOpacity={0.8}
             >
-              <Text style={styles.claimButtonText}>🔓 UNLOCK & CLAIM XP</Text>
+              <Text style={styles.claimButtonText}>🔓 Claim XP</Text>
             </TouchableOpacity>
           ) : (
             <TouchableOpacity
@@ -275,7 +275,7 @@ export function XPClaimModal({
               onPress={onDismiss}
               activeOpacity={0.8}
             >
-              <Text style={styles.continueButtonText}>CONFIRM & CONTINUE →</Text>
+              <Text style={styles.continueButtonText}>Continue</Text>
             </TouchableOpacity>
           )}
         </Animated.View>
@@ -287,7 +287,7 @@ export function XPClaimModal({
 const styles = StyleSheet.create({
   overlay: {
     flex: 1,
-    backgroundColor: 'rgba(5, 8, 16, 0.94)',
+    backgroundColor: 'rgba(5, 8, 16, 0.92)',
     justifyContent: 'center',
     alignItems: 'center',
     padding: Spacing.four,
@@ -301,17 +301,17 @@ const styles = StyleSheet.create({
   },
   container: {
     width: '100%',
-    backgroundColor: '#0B1220',
-    borderWidth: 1.8,
-    borderColor: '#00A8FF',
-    borderRadius: 18,
+    backgroundColor: '#111827',
+    borderWidth: 1,
+    borderColor: '#1E293B',
+    borderRadius: 20,
     padding: Spacing.four,
     gap: Spacing.three,
     alignItems: 'center',
-    shadowColor: '#00A8FF',
-    shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 0.6,
-    shadowRadius: 28,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.3,
+    shadowRadius: 24,
     elevation: 14,
   },
   header: {
@@ -319,24 +319,23 @@ const styles = StyleSheet.create({
     gap: 4,
   },
   headerTag: {
-    fontSize: 10,
-    fontFamily: Fonts.mono,
+    fontSize: 12,
+    fontFamily: Fonts.sans,
     color: '#00A8FF',
-    letterSpacing: 2,
-    fontWeight: '800',
+    fontWeight: '600',
   },
   activityName: {
     fontSize: 18,
-    fontWeight: '900',
-    color: '#E0E8FF',
-    letterSpacing: 1,
+    fontWeight: '700',
+    fontFamily: Fonts.sans,
+    color: '#E8ECF4',
     textAlign: 'center',
   },
   caloriesText: {
-    fontSize: 11,
-    fontFamily: Fonts.mono,
+    fontSize: 12,
+    fontFamily: Fonts.sans,
     color: '#FFAA00',
-    letterSpacing: 1,
+    fontWeight: '600',
     marginTop: 2,
   },
   xpArea: {
@@ -360,16 +359,16 @@ const styles = StyleSheet.create({
   },
   lockContainer: {
     alignItems: 'center',
-    gap: 3,
+    gap: 4,
     position: 'absolute',
   },
   lockIconBox: {
     width: 68,
     height: 68,
     borderRadius: 34,
-    backgroundColor: '#070D18',
+    backgroundColor: '#0E1726',
     borderWidth: 1.5,
-    borderColor: '#1C335C',
+    borderColor: '#1E293B',
     justifyContent: 'center',
     alignItems: 'center',
     marginBottom: 4,
@@ -378,11 +377,10 @@ const styles = StyleSheet.create({
     fontSize: 34,
   },
   lockedStateLabel: {
-    fontSize: 10,
-    fontFamily: Fonts.mono,
-    color: '#6582A6',
-    letterSpacing: 1.5,
-    fontWeight: '700',
+    fontSize: 12,
+    fontFamily: Fonts.sans,
+    color: '#8896AB',
+    fontWeight: '600',
   },
   lockedXPText: {
     fontSize: 26,
@@ -390,10 +388,10 @@ const styles = StyleSheet.create({
     fontFamily: Fonts.mono,
   },
   lockedStatText: {
-    fontSize: 11,
-    fontFamily: Fonts.mono,
-    color: '#8AABCE',
-    letterSpacing: 0.8,
+    fontSize: 12,
+    fontFamily: Fonts.sans,
+    color: '#8896AB',
+    fontWeight: '500',
   },
   xpCounterContainer: {
     alignItems: 'center',
@@ -409,36 +407,34 @@ const styles = StyleSheet.create({
     fontFamily: Fonts.mono,
   },
   xpStatLabel: {
-    fontSize: 12,
-    fontFamily: Fonts.mono,
-    fontWeight: '800',
-    letterSpacing: 1.5,
+    fontSize: 13,
+    fontFamily: Fonts.sans,
+    fontWeight: '700',
   },
   claimedBannerWrapper: {
     width: '100%',
   },
   claimedContainer: {
     alignItems: 'center',
-    gap: 8,
+    gap: 10,
     width: '100%',
   },
   claimedText: {
-    fontSize: 15,
-    fontWeight: '900',
-    fontFamily: Fonts.mono,
+    fontSize: 16,
+    fontWeight: '700',
+    fontFamily: Fonts.sans,
     color: '#00FF88',
-    letterSpacing: 1.5,
   },
   levelUpBanner: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
-    backgroundColor: 'rgba(255, 215, 0, 0.14)',
-    borderWidth: 1.2,
-    borderColor: '#FFD700',
-    borderRadius: 8,
-    paddingVertical: 8,
-    paddingHorizontal: 14,
+    gap: 10,
+    backgroundColor: 'rgba(255, 215, 0, 0.1)',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 215, 0, 0.3)',
+    borderRadius: 12,
+    paddingVertical: 10,
+    paddingHorizontal: 16,
     width: '100%',
     justifyContent: 'center',
   },
@@ -446,81 +442,76 @@ const styles = StyleSheet.create({
     fontSize: 18,
   },
   levelUpText: {
-    fontSize: 13,
-    fontWeight: '900',
-    fontFamily: Fonts.mono,
+    fontSize: 14,
+    fontWeight: '700',
+    fontFamily: Fonts.sans,
     color: '#FFD700',
-    letterSpacing: 1,
   },
   rankBanner: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 10,
-    backgroundColor: 'rgba(255, 0, 85, 0.14)',
-    borderWidth: 1.2,
-    borderColor: '#FF0055',
-    borderRadius: 10,
-    paddingVertical: 8,
-    paddingHorizontal: 12,
+    gap: 12,
+    backgroundColor: 'rgba(255, 0, 85, 0.1)',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 0, 85, 0.3)',
+    borderRadius: 12,
+    paddingVertical: 10,
+    paddingHorizontal: 14,
     width: '100%',
   },
   rankBannerPortrait: {
-    width: 36,
-    height: 36,
-    borderRadius: 8,
+    width: 38,
+    height: 38,
+    borderRadius: 10,
     borderWidth: 1.5,
     borderColor: '#FF0055',
-    backgroundColor: '#070C16',
+    backgroundColor: '#0E1726',
   },
   rankBannerSubtitle: {
-    fontSize: 8,
-    fontFamily: Fonts.mono,
+    fontSize: 11,
+    fontFamily: Fonts.sans,
     color: '#FF6699',
-    letterSpacing: 1,
-    fontWeight: '800',
+    fontWeight: '600',
   },
   rankEmoji: {
     fontSize: 18,
   },
   rankText: {
-    fontSize: 12,
-    fontWeight: '900',
-    fontFamily: Fonts.mono,
+    fontSize: 13,
+    fontWeight: '700',
+    fontFamily: Fonts.sans,
     color: '#FF0055',
-    letterSpacing: 0.5,
   },
   claimButton: {
     width: '100%',
-    borderRadius: 10,
-    paddingVertical: 15,
+    borderRadius: 14,
+    paddingVertical: 16,
     alignItems: 'center',
-    shadowColor: '#00F0FF',
-    shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 0.5,
-    shadowRadius: 14,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 10,
     elevation: 8,
   },
   claimButtonText: {
-    fontSize: 15,
-    fontWeight: '900',
-    fontFamily: Fonts.mono,
-    color: '#070B14',
-    letterSpacing: 1.5,
+    fontSize: 16,
+    fontWeight: '700',
+    fontFamily: Fonts.sans,
+    color: '#0B1120',
   },
   continueButton: {
     width: '100%',
-    borderWidth: 1.5,
-    borderColor: '#00A8FF',
-    borderRadius: 10,
-    paddingVertical: 13,
+    borderWidth: 1,
+    borderColor: '#1E293B',
+    borderRadius: 14,
+    paddingVertical: 14,
     alignItems: 'center',
-    backgroundColor: 'rgba(0, 168, 255, 0.12)',
+    backgroundColor: 'rgba(0, 168, 255, 0.08)',
   },
   continueButtonText: {
-    fontSize: 13,
-    fontWeight: '900',
-    fontFamily: Fonts.mono,
-    color: '#00F0FF',
-    letterSpacing: 1.5,
+    fontSize: 15,
+    fontWeight: '700',
+    fontFamily: Fonts.sans,
+    color: '#00A8FF',
   },
 });

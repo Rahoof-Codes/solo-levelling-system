@@ -1010,7 +1010,12 @@ export async function getStepsHistory(db: SQLiteDatabase, limitDays: number = 7)
 // --- SYNC ENGINE HELPERS ---
 
 export async function getUnsyncedRows<T>(db: SQLiteDatabase, tableName: string): Promise<T[]> {
-  return await db.getAllAsync<T>(`SELECT * FROM ${tableName} WHERE synced = 0;`);
+  try {
+    return await db.getAllAsync<T>(`SELECT * FROM ${tableName} WHERE synced = 0;`);
+  } catch (err) {
+    console.warn(`[DB] Failed to get unsynced rows for ${tableName}:`, err);
+    return [];
+  }
 }
 
 export async function markRowsSynced(
@@ -1018,27 +1023,58 @@ export async function markRowsSynced(
   tableName: string,
   ids: string[]
 ): Promise<void> {
-  if (ids.length === 0) return;
-  const placeholders = ids.map(() => '?').join(',');
-  await db.runAsync(
-    `UPDATE ${tableName} SET synced = 1 WHERE id IN (${placeholders});`,
-    ids
-  );
+  const validIds = ids.filter((id) => typeof id === 'string' && id.trim().length > 0);
+  if (validIds.length === 0) return;
+
+  // Batch in chunks of 50 to prevent SQLite variable limits or statement buffer overflow
+  for (let i = 0; i < validIds.length; i += 50) {
+    const chunk = validIds.slice(i, i + 50);
+    const placeholders = chunk.map(() => '?').join(',');
+    try {
+      await db.runAsync(
+        `UPDATE ${tableName} SET synced = 1 WHERE id IN (${placeholders});`,
+        chunk
+      );
+    } catch (err) {
+      console.warn(`[DB] Failed to mark rows synced for ${tableName}:`, err);
+    }
+  }
 }
 
 export async function getLastSyncedAt(db: SQLiteDatabase): Promise<string | null> {
-  const row = await db.getFirstAsync<{ value: string }>(
-    "SELECT value FROM sync_metadata WHERE key = 'last_synced_at';"
-  );
-  return row?.value ?? null;
+  try {
+    await db.execAsync(`
+      CREATE TABLE IF NOT EXISTS sync_metadata (
+        key TEXT PRIMARY KEY NOT NULL,
+        value TEXT NOT NULL
+      );
+    `);
+    const row = await db.getFirstAsync<{ value: string }>(
+      "SELECT value FROM sync_metadata WHERE key = 'last_synced_at';"
+    );
+    return row?.value ?? null;
+  } catch (err) {
+    console.warn('[DB] Failed to get last_synced_at:', err);
+    return null;
+  }
 }
 
 export async function setLastSyncedAt(db: SQLiteDatabase, timestamp: string): Promise<void> {
-  await db.runAsync(
-    `INSERT INTO sync_metadata (key, value) VALUES ('last_synced_at', ?)
-     ON CONFLICT(key) DO UPDATE SET value = excluded.value;`,
-    [timestamp]
-  );
+  try {
+    await db.execAsync(`
+      CREATE TABLE IF NOT EXISTS sync_metadata (
+        key TEXT PRIMARY KEY NOT NULL,
+        value TEXT NOT NULL
+      );
+    `);
+    await db.runAsync(
+      `INSERT INTO sync_metadata (key, value) VALUES ('last_synced_at', ?)
+       ON CONFLICT(key) DO UPDATE SET value = excluded.value;`,
+      [timestamp]
+    );
+  } catch (err) {
+    console.warn('[DB] Failed to set last_synced_at:', err);
+  }
 }
 
 export async function upsertRemoteRows(
@@ -1046,34 +1082,91 @@ export async function upsertRemoteRows(
   tableName: string,
   rows: any[]
 ): Promise<void> {
-  if (rows.length === 0) return;
+  if (!rows || rows.length === 0) return;
 
-  for (const row of rows) {
-    // Last-write-wins: check local row's updated_at
-    const local = await db.getFirstAsync<{ updated_at: string }>(
-      `SELECT updated_at FROM ${tableName} WHERE id = ?;`,
-      [row.id]
-    );
+  try {
+    // 1. Get valid table columns from local SQLite schema
+    const tableInfo = await db.getAllAsync<{ name: string }>(`PRAGMA table_info(${tableName});`);
+    const validColumns = new Set(tableInfo.map((c) => c.name));
 
-    if (local && new Date(local.updated_at) > new Date(row.updated_at)) {
-      // Local version is newer, skip remote overwrite
-      continue;
+    for (const row of rows) {
+      if (!row || !row.id) continue;
+
+      const rowId = String(row.id);
+
+      // Parse remote updated_at safely
+      let remoteUpdatedAt = row.updated_at;
+      if (remoteUpdatedAt && typeof remoteUpdatedAt === 'object') {
+        if (remoteUpdatedAt instanceof Date) {
+          remoteUpdatedAt = remoteUpdatedAt.toISOString();
+        } else if (typeof remoteUpdatedAt.toDate === 'function') {
+          remoteUpdatedAt = remoteUpdatedAt.toDate().toISOString();
+        } else if ('seconds' in remoteUpdatedAt) {
+          remoteUpdatedAt = new Date(remoteUpdatedAt.seconds * 1000).toISOString();
+        } else {
+          remoteUpdatedAt = new Date().toISOString();
+        }
+      } else if (!remoteUpdatedAt || typeof remoteUpdatedAt !== 'string') {
+        remoteUpdatedAt = new Date().toISOString();
+      }
+
+      // Last-write-wins: check local row's updated_at
+      try {
+        const local = await db.getFirstAsync<{ updated_at: string }>(
+          `SELECT updated_at FROM ${tableName} WHERE id = ?;`,
+          [rowId]
+        );
+
+        if (local && local.updated_at && new Date(local.updated_at) > new Date(remoteUpdatedAt)) {
+          // Local version is newer, skip remote overwrite
+          continue;
+        }
+      } catch {
+        // Continue to insert if query fails
+      }
+
+      // Build safe column & value lists from only existing SQLite columns (excluding 'synced')
+      const insertCols: string[] = ['id'];
+      const insertVals: any[] = [rowId];
+
+      for (const col of Object.keys(row)) {
+        if (col === 'id' || col === 'synced') continue;
+        if (!validColumns.has(col)) continue;
+
+        let val = row[col];
+        if (val !== null && typeof val === 'object') {
+          if (val instanceof Date) {
+            val = val.toISOString();
+          } else if (typeof val.toDate === 'function') {
+            val = val.toDate().toISOString();
+          } else if ('seconds' in val) {
+            val = new Date(val.seconds * 1000).toISOString();
+          } else if (Array.isArray(val) || !(val instanceof Uint8Array)) {
+            val = JSON.stringify(val);
+          }
+        }
+        insertCols.push(col);
+        insertVals.push(val ?? null);
+      }
+
+      // Append synced column explicitly
+      insertCols.push('synced');
+      insertVals.push(1);
+
+      const placeholders = insertCols.map(() => '?').join(',');
+      const updateClauses = insertCols
+        .filter((col) => col !== 'id')
+        .map((col) => `${col} = excluded.${col}`)
+        .join(', ');
+
+      await db.runAsync(
+        `INSERT INTO ${tableName} (${insertCols.join(',')})
+         VALUES (${placeholders})
+         ON CONFLICT(id) DO UPDATE SET ${updateClauses};`,
+        insertVals
+      );
     }
-
-    const columns = Object.keys(row);
-    const placeholders = columns.map(() => '?').join(',');
-    const values = columns.map((col) => row[col]);
-
-    const updateClauses = columns
-      .filter((col) => col !== 'id')
-      .map((col) => `${col} = excluded.${col}`)
-      .join(', ');
-
-    await db.runAsync(
-      `INSERT INTO ${tableName} (${columns.join(',')}, synced)
-       VALUES (${placeholders}, 1)
-       ON CONFLICT(id) DO UPDATE SET ${updateClauses}, synced = 1;`,
-      values
-    );
+  } catch (err) {
+    console.warn(`[DB] Failed to upsert remote rows for ${tableName}:`, err);
   }
 }

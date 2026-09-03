@@ -71,7 +71,7 @@ function MainNavigation() {
       <Stack
         screenOptions={{
           headerShown: false,
-          contentStyle: { backgroundColor: '#070B14' },
+          contentStyle: { backgroundColor: '#0B1120' },
           animation: 'fade',
         }}
       >
@@ -207,7 +207,7 @@ export default function RootLayout() {
 const errorStyles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#070B14',
+    backgroundColor: '#0B1120',
     alignItems: 'center',
     justifyContent: 'center',
     padding: 32,
@@ -217,36 +217,37 @@ const errorStyles = StyleSheet.create({
     fontSize: 48,
   },
   title: {
-    fontSize: 16,
-    fontWeight: '900',
+    fontSize: 18,
+    fontWeight: '700',
+    fontFamily: Fonts.sans,
     color: '#FF4444',
-    letterSpacing: 2,
   },
   message: {
-    fontSize: 12,
-    color: '#6582A6',
+    fontSize: 13,
+    fontFamily: Fonts.sans,
+    color: '#8896AB',
     textAlign: 'center',
   },
   hint: {
-    fontSize: 10,
-    color: '#4B6282',
+    fontSize: 11,
+    fontFamily: Fonts.sans,
+    color: '#6B7B8F',
     marginTop: 8,
     textAlign: 'center',
   },
   reloadBtn: {
-    backgroundColor: '#0055AA',
+    backgroundColor: '#0066BB',
     borderWidth: 1,
     borderColor: '#00A8FF',
-    borderRadius: 8,
+    borderRadius: 12,
     paddingHorizontal: 20,
     paddingVertical: 12,
     marginTop: 12,
   },
   reloadBtnText: {
-    fontFamily: Fonts.mono,
-    fontSize: 13,
-    fontWeight: '900',
-    color: '#00F0FF',
-    letterSpacing: 1,
+    fontFamily: Fonts.sans,
+    fontSize: 14,
+    fontWeight: '700',
+    color: '#FFFFFF',
   },
 });

@@ -101,7 +101,7 @@ export default function StatusScreen() {
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#00A8FF" />
         }
       >
-        {/* UNCALIBRATED BANNER IF NOT ONBOARDED */}
+        {/* ONBOARDING BANNER IF NOT ONBOARDED */}
         {profile && profile.onboarding_complete === 0 && (
           <TouchableOpacity
             style={styles.onboardingBanner}
@@ -109,24 +109,24 @@ export default function StatusScreen() {
           >
             <Text style={styles.bannerIcon}>⚠️</Text>
             <View style={{ flex: 1 }}>
-              <Text style={styles.bannerTitle}>SYSTEM CALIBRATION REQUIRED</Text>
-              <Text style={styles.bannerSub}>Tap to scan body stats & unlock custom nutrition targets</Text>
+              <Text style={styles.bannerTitle}>Complete your profile</Text>
+              <Text style={styles.bannerSub}>Set up your body stats to unlock custom nutrition targets</Text>
             </View>
             <Text style={styles.bannerArrow}>→</Text>
           </TouchableOpacity>
         )}
 
-        {/* ACTIVE PHYSICAL DIRECTIVE (LOCKED — RECALIBRATION ONLY) */}
+        {/* ACTIVE GOAL BANNER */}
         {profile && (
           <View style={styles.activeDirectiveBanner}>
             <View style={styles.directiveTop}>
-              <Text style={styles.directiveSystemTag}>[ PHYSICAL DIRECTIVE: LOCKED ]</Text>
+              <Text style={styles.directiveSystemTag}>Your Goal</Text>
               <TouchableOpacity
                 style={styles.recalibrateBtn}
                 onPress={() => router.push('/onboarding')}
                 activeOpacity={0.7}
               >
-                <Text style={styles.recalibrateBtnText}>RECALIBRATE ⚙️</Text>
+                <Text style={styles.recalibrateBtnText}>Edit ⚙️</Text>
               </TouchableOpacity>
             </View>
 
@@ -134,31 +134,31 @@ export default function StatusScreen() {
               <Text style={styles.directiveEmoji}>
                 {GOAL_CONFIG[profile.goal_type]?.emoji || '⚖️'}
               </Text>
-              <View style={{ flex: 1, gap: 2 }}>
+              <View style={{ flex: 1, gap: 3 }}>
                 <Text style={styles.directiveTitle}>
-                  {GOAL_CONFIG[profile.goal_type]?.label?.toUpperCase() || 'MAINTAIN WEIGHT'}
+                  {GOAL_CONFIG[profile.goal_type]?.label || 'Maintain Weight'}
                 </Text>
                 <Text style={styles.directiveSub}>
                   {GOAL_CONFIG[profile.goal_type]?.calorieOffset === 0
-                    ? 'TDEE Match (Energy Balance)'
+                    ? 'Energy balance (TDEE match)'
                     : `${GOAL_CONFIG[profile.goal_type]?.calorieOffset > 0 ? '+' : ''}${GOAL_CONFIG[profile.goal_type]?.calorieOffset} kcal/day`}
-                  {' • '}Daily Target: {Math.round(profile.daily_calories ?? 2000)} kcal
+                  {' • '}Target: {Math.round(profile.daily_calories ?? 2000)} kcal
                 </Text>
               </View>
             </View>
           </View>
         )}
 
-        {/* MAIN SOLO LEVELING STATUS WINDOW */}
+        {/* MAIN STATUS WINDOW */}
         {profile ? (
-          <StatusWindow title="HUNTER STATUS WINDOW">
+          <StatusWindow title="Your Status">
             {/* Hunter Identity & XP */}
             <HunterInfo profile={profile} />
 
             {/* Daily Streak & Resonance Buff */}
             <DailyStreakCard streaks={streaks} weekHistory={weekHistory} />
 
-            {/* Daily Calorie & Mana Energy Balance */}
+            {/* Daily Calorie & Energy Balance */}
             <DailySummary
               calorieSummary={calorieSummary}
               completedQuestsCount={completedQuestsCount}
@@ -171,11 +171,11 @@ export default function StatusScreen() {
           </StatusWindow>
         ) : (
           <View style={styles.loadingContainer}>
-            <Text style={styles.loadingText}>INITIALIZING SYSTEM MATRIX...</Text>
+            <Text style={styles.loadingText}>Loading your status...</Text>
           </View>
         )}
 
-        {/* 10,000 STEPS DAILY DIRECTIVE & MOTION HUD */}
+        {/* STEP TRACKER */}
         <StepTrackerCard onQuestClaimed={loadData} />
 
         {/* QUICK ACCESS ACTION ROW */}
@@ -185,7 +185,7 @@ export default function StatusScreen() {
             onPress={() => router.push('/(tabs)/quests')}
           >
             <Text style={styles.actionEmoji}>📜</Text>
-            <Text style={styles.actionLabel}>VIEW QUESTS</Text>
+            <Text style={styles.actionLabel}>Quests</Text>
           </TouchableOpacity>
 
           <TouchableOpacity
@@ -193,7 +193,7 @@ export default function StatusScreen() {
             onPress={() => router.push('/(tabs)/log')}
           >
             <Text style={styles.actionEmoji}>🍽️</Text>
-            <Text style={styles.actionLabel}>LOG MEAL</Text>
+            <Text style={styles.actionLabel}>Log Meal</Text>
           </TouchableOpacity>
 
           <TouchableOpacity
@@ -201,7 +201,7 @@ export default function StatusScreen() {
             onPress={() => router.push('/(tabs)/activity')}
           >
             <Text style={styles.actionEmoji}>⚡</Text>
-            <Text style={styles.actionLabel}>TRAIN</Text>
+            <Text style={styles.actionLabel}>Train</Text>
           </TouchableOpacity>
         </View>
       </ScrollView>
@@ -212,20 +212,20 @@ export default function StatusScreen() {
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: '#070B14',
+    backgroundColor: '#0B1120',
   },
   container: {
-    padding: Spacing.three,
-    gap: Spacing.three,
+    padding: Spacing.threeHalf,
+    gap: Spacing.threeHalf,
     paddingBottom: Spacing.six,
   },
   onboardingBanner: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: 'rgba(255, 170, 0, 0.12)',
-    borderWidth: 1.5,
-    borderColor: '#FFAA00',
-    borderRadius: 10,
+    backgroundColor: 'rgba(255, 170, 0, 0.08)',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 170, 0, 0.35)',
+    borderRadius: 14,
     padding: Spacing.three,
     gap: Spacing.two,
   },
@@ -233,21 +233,21 @@ const styles = StyleSheet.create({
     fontSize: 22,
   },
   bannerTitle: {
-    fontSize: 12,
-    fontWeight: '900',
-    fontFamily: Fonts.mono,
+    fontSize: 14,
+    fontWeight: '700',
+    fontFamily: Fonts.sans,
     color: '#FFAA00',
-    letterSpacing: 1,
   },
   bannerSub: {
-    fontSize: 10,
-    color: '#D4C09B',
+    fontSize: 12,
+    fontFamily: Fonts.sans,
+    color: '#C4A870',
     marginTop: 2,
   },
   bannerArrow: {
     fontSize: 18,
     color: '#FFAA00',
-    fontWeight: '900',
+    fontWeight: '700',
   },
   loadingContainer: {
     padding: Spacing.six,
@@ -255,10 +255,9 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   loadingText: {
-    fontFamily: Fonts.mono,
-    color: '#00F0FF',
-    fontSize: 12,
-    letterSpacing: 2,
+    fontFamily: Fonts.sans,
+    color: '#8896AB',
+    fontSize: 14,
   },
   actionsRow: {
     flexDirection: 'row',
@@ -266,36 +265,35 @@ const styles = StyleSheet.create({
   },
   actionButton: {
     flex: 1,
-    backgroundColor: '#0D1424',
+    backgroundColor: '#111827',
     borderWidth: 1,
-    borderColor: '#19315A',
-    borderRadius: 10,
-    paddingVertical: 12,
+    borderColor: '#1E293B',
+    borderRadius: 14,
+    paddingVertical: 14,
     alignItems: 'center',
-    gap: 4,
-    shadowColor: '#00A8FF',
-    shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 0.2,
+    gap: 6,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.15,
     shadowRadius: 6,
-    elevation: 4,
+    elevation: 3,
   },
   actionEmoji: {
-    fontSize: 20,
+    fontSize: 22,
   },
   actionLabel: {
-    fontSize: 10,
-    fontFamily: Fonts.mono,
-    fontWeight: '800',
-    color: '#90B4E0',
-    letterSpacing: 1,
+    fontSize: 12,
+    fontFamily: Fonts.sans,
+    fontWeight: '600',
+    color: '#8896AB',
   },
   activeDirectiveBanner: {
-    backgroundColor: '#0D1424',
+    backgroundColor: '#111827',
     borderWidth: 1,
-    borderColor: '#19315A',
-    borderRadius: 12,
-    padding: Spacing.three,
-    gap: 10,
+    borderColor: '#1E293B',
+    borderRadius: 14,
+    padding: Spacing.threeHalf,
+    gap: 12,
   },
   directiveTop: {
     flexDirection: 'row',
@@ -303,43 +301,42 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   directiveSystemTag: {
-    fontSize: 10,
-    fontFamily: Fonts.mono,
+    fontSize: 12,
+    fontFamily: Fonts.sans,
     color: '#00A8FF',
-    letterSpacing: 1.5,
-    fontWeight: '800',
+    fontWeight: '600',
   },
   recalibrateBtn: {
-    backgroundColor: 'rgba(0, 168, 255, 0.1)',
+    backgroundColor: 'rgba(0, 168, 255, 0.08)',
     borderWidth: 1,
-    borderColor: '#00A8FF',
-    borderRadius: 6,
-    paddingHorizontal: 8,
-    paddingVertical: 4,
+    borderColor: 'rgba(0, 168, 255, 0.25)',
+    borderRadius: 8,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
   },
   recalibrateBtnText: {
-    fontSize: 9,
-    fontFamily: Fonts.mono,
-    color: '#00F0FF',
-    fontWeight: '800',
+    fontSize: 11,
+    fontFamily: Fonts.sans,
+    color: '#00A8FF',
+    fontWeight: '600',
   },
   directiveBody: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 12,
+    gap: 14,
   },
   directiveEmoji: {
-    fontSize: 26,
+    fontSize: 28,
   },
   directiveTitle: {
-    fontSize: 14,
-    fontWeight: '900',
-    color: '#E0E8FF',
-    letterSpacing: 0.5,
+    fontSize: 16,
+    fontWeight: '700',
+    fontFamily: Fonts.sans,
+    color: '#E8ECF4',
   },
   directiveSub: {
-    fontSize: 11,
-    fontFamily: Fonts.mono,
-    color: '#6582A6',
+    fontSize: 12,
+    fontFamily: Fonts.sans,
+    color: '#8896AB',
   },
 });

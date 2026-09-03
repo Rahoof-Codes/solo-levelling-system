@@ -64,31 +64,43 @@ export async function syncPendingRecords(db: SQLiteDatabase, userId: string | nu
     // Path: /users/{userId}/{table}/{docId}
     // ============================================================
     for (const table of SYNCABLE_TABLES) {
-      const unsyncedRows = await getUnsyncedRows<any>(db, table);
-      if (unsyncedRows.length === 0) continue;
+      try {
+        const unsyncedRows = await getUnsyncedRows<any>(db, table);
+        if (unsyncedRows.length === 0) continue;
 
-      // Clean rows (remove local-only synced flag)
-      const cleanRows = unsyncedRows.map(({ synced, ...rest }) => rest);
+        // Clean rows (remove local-only synced flag & sanitize undefined values)
+        const cleanRows = unsyncedRows.map(({ synced, ...rest }) => {
+          const sanitized: Record<string, any> = {};
+          for (const key of Object.keys(rest)) {
+            const val = rest[key];
+            sanitized[key] = val === undefined ? null : val;
+          }
+          return sanitized;
+        });
 
-      // Firestore batches support up to 500 operations
-      const BATCH_SIZE = 400;
-      for (let i = 0; i < cleanRows.length; i += BATCH_SIZE) {
-        const chunk = cleanRows.slice(i, i + BATCH_SIZE);
-        const batch = writeBatch(firestoreDb);
+        // Firestore batches support up to 500 operations
+        const BATCH_SIZE = 400;
+        for (let i = 0; i < cleanRows.length; i += BATCH_SIZE) {
+          const chunk = cleanRows.slice(i, i + BATCH_SIZE);
+          const batch = writeBatch(firestoreDb);
 
-        for (const row of chunk) {
-          // Per-user path: /users/{userId}/{table}/{docId}
-          const docRef = doc(firestoreDb, 'users', userId, table, String(row.id));
-          batch.set(docRef, row, { merge: true });
+          for (const row of chunk) {
+            if (!row || !row.id) continue;
+            // Per-user path: /users/{userId}/{table}/{docId}
+            const docRef = doc(firestoreDb, 'users', userId, table, String(row.id));
+            batch.set(docRef, row, { merge: true });
+          }
+
+          await batch.commit();
         }
 
-        await batch.commit();
+        // Mark pushed rows as synced = 1 locally
+        const pushedIds = unsyncedRows.map((r) => r.id).filter(Boolean);
+        await markRowsSynced(db, table, pushedIds);
+        totalPushed += pushedIds.length;
+      } catch (tableErr) {
+        console.warn(`[Sync] Issue pushing table ${table}:`, tableErr);
       }
-
-      // Mark pushed rows as synced = 1 locally
-      const pushedIds = unsyncedRows.map((r) => r.id);
-      await markRowsSynced(db, table, pushedIds);
-      totalPushed += pushedIds.length;
     }
 
     // ============================================================
@@ -96,17 +108,24 @@ export async function syncPendingRecords(db: SQLiteDatabase, userId: string | nu
     // Path: /users/{userId}/{table}
     // ============================================================
     for (const table of SYNCABLE_TABLES) {
-      const colRef = collection(firestoreDb, 'users', userId, table);
-      const q = lastSyncedAt
-        ? query(colRef, where('updated_at', '>', lastSyncedAt))
-        : query(colRef);
+      try {
+        const colRef = collection(firestoreDb, 'users', userId, table);
+        const q = lastSyncedAt
+          ? query(colRef, where('updated_at', '>', lastSyncedAt))
+          : query(colRef);
 
-      const snapshot = await getDocs(q);
+        const snapshot = await getDocs(q);
 
-      if (!snapshot.empty) {
-        const remoteRows = snapshot.docs.map((d) => d.data());
-        await upsertRemoteRows(db, table, remoteRows);
-        totalPulled += remoteRows.length;
+        if (!snapshot.empty) {
+          const remoteRows = snapshot.docs.map((d) => ({
+            id: d.id,
+            ...d.data(),
+          }));
+          await upsertRemoteRows(db, table, remoteRows);
+          totalPulled += remoteRows.length;
+        }
+      } catch (tableErr) {
+        console.warn(`[Sync] Issue pulling table ${table}:`, tableErr);
       }
     }
 
@@ -121,7 +140,7 @@ export async function syncPendingRecords(db: SQLiteDatabase, userId: string | nu
       pulledCount: totalPulled,
     };
   } catch (err: any) {
-    console.error('[Sync] Unexpected Firebase sync error:', err);
+    console.warn('[Sync] Background sync encountered an issue:', err?.message ?? err);
     return {
       success: false,
       pushedCount: totalPushed,

@@ -95,9 +95,9 @@ export function ManaReplenishModal({
         >
           {/* Header */}
           <View style={styles.header}>
-            <Text style={styles.systemTag}>SYSTEM PROTOCOL // NUTRITION</Text>
-            <Text style={styles.title}>[ MANA REPLENISHED ]</Text>
-            <Text style={styles.mealNameText}>"{mealName.toUpperCase()}"</Text>
+            <Text style={styles.systemTag}>Nutrition</Text>
+            <Text style={styles.title}>Energy Replenished!</Text>
+            <Text style={styles.mealNameText}>"{mealName}"</Text>
           </View>
 
           {/* Glowing Ring & Mana Orb */}
@@ -106,14 +106,14 @@ export function ManaReplenishModal({
             <Animated.View style={[styles.manaOrb, animatedPulseStyle]}>
               <Text style={styles.orbEmoji}>⚡</Text>
               <Text style={styles.orbText}>+{Math.round(calories)}</Text>
-              <Text style={styles.orbUnit}>KCAL MANA</Text>
+              <Text style={styles.orbUnit}>kcal</Text>
             </Animated.View>
           </View>
 
           {/* GAUGE PROGRESS BAR */}
           <View style={styles.gaugeContainer}>
             <View style={styles.gaugeHeader}>
-              <Text style={styles.gaugeLabel}>MANA RESERVES</Text>
+              <Text style={styles.gaugeLabel}>Daily Energy</Text>
               <Text style={styles.gaugeNumbers}>
                 {Math.round(totalCaloriesToday)} / {Math.round(targetCalories)} kcal
               </Text>
@@ -127,30 +127,30 @@ export function ManaReplenishModal({
           <View style={styles.macrosRow}>
             {/* Protein */}
             <Animated.View entering={ZoomIn.delay(200)} style={styles.macroTile}>
-              <Text style={[styles.macroTileKey, { color: '#FF4444' }]}>PROTEIN</Text>
+              <Text style={[styles.macroTileKey, { color: '#FF4444' }]}>Protein</Text>
               <Text style={styles.macroTileVal}>+{Math.round(protein)}g</Text>
-              <Text style={styles.macroTileSub}>Muscle Recovery</Text>
+              <Text style={styles.macroTileSub}>Recovery</Text>
             </Animated.View>
 
             {/* Carbs */}
             <Animated.View entering={ZoomIn.delay(300)} style={styles.macroTile}>
-              <Text style={[styles.macroTileKey, { color: '#FFAA00' }]}>CARBS</Text>
+              <Text style={[styles.macroTileKey, { color: '#FFAA00' }]}>Carbs</Text>
               <Text style={styles.macroTileVal}>+{Math.round(carbs)}g</Text>
-              <Text style={styles.macroTileSub}>Stamina Fuel</Text>
+              <Text style={styles.macroTileSub}>Fuel</Text>
             </Animated.View>
 
             {/* Fat */}
             <Animated.View entering={ZoomIn.delay(400)} style={styles.macroTile}>
-              <Text style={[styles.macroTileKey, { color: '#00FF88' }]}>LIPIDS</Text>
+              <Text style={[styles.macroTileKey, { color: '#00FF88' }]}>Fat</Text>
               <Text style={styles.macroTileVal}>+{Math.round(fat)}g</Text>
-              <Text style={styles.macroTileSub}>Vital Systems</Text>
+              <Text style={styles.macroTileSub}>Vitals</Text>
             </Animated.View>
           </View>
 
           {/* STATUS NOTIFICATION FOOTER */}
           <View style={styles.systemStatusBox}>
             <Text style={styles.systemStatusText}>
-              ✓ Body matrix energized. Daily metabolic quota updated.
+              ✓ Meal logged. Daily nutrition updated.
             </Text>
           </View>
 
@@ -160,7 +160,7 @@ export function ManaReplenishModal({
             onPress={onDismiss}
             activeOpacity={0.8}
           >
-            <Text style={styles.confirmButtonText}>ABSORB & CONTINUE →</Text>
+            <Text style={styles.confirmButtonText}>Continue</Text>
           </TouchableOpacity>
         </Animated.View>
       </View>
@@ -171,56 +171,54 @@ export function ManaReplenishModal({
 const styles = StyleSheet.create({
   overlay: {
     flex: 1,
-    backgroundColor: 'rgba(4, 7, 15, 0.94)',
+    backgroundColor: 'rgba(4, 7, 15, 0.92)',
     justifyContent: 'center',
     alignItems: 'center',
-    padding: Spacing.three,
+    padding: Spacing.threeHalf,
   },
   bgGlow: {
     position: 'absolute',
     width: width * 0.8,
     height: width * 0.8,
     borderRadius: (width * 0.8) / 2,
-    backgroundColor: 'rgba(0, 168, 255, 0.12)',
+    backgroundColor: 'rgba(0, 168, 255, 0.08)',
   },
   container: {
     width: '100%',
-    backgroundColor: '#0A1120',
-    borderWidth: 1.8,
-    borderColor: '#00A8FF',
-    borderRadius: 18,
+    backgroundColor: '#111827',
+    borderWidth: 1,
+    borderColor: '#1E293B',
+    borderRadius: 20,
     padding: Spacing.four,
     gap: Spacing.three,
     alignItems: 'center',
-    shadowColor: '#00A8FF',
-    shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 0.6,
-    shadowRadius: 28,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.3,
+    shadowRadius: 24,
     elevation: 12,
   },
   header: {
     alignItems: 'center',
-    gap: 3,
+    gap: 4,
   },
   systemTag: {
-    fontSize: 9,
-    fontFamily: Fonts.mono,
+    fontSize: 12,
+    fontFamily: Fonts.sans,
     color: '#00A8FF',
-    letterSpacing: 2,
-    fontWeight: '800',
+    fontWeight: '600',
   },
   title: {
     fontSize: 20,
-    fontWeight: '900',
-    fontFamily: Fonts.mono,
-    color: '#E0E8FF',
-    letterSpacing: 1.5,
+    fontWeight: '700',
+    fontFamily: Fonts.sans,
+    color: '#E8ECF4',
   },
   mealNameText: {
-    fontSize: 12,
-    fontFamily: Fonts.mono,
-    color: '#7AA4D4',
-    fontWeight: '700',
+    fontSize: 13,
+    fontFamily: Fonts.sans,
+    color: '#8896AB',
+    fontWeight: '500',
     marginTop: 2,
   },
   orbArea: {
@@ -237,21 +235,21 @@ const styles = StyleSheet.create({
     height: 90,
     borderRadius: 45,
     borderWidth: 2,
-    borderColor: '#00F0FF',
+    borderColor: '#00A8FF',
   },
   manaOrb: {
     width: 104,
     height: 104,
     borderRadius: 52,
-    backgroundColor: '#07101E',
+    backgroundColor: '#0E1726',
     borderWidth: 2,
-    borderColor: '#00F0FF',
+    borderColor: '#00A8FF',
     justifyContent: 'center',
     alignItems: 'center',
-    shadowColor: '#00F0FF',
+    shadowColor: '#00A8FF',
     shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 0.7,
-    shadowRadius: 16,
+    shadowOpacity: 0.4,
+    shadowRadius: 12,
     elevation: 8,
     gap: 1,
   },
@@ -262,23 +260,22 @@ const styles = StyleSheet.create({
     fontSize: 20,
     fontWeight: '900',
     fontFamily: Fonts.mono,
-    color: '#00F0FF',
+    color: '#00A8FF',
   },
   orbUnit: {
-    fontSize: 8,
-    fontFamily: Fonts.mono,
-    fontWeight: '800',
-    color: '#8AABCE',
-    letterSpacing: 1,
+    fontSize: 10,
+    fontFamily: Fonts.sans,
+    fontWeight: '600',
+    color: '#8896AB',
   },
   gaugeContainer: {
     width: '100%',
     gap: 6,
-    backgroundColor: '#060B14',
+    backgroundColor: '#0E1726',
     borderWidth: 1,
-    borderColor: '#152542',
-    borderRadius: 10,
-    padding: 10,
+    borderColor: '#1E293B',
+    borderRadius: 12,
+    padding: 12,
   },
   gaugeHeader: {
     flexDirection: 'row',
@@ -286,32 +283,31 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   gaugeLabel: {
-    fontSize: 10,
-    fontFamily: Fonts.mono,
-    fontWeight: '800',
+    fontSize: 12,
+    fontFamily: Fonts.sans,
+    fontWeight: '600',
     color: '#00A8FF',
-    letterSpacing: 1,
   },
   gaugeNumbers: {
-    fontSize: 10,
+    fontSize: 11,
     fontFamily: Fonts.mono,
-    color: '#8AABCE',
-    fontWeight: '700',
+    color: '#8896AB',
+    fontWeight: '600',
   },
   gaugeTrack: {
     height: 8,
-    backgroundColor: '#0D1728',
+    backgroundColor: '#0B1120',
     borderRadius: 4,
     overflow: 'hidden',
   },
   gaugeFill: {
     height: '100%',
-    backgroundColor: '#00F0FF',
+    backgroundColor: '#00A8FF',
     borderRadius: 4,
-    shadowColor: '#00F0FF',
+    shadowColor: '#00A8FF',
     shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 0.8,
-    shadowRadius: 6,
+    shadowOpacity: 0.5,
+    shadowRadius: 4,
   },
   macrosRow: {
     flexDirection: 'row',
@@ -320,64 +316,62 @@ const styles = StyleSheet.create({
   },
   macroTile: {
     flex: 1,
-    backgroundColor: '#070D18',
+    backgroundColor: '#0E1726',
     borderWidth: 1,
-    borderColor: '#192C4D',
-    borderRadius: 8,
-    padding: 8,
+    borderColor: '#1E293B',
+    borderRadius: 10,
+    padding: 10,
     alignItems: 'center',
-    gap: 2,
+    gap: 3,
   },
   macroTileKey: {
-    fontSize: 9,
-    fontFamily: Fonts.mono,
-    fontWeight: '800',
-    letterSpacing: 0.5,
+    fontSize: 11,
+    fontFamily: Fonts.sans,
+    fontWeight: '700',
   },
   macroTileVal: {
-    fontSize: 14,
+    fontSize: 15,
     fontWeight: '900',
     fontFamily: Fonts.mono,
-    color: '#E0E8FF',
+    color: '#E8ECF4',
   },
   macroTileSub: {
-    fontSize: 8,
-    fontFamily: Fonts.mono,
-    color: '#556F91',
+    fontSize: 9,
+    fontFamily: Fonts.sans,
+    color: '#6B7B8F',
   },
   systemStatusBox: {
-    backgroundColor: 'rgba(0, 255, 136, 0.08)',
+    backgroundColor: 'rgba(0, 255, 136, 0.06)',
     borderWidth: 1,
-    borderColor: 'rgba(0, 255, 136, 0.3)',
-    borderRadius: 8,
-    paddingVertical: 8,
-    paddingHorizontal: 12,
+    borderColor: 'rgba(0, 255, 136, 0.2)',
+    borderRadius: 10,
+    paddingVertical: 10,
+    paddingHorizontal: 14,
     width: '100%',
   },
   systemStatusText: {
-    fontSize: 10,
-    fontFamily: Fonts.mono,
+    fontSize: 12,
+    fontFamily: Fonts.sans,
     color: '#00FF88',
     textAlign: 'center',
-    fontWeight: '700',
+    fontWeight: '600',
   },
   confirmButton: {
     width: '100%',
     backgroundColor: '#00A8FF',
-    borderRadius: 10,
-    paddingVertical: 14,
+    borderRadius: 14,
+    paddingVertical: 16,
     alignItems: 'center',
     shadowColor: '#00A8FF',
-    shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 0.6,
-    shadowRadius: 14,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 10,
     elevation: 6,
   },
   confirmButtonText: {
-    fontSize: 13,
-    fontWeight: '900',
-    fontFamily: Fonts.mono,
-    color: '#070B14',
-    letterSpacing: 1.5,
+    fontSize: 15,
+    fontWeight: '700',
+    fontFamily: Fonts.sans,
+    color: '#0B1120',
   },
 });

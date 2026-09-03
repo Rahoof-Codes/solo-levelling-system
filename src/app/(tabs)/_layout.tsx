@@ -11,20 +11,25 @@ export default function TabLayout() {
       screenOptions={{
         headerShown: false,
         tabBarStyle: {
-          backgroundColor: '#070B14',
-          borderTopColor: '#172744',
-          borderTopWidth: 1,
-          height: Platform.OS === 'android' ? 64 : 84,
-          paddingBottom: Platform.OS === 'android' ? 8 : 24,
-          paddingTop: 8,
+          backgroundColor: '#0B1120',
+          borderTopColor: 'transparent',
+          borderTopWidth: 0,
+          height: Platform.OS === 'android' ? 68 : 88,
+          paddingBottom: Platform.OS === 'android' ? 10 : 26,
+          paddingTop: 10,
+          elevation: 20,
+          shadowColor: '#000',
+          shadowOffset: { width: 0, height: -4 },
+          shadowOpacity: 0.3,
+          shadowRadius: 12,
         },
-        tabBarActiveTintColor: '#00F0FF',
+        tabBarActiveTintColor: '#00A8FF',
         tabBarInactiveTintColor: '#4B6282',
         tabBarLabelStyle: {
-          fontFamily: Fonts.mono,
-          fontSize: 10,
-          fontWeight: '700',
-          letterSpacing: 0.5,
+          fontFamily: Fonts.sans,
+          fontSize: 11,
+          fontWeight: '600',
+          letterSpacing: 0.2,
         },
       }}
     >
@@ -59,7 +64,7 @@ export default function TabLayout() {
       <Tabs.Screen
         name="profile"
         options={{
-          title: 'Hunter',
+          title: 'Profile',
           tabBarIcon: ({ color }) => <Text style={[styles.icon, { color }]}>👤</Text>,
         }}
       />
@@ -69,6 +74,6 @@ export default function TabLayout() {
 
 const styles = StyleSheet.create({
   icon: {
-    fontSize: 18,
+    fontSize: 20,
   },
 });

@@ -186,7 +186,7 @@ export default function ActivityScreen() {
       await activateWorkoutPlan(db, planType);
       await loadData();
       Alert.alert(
-        'PROTOCOL INITIALIZED',
+        'Plan Activated!',
         `${planType === '100day' ? '100-Day Shadow Awakening' : "365-Day Monarch's Ascension"} has been activated! Your daily workouts are now scheduled.`
       );
     } catch (err: any) {
@@ -197,7 +197,7 @@ export default function ActivityScreen() {
   };
 
   const getDayDateLabel = (dayNum: number, startDate?: string | null): string => {
-    if (!startDate) return `DAY ${dayNum}`;
+    if (!startDate) return `Day ${dayNum}`;
     try {
       const d = new Date(startDate + 'T00:00:00');
       d.setDate(d.getDate() + (dayNum - 1));
@@ -205,9 +205,9 @@ export default function ActivityScreen() {
         weekday: 'short',
         month: 'short',
         day: 'numeric',
-      }).toUpperCase();
+      });
     } catch {
-      return `DAY ${dayNum}`;
+      return `Day ${dayNum}`;
     }
   };
 
@@ -340,11 +340,11 @@ export default function ActivityScreen() {
         {/* HEADER */}
         <View style={styles.header}>
           <View>
-            <Text style={styles.systemTag}>COMBAT TRAINING</Text>
-            <Text style={styles.title}>TRAINING GROUNDS</Text>
+            <Text style={styles.systemTag}>Workouts & Activities</Text>
+            <Text style={styles.title}>Training</Text>
           </View>
           <TouchableOpacity style={styles.addBtn} onPress={() => setModalVisible(true)}>
-            <Text style={styles.addBtnText}>+ LOG ACTIVITY</Text>
+            <Text style={styles.addBtnText}>+ Log Activity</Text>
           </TouchableOpacity>
         </View>
 
@@ -354,10 +354,10 @@ export default function ActivityScreen() {
             <View style={styles.planProgressTop}>
               <View style={{ flex: 1 }}>
                 <Text style={styles.planProgressTag}>
-                  {progress.planType === '100day' ? '⚡' : '👑'} {progress.planName.toUpperCase()}
+                  {progress.planType === '100day' ? '⚡' : '👑'} {progress.planName}
                 </Text>
                 <Text style={styles.planProgressPhase}>
-                  Phase: {progress.phase} — {progress.difficulty.toUpperCase()}
+                  Phase: {progress.phase} — {progress.difficulty}
                 </Text>
               </View>
               <View style={styles.dayCounter}>
@@ -377,7 +377,7 @@ export default function ActivityScreen() {
                 />
               </View>
               <Text style={styles.progressBarLabel}>
-                WEEK {progress.currentWeek} OF {progress.totalWeeks} • {progress.completedCount} WORKOUTS COMPLETED ({progress.progressPercent}%)
+                Week {progress.currentWeek} of {progress.totalWeeks} • {progress.completedCount} workouts done ({progress.progressPercent}%)
               </Text>
             </View>
           </View>
@@ -385,9 +385,9 @@ export default function ActivityScreen() {
           /* NO PLAN ACTIVE — ONE-TAP QUICK ACTIVATION */
           <View style={styles.noPlanCard}>
             <Text style={styles.noPlanEmoji}>⚔️</Text>
-            <Text style={styles.noPlanTitle}>NO TRAINING PROTOCOL ACTIVE</Text>
+            <Text style={styles.noPlanTitle}>No Training Plan Active</Text>
             <Text style={styles.noPlanSub}>
-              Select an official Hunter Training Program to generate and view your daily home workout plans mapped by dates:
+              Select a training program to generate daily home workout plans mapped by dates:
             </Text>
 
             <View style={styles.quickActivateRow}>
@@ -397,8 +397,8 @@ export default function ActivityScreen() {
                 disabled={activating}
                 activeOpacity={0.8}
               >
-                <Text style={styles.quickActivateBadge}>⚡ 100 DAYS</Text>
-                <Text style={styles.quickActivateTitle}>SHADOW AWAKENING</Text>
+                <Text style={styles.quickActivateBadge}>⚡ 100 Days</Text>
+                <Text style={styles.quickActivateTitle}>Shadow Awakening</Text>
                 <Text style={styles.quickActivateDesc}>14 Weeks • Foundation to Power</Text>
               </TouchableOpacity>
 
@@ -408,8 +408,8 @@ export default function ActivityScreen() {
                 disabled={activating}
                 activeOpacity={0.8}
               >
-                <Text style={[styles.quickActivateBadge, { color: '#FFAA00' }]}>👑 365 DAYS</Text>
-                <Text style={styles.quickActivateTitle}>MONARCH'S ASCENSION</Text>
+                <Text style={[styles.quickActivateBadge, { color: '#FFAA00' }]}>👑 365 Days</Text>
+                <Text style={styles.quickActivateTitle}>Monarch's Ascension</Text>
                 <Text style={styles.quickActivateDesc}>52 Weeks • E-Rank to S-Rank</Text>
               </TouchableOpacity>
             </View>
@@ -420,7 +420,7 @@ export default function ActivityScreen() {
               activeOpacity={0.7}
             >
               <Text style={styles.fullCalibrationLinkText}>
-                ⚙️ RUN FULL SYSTEM BODY CALIBRATION →
+                ⚙️ Set up body stats →
               </Text>
             </TouchableOpacity>
           </View>
@@ -440,7 +440,7 @@ export default function ActivityScreen() {
                 </TouchableOpacity>
 
                 <Text style={styles.sectionTitle}>
-                  WEEK {viewWeek} OF {progress.totalWeeks}
+                  Week {viewWeek} of {progress.totalWeeks}
                 </Text>
 
                 <TouchableOpacity
@@ -454,7 +454,7 @@ export default function ActivityScreen() {
 
               <TouchableOpacity onPress={() => setShowCalendar(!showCalendar)} activeOpacity={0.7}>
                 <Text style={styles.calendarToggle}>
-                  {showCalendar ? '▲ HIDE' : '▼ MONTH GRID'}
+                  {showCalendar ? '▲ Hide' : '▼ Calendar'}
                 </Text>
               </TouchableOpacity>
             </View>
@@ -525,7 +525,7 @@ export default function ActivityScreen() {
             {showCalendar && progress && (
               <View style={styles.calendarGrid}>
                 <Text style={styles.calendarTitle}>
-                  MONTH {Math.ceil(viewWeek / 4)} CALENDAR (TAP DAY TO VIEW)
+                  Month {Math.ceil(viewWeek / 4)} Calendar
                 </Text>
                 <View style={styles.calendarWeekLabels}>
                   {WEEKDAY_NAMES.map((d, i) => (
@@ -584,8 +584,8 @@ export default function ActivityScreen() {
             <View style={styles.workoutHeaderRow}>
               <Text style={styles.sectionTitle}>
                 {displayWorkout.id === todayWorkout?.id
-                  ? `TODAY'S WORKOUT // ${getDayDateLabel(displayWorkout.day, profile?.plan_start_date)}`
-                  : `DAY ${displayWorkout.day} PLAN // ${getDayDateLabel(displayWorkout.day, profile?.plan_start_date)}`}
+                  ? `Today's Workout — ${getDayDateLabel(displayWorkout.day, profile?.plan_start_date)}`
+                  : `Day ${displayWorkout.day} — ${getDayDateLabel(displayWorkout.day, profile?.plan_start_date)}`}
               </Text>
               {selectedWeekDay && (
                 <TouchableOpacity
@@ -594,7 +594,7 @@ export default function ActivityScreen() {
                     if (progress) setViewWeek(progress.currentWeek);
                   }}
                 >
-                  <Text style={styles.returnTodayLink}>RESET TO TODAY ↺</Text>
+                  <Text style={styles.returnTodayLink}>Back to today ↺</Text>
                 </TouchableOpacity>
               )}
             </View>
@@ -623,7 +623,7 @@ export default function ActivityScreen() {
 
               {/* Exercises List */}
               <View style={styles.exerciseList}>
-                <Text style={styles.exerciseListTitle}>DAILY HOME ROUTINE (NO EQUIPMENT):</Text>
+                <Text style={styles.exerciseListTitle}>Exercises (no equipment needed):</Text>
                 {displayExercises.map((ex: any, idx: number) => (
                   <View key={idx} style={styles.exerciseRow}>
                     <Text style={styles.exerciseBullet}>▸</Text>
@@ -649,12 +649,12 @@ export default function ActivityScreen() {
                   activeOpacity={0.8}
                 >
                   <Text style={styles.completeWorkoutBtnText}>
-                    ⚔️ COMPLETE WORKOUT (+{displayWorkout.xp_value} XP)
+                    ⚔️ Complete Workout (+{displayWorkout.xp_value} XP)
                   </Text>
                 </TouchableOpacity>
               ) : (
                 <View style={styles.completedBadge}>
-                  <Text style={styles.completedBadgeText}>✓ WORKOUT COMPLETED</Text>
+                  <Text style={styles.completedBadgeText}>✓ Workout complete</Text>
                 </View>
               )}
             </View>
@@ -666,12 +666,12 @@ export default function ActivityScreen() {
 
         {/* TODAY'S LOGGED ACTIVITIES */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>MANUAL ACTIVITIES LOGGED ({activities.length})</Text>
+          <Text style={styles.sectionTitle}>Activities Logged ({activities.length})</Text>
 
           {activities.length === 0 ? (
             <View style={styles.emptyCard}>
               <Text style={styles.emptyEmoji}>⚡</Text>
-              <Text style={styles.emptyText}>No manual combat exercises logged today.</Text>
+              <Text style={styles.emptyText}>No activities logged today.</Text>
               <Text style={styles.emptySub}>Log running, lifting, or study to earn XP & burn calories.</Text>
             </View>
           ) : (
@@ -701,12 +701,12 @@ export default function ActivityScreen() {
       <Modal visible={modalVisible} animationType="slide" transparent>
         <View style={styles.modalOverlay}>
           <View style={styles.modalContent}>
-            <Text style={styles.modalTitle}>[ LOG COMBAT / STUDY ACTIVITY ]</Text>
+            <Text style={styles.modalTitle}>Log Activity</Text>
 
             <ScrollView contentContainerStyle={styles.modalForm}>
               {/* ACTIVITY TYPE SELECTOR */}
               <View style={styles.inputGroup}>
-                <Text style={styles.inputLabel}>ACTIVITY TYPE</Text>
+                <Text style={styles.inputLabel}>Activity type</Text>
                 <View style={styles.typeGrid}>
                   {ACTIVITY_TYPE_OPTIONS.map((opt) => (
                     <TouchableOpacity
@@ -732,7 +732,7 @@ export default function ActivityScreen() {
               </View>
 
               <View style={styles.inputGroup}>
-                <Text style={styles.inputLabel}>DURATION (MINUTES)</Text>
+                <Text style={styles.inputLabel}>Duration (minutes)</Text>
                 <TextInput
                   style={styles.textInput}
                   keyboardType="numeric"
@@ -744,7 +744,7 @@ export default function ActivityScreen() {
               </View>
 
               <View style={styles.inputGroup}>
-                <Text style={styles.inputLabel}>NOTES / DETAILS (OPTIONAL)</Text>
+                <Text style={styles.inputLabel}>Notes (optional)</Text>
                 <TextInput
                   style={styles.textInput}
                   placeholder="e.g. 5km outdoors, morning pace"
@@ -757,11 +757,11 @@ export default function ActivityScreen() {
 
             <View style={styles.modalButtons}>
               <TouchableOpacity style={styles.cancelBtn} onPress={() => setModalVisible(false)}>
-                <Text style={styles.cancelBtnText}>CANCEL</Text>
+                <Text style={styles.cancelBtnText}>Cancel</Text>
               </TouchableOpacity>
 
               <TouchableOpacity style={styles.createBtn} onPress={handleLogActivity}>
-                <Text style={styles.createBtnText}>RECORD TRAINING</Text>
+                <Text style={styles.createBtnText}>Save Activity</Text>
               </TouchableOpacity>
             </View>
           </View>
@@ -788,11 +788,11 @@ export default function ActivityScreen() {
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: '#070B14',
+    backgroundColor: '#0B1120',
   },
   container: {
-    padding: Spacing.three,
-    gap: Spacing.three,
+    padding: Spacing.threeHalf,
+    gap: Spacing.threeHalf,
     paddingBottom: Spacing.six,
   },
   header: {
@@ -802,41 +802,40 @@ const styles = StyleSheet.create({
     marginTop: Spacing.two,
   },
   systemTag: {
-    fontSize: 10,
-    fontFamily: Fonts.mono,
+    fontSize: 12,
+    fontFamily: Fonts.sans,
     color: '#00A8FF',
-    letterSpacing: 1.5,
+    fontWeight: '600',
   },
   title: {
-    fontSize: 22,
-    fontWeight: '900',
-    color: '#E0E8FF',
-    letterSpacing: 1,
+    fontSize: 24,
+    fontWeight: '700',
+    fontFamily: Fonts.sans,
+    color: '#E8ECF4',
   },
   addBtn: {
-    backgroundColor: '#0D1424',
+    backgroundColor: '#111827',
     borderWidth: 1,
-    borderColor: '#00A8FF',
-    borderRadius: 8,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
+    borderColor: 'rgba(0, 168, 255, 0.3)',
+    borderRadius: 10,
+    paddingHorizontal: 14,
+    paddingVertical: 9,
   },
   addBtnText: {
-    fontSize: 11,
-    fontFamily: Fonts.mono,
-    fontWeight: '800',
-    color: '#00F0FF',
-    letterSpacing: 0.5,
+    fontSize: 13,
+    fontFamily: Fonts.sans,
+    fontWeight: '600',
+    color: '#00A8FF',
   },
 
   // --- Plan Progress Card ---
   planProgressCard: {
-    backgroundColor: '#0D1424',
+    backgroundColor: '#111827',
     borderWidth: 1,
-    borderColor: '#19315A',
-    borderRadius: 12,
-    padding: Spacing.three,
-    gap: 12,
+    borderColor: '#1E293B',
+    borderRadius: 14,
+    padding: Spacing.threeHalf,
+    gap: 14,
   },
   planProgressTop: {
     flexDirection: 'row',
@@ -844,16 +843,15 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   planProgressTag: {
-    fontSize: 13,
-    fontFamily: Fonts.mono,
-    fontWeight: '900',
-    color: '#00F0FF',
-    letterSpacing: 1,
+    fontSize: 14,
+    fontFamily: Fonts.sans,
+    fontWeight: '700',
+    color: '#00A8FF',
   },
   planProgressPhase: {
-    fontSize: 10,
-    fontFamily: Fonts.mono,
-    color: '#6582A6',
+    fontSize: 12,
+    fontFamily: Fonts.sans,
+    color: '#8896AB',
     marginTop: 2,
   },
   dayCounter: {
@@ -864,19 +862,19 @@ const styles = StyleSheet.create({
     fontSize: 28,
     fontWeight: '900',
     fontFamily: Fonts.mono,
-    color: '#00F0FF',
+    color: '#00A8FF',
   },
   dayCounterSlash: {
     fontSize: 12,
     fontFamily: Fonts.mono,
-    color: '#4B6282',
+    color: '#6B7B8F',
   },
   progressBarContainer: {
-    gap: 4,
+    gap: 6,
   },
   progressBarBg: {
     height: 6,
-    backgroundColor: '#0A1020',
+    backgroundColor: '#0E1726',
     borderRadius: 3,
     overflow: 'hidden',
   },
@@ -886,37 +884,36 @@ const styles = StyleSheet.create({
     borderRadius: 3,
   },
   progressBarLabel: {
-    fontSize: 9,
-    fontFamily: Fonts.mono,
-    color: '#6582A6',
-    letterSpacing: 0.5,
+    fontSize: 11,
+    fontFamily: Fonts.sans,
+    color: '#8896AB',
   },
 
   // --- Quick Activate Card (Fallback) ---
   noPlanCard: {
-    backgroundColor: '#0D1424',
-    borderRadius: 12,
-    borderWidth: 1.5,
-    borderColor: '#19315A',
+    backgroundColor: '#111827',
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: '#1E293B',
     padding: Spacing.four,
     alignItems: 'center',
-    gap: 12,
+    gap: 14,
   },
   noPlanEmoji: {
     fontSize: 32,
   },
   noPlanTitle: {
-    fontSize: 14,
-    fontWeight: '900',
-    fontFamily: Fonts.mono,
+    fontSize: 16,
+    fontWeight: '700',
+    fontFamily: Fonts.sans,
     color: '#00A8FF',
-    letterSpacing: 1,
   },
   noPlanSub: {
-    fontSize: 11,
-    color: '#7A96BA',
+    fontSize: 13,
+    fontFamily: Fonts.sans,
+    color: '#8896AB',
     textAlign: 'center',
-    lineHeight: 16,
+    lineHeight: 18,
   },
   quickActivateRow: {
     flexDirection: 'row',
@@ -926,32 +923,34 @@ const styles = StyleSheet.create({
   },
   quickActivateBtn: {
     flex: 1,
-    backgroundColor: '#090E1A',
-    borderWidth: 1.5,
-    borderColor: '#00A8FF',
-    borderRadius: 10,
-    padding: 12,
-    gap: 4,
+    backgroundColor: '#0E1726',
+    borderWidth: 1,
+    borderColor: 'rgba(0, 168, 255, 0.3)',
+    borderRadius: 12,
+    padding: 14,
+    gap: 6,
     alignItems: 'center',
   },
   quickActivateBtnMonarch: {
-    borderColor: '#FFAA00',
+    borderColor: 'rgba(255, 170, 0, 0.35)',
   },
   quickActivateBadge: {
-    fontSize: 10,
-    fontFamily: Fonts.mono,
-    fontWeight: '900',
-    color: '#00F0FF',
+    fontSize: 12,
+    fontFamily: Fonts.sans,
+    fontWeight: '700',
+    color: '#00A8FF',
   },
   quickActivateTitle: {
-    fontSize: 12,
-    fontWeight: '900',
-    color: '#E0E8FF',
+    fontSize: 13,
+    fontWeight: '700',
+    fontFamily: Fonts.sans,
+    color: '#E8ECF4',
     textAlign: 'center',
   },
   quickActivateDesc: {
-    fontSize: 9,
-    color: '#556F91',
+    fontSize: 11,
+    fontFamily: Fonts.sans,
+    color: '#6B7B8F',
     textAlign: 'center',
   },
   fullCalibrationLink: {
@@ -959,11 +958,10 @@ const styles = StyleSheet.create({
     paddingVertical: 6,
   },
   fullCalibrationLinkText: {
-    fontSize: 10,
-    fontFamily: Fonts.mono,
-    fontWeight: '800',
+    fontSize: 12,
+    fontFamily: Fonts.sans,
+    fontWeight: '600',
     color: '#00A8FF',
-    letterSpacing: 0.5,
   },
 
   // --- Week Section ---
@@ -981,26 +979,26 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   weekNavBtn: {
-    backgroundColor: '#0D1424',
+    backgroundColor: '#111827',
     borderWidth: 1,
-    borderColor: '#19315A',
-    borderRadius: 6,
-    paddingHorizontal: 8,
-    paddingVertical: 4,
+    borderColor: '#1E293B',
+    borderRadius: 8,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
   },
   weekNavBtnDisabled: {
     opacity: 0.3,
   },
   weekNavBtnText: {
-    fontSize: 11,
+    fontSize: 12,
     color: '#00A8FF',
-    fontWeight: '900',
+    fontWeight: '700',
   },
   calendarToggle: {
-    fontSize: 10,
-    fontFamily: Fonts.mono,
+    fontSize: 12,
+    fontFamily: Fonts.sans,
     color: '#00A8FF',
-    fontWeight: '800',
+    fontWeight: '600',
   },
   weekBar: {
     flexDirection: 'row',
@@ -1009,17 +1007,17 @@ const styles = StyleSheet.create({
   },
   weekDayCell: {
     flex: 1,
-    backgroundColor: '#0D1424',
+    backgroundColor: '#111827',
     borderWidth: 1,
-    borderColor: '#19315A',
-    borderRadius: 8,
-    paddingVertical: 8,
+    borderColor: '#1E293B',
+    borderRadius: 10,
+    paddingVertical: 10,
     alignItems: 'center',
     gap: 4,
   },
   weekDayCellToday: {
-    borderColor: '#00F0FF',
-    backgroundColor: 'rgba(0, 240, 255, 0.08)',
+    borderColor: '#00A8FF',
+    backgroundColor: 'rgba(0, 168, 255, 0.08)',
   },
   weekDayCellSelected: {
     borderColor: '#00A8FF',
@@ -1029,13 +1027,13 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(0, 255, 136, 0.06)',
   },
   weekDayLabel: {
-    fontSize: 9,
-    fontFamily: Fonts.mono,
-    fontWeight: '700',
-    color: '#556F91',
+    fontSize: 10,
+    fontFamily: Fonts.sans,
+    fontWeight: '600',
+    color: '#6B7B8F',
   },
   weekDayLabelToday: {
-    color: '#00F0FF',
+    color: '#00A8FF',
   },
   weekDayLabelSelected: {
     color: '#00A8FF',
@@ -1046,11 +1044,11 @@ const styles = StyleSheet.create({
   weekDayNum: {
     fontSize: 10,
     fontFamily: Fonts.mono,
-    fontWeight: '800',
-    color: '#7A96BA',
+    fontWeight: '700',
+    color: '#8896AB',
   },
   weekDayNumSelected: {
-    color: '#E0E8FF',
+    color: '#E8ECF4',
   },
   weekDayDot: {
     width: 6,
@@ -1061,30 +1059,29 @@ const styles = StyleSheet.create({
     backgroundColor: '#00FF88',
   },
   weekDayDotToday: {
-    backgroundColor: '#00F0FF',
+    backgroundColor: '#00A8FF',
   },
   weekDayDotRest: {
     backgroundColor: '#2A3A5C',
   },
   weekDayDotFuture: {
-    backgroundColor: '#1A2E50',
+    backgroundColor: '#1E293B',
   },
 
   // --- Calendar Grid ---
   calendarGrid: {
-    backgroundColor: '#0D1424',
+    backgroundColor: '#111827',
     borderWidth: 1,
-    borderColor: '#19315A',
-    borderRadius: 10,
+    borderColor: '#1E293B',
+    borderRadius: 14,
     padding: Spacing.three,
     gap: 8,
   },
   calendarTitle: {
-    fontSize: 10,
-    fontFamily: Fonts.mono,
-    fontWeight: '800',
+    fontSize: 12,
+    fontFamily: Fonts.sans,
+    fontWeight: '600',
     color: '#00A8FF',
-    letterSpacing: 1,
     textAlign: 'center',
     marginBottom: 4,
   },
@@ -1093,10 +1090,10 @@ const styles = StyleSheet.create({
     justifyContent: 'space-around',
   },
   calendarWeekLabel: {
-    fontSize: 9,
-    fontFamily: Fonts.mono,
-    color: '#4B6282',
-    fontWeight: '700',
+    fontSize: 10,
+    fontFamily: Fonts.sans,
+    color: '#6B7B8F',
+    fontWeight: '600',
     width: 28,
     textAlign: 'center',
   },
@@ -1109,23 +1106,23 @@ const styles = StyleSheet.create({
   calendarDayCell: {
     width: 28,
     height: 28,
-    borderRadius: 6,
+    borderRadius: 8,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#0A1020',
+    backgroundColor: '#0E1726',
   },
   calendarDayCurrent: {
-    backgroundColor: 'rgba(0, 240, 255, 0.15)',
+    backgroundColor: 'rgba(0, 168, 255, 0.12)',
     borderWidth: 1,
-    borderColor: '#00F0FF',
+    borderColor: '#00A8FF',
   },
   calendarDaySelected: {
-    backgroundColor: 'rgba(0, 168, 255, 0.25)',
+    backgroundColor: 'rgba(0, 168, 255, 0.2)',
     borderWidth: 1,
     borderColor: '#00A8FF',
   },
   calendarDayDone: {
-    backgroundColor: 'rgba(0, 255, 136, 0.15)',
+    backgroundColor: 'rgba(0, 255, 136, 0.12)',
   },
   calendarDayOutside: {
     backgroundColor: 'transparent',
@@ -1134,10 +1131,10 @@ const styles = StyleSheet.create({
     fontSize: 9,
     fontFamily: Fonts.mono,
     fontWeight: '700',
-    color: '#556F91',
+    color: '#6B7B8F',
   },
   calendarDayNumCurrent: {
-    color: '#00F0FF',
+    color: '#00A8FF',
     fontWeight: '900',
   },
   calendarDayNumSelected: {
@@ -1161,33 +1158,32 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   sectionTitle: {
-    fontSize: 12,
-    fontFamily: Fonts.mono,
-    fontWeight: '800',
+    fontSize: 14,
+    fontFamily: Fonts.sans,
+    fontWeight: '700',
     color: '#00A8FF',
-    letterSpacing: 1,
   },
   returnTodayLink: {
-    fontSize: 10,
-    fontFamily: Fonts.mono,
-    fontWeight: '800',
-    color: '#00F0FF',
+    fontSize: 12,
+    fontFamily: Fonts.sans,
+    fontWeight: '600',
+    color: '#00A8FF',
   },
   todayWorkoutCard: {
-    backgroundColor: '#0D1424',
-    borderWidth: 1.5,
-    borderColor: '#00A8FF',
-    borderRadius: 12,
-    padding: Spacing.three,
-    gap: 12,
-    shadowColor: '#00A8FF',
-    shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 0.2,
+    backgroundColor: '#111827',
+    borderWidth: 1,
+    borderColor: 'rgba(0, 168, 255, 0.3)',
+    borderRadius: 14,
+    padding: Spacing.threeHalf,
+    gap: 14,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.15,
     shadowRadius: 8,
     elevation: 4,
   },
   todayWorkoutCardRest: {
-    borderColor: '#2A3A5C',
+    borderColor: '#1E293B',
     shadowOpacity: 0,
   },
   todayWorkoutHeader: {
@@ -1196,43 +1192,42 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   todayWorkoutPhase: {
-    fontSize: 9,
-    fontFamily: Fonts.mono,
-    color: '#6582A6',
-    letterSpacing: 1,
+    fontSize: 11,
+    fontFamily: Fonts.sans,
+    color: '#8896AB',
   },
   todayWorkoutName: {
-    fontSize: 16,
-    fontWeight: '900',
-    color: '#E0E8FF',
+    fontSize: 17,
+    fontWeight: '700',
+    fontFamily: Fonts.sans,
+    color: '#E8ECF4',
     marginTop: 2,
   },
   todayXpBadge: {
     borderWidth: 1,
-    borderColor: '#00F0FF',
-    borderRadius: 6,
+    borderColor: 'rgba(0, 168, 255, 0.3)',
+    borderRadius: 8,
     paddingHorizontal: 10,
-    paddingVertical: 4,
-    backgroundColor: 'rgba(0, 240, 255, 0.08)',
+    paddingVertical: 5,
+    backgroundColor: 'rgba(0, 168, 255, 0.06)',
   },
   todayXpText: {
-    fontSize: 12,
+    fontSize: 13,
     fontFamily: Fonts.mono,
-    fontWeight: '900',
-    color: '#00F0FF',
+    fontWeight: '800',
+    color: '#00A8FF',
   },
   exerciseList: {
     gap: 6,
-    backgroundColor: '#090E1A',
-    borderRadius: 8,
-    padding: 10,
+    backgroundColor: '#0E1726',
+    borderRadius: 10,
+    padding: 12,
   },
   exerciseListTitle: {
-    fontSize: 9,
-    fontFamily: Fonts.mono,
-    color: '#556F91',
-    fontWeight: '800',
-    letterSpacing: 0.5,
+    fontSize: 11,
+    fontFamily: Fonts.sans,
+    color: '#6B7B8F',
+    fontWeight: '600',
     marginBottom: 4,
   },
   exerciseRow: {
@@ -1246,77 +1241,78 @@ const styles = StyleSheet.create({
     marginTop: 1,
   },
   exerciseText: {
-    fontSize: 12,
-    color: '#A0BBE0',
-    lineHeight: 16,
+    fontSize: 13,
+    fontFamily: Fonts.sans,
+    color: '#A8B8CC',
+    lineHeight: 18,
   },
   exerciseTextBold: {
-    fontWeight: '800',
-    color: '#E0E8FF',
+    fontWeight: '700',
+    color: '#E8ECF4',
   },
   completeWorkoutBtn: {
-    backgroundColor: '#0055AA',
+    backgroundColor: '#0066BB',
     borderWidth: 1,
     borderColor: '#00A8FF',
-    borderRadius: 8,
-    paddingVertical: 12,
+    borderRadius: 12,
+    paddingVertical: 14,
     alignItems: 'center',
     marginTop: 4,
   },
   completeWorkoutBtnText: {
-    fontFamily: Fonts.mono,
-    fontSize: 13,
-    fontWeight: '900',
+    fontFamily: Fonts.sans,
+    fontSize: 14,
+    fontWeight: '700',
     color: '#FFFFFF',
-    letterSpacing: 1,
   },
   completedBadge: {
-    backgroundColor: 'rgba(0, 255, 136, 0.1)',
+    backgroundColor: 'rgba(0, 255, 136, 0.06)',
     borderWidth: 1,
-    borderColor: '#00FF88',
-    borderRadius: 8,
-    paddingVertical: 10,
+    borderColor: 'rgba(0, 255, 136, 0.25)',
+    borderRadius: 10,
+    paddingVertical: 12,
     alignItems: 'center',
     marginTop: 4,
   },
   completedBadgeText: {
-    fontFamily: Fonts.mono,
-    fontSize: 12,
-    fontWeight: '900',
+    fontFamily: Fonts.sans,
+    fontSize: 13,
+    fontWeight: '600',
     color: '#00FF88',
-    letterSpacing: 1,
   },
 
   // --- Activities ---
   emptyCard: {
-    backgroundColor: '#0D1424',
-    borderRadius: 10,
+    backgroundColor: '#111827',
+    borderRadius: 14,
     borderWidth: 1,
-    borderColor: '#162846',
+    borderColor: '#1E293B',
     padding: Spacing.four,
     alignItems: 'center',
-    gap: 6,
+    gap: 8,
   },
   emptyEmoji: {
     fontSize: 28,
   },
   emptyText: {
-    fontSize: 14,
+    fontSize: 15,
     fontWeight: '700',
-    color: '#B0C8E8',
+    fontFamily: Fonts.sans,
+    color: '#D2E0F5',
   },
   emptySub: {
-    fontSize: 11,
-    color: '#556F91',
+    fontSize: 12,
+    fontFamily: Fonts.sans,
+    color: '#8896AB',
     textAlign: 'center',
   },
   activityCard: {
-    backgroundColor: '#0D1424',
+    backgroundColor: '#111827',
     borderWidth: 1,
-    borderColor: '#1A2E50',
-    borderRadius: 8,
-    padding: Spacing.three,
-    gap: 6,
+    borderColor: '#1E293B',
+    borderRadius: 12,
+    padding: Spacing.threeHalf,
+    gap: 8,
   },
   activityMain: {
     flexDirection: 'row',
@@ -1324,14 +1320,14 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   activityTypeName: {
-    fontSize: 14,
-    fontWeight: '800',
-    fontFamily: Fonts.mono,
-    color: '#E0E8FF',
+    fontSize: 15,
+    fontWeight: '700',
+    fontFamily: Fonts.sans,
+    color: '#E8ECF4',
   },
   activityXP: {
-    fontSize: 12,
-    fontWeight: '800',
+    fontSize: 13,
+    fontWeight: '700',
     fontFamily: Fonts.mono,
   },
   activityMeta: {
@@ -1339,9 +1335,9 @@ const styles = StyleSheet.create({
     gap: 14,
   },
   activityMetaText: {
-    fontSize: 10,
-    fontFamily: Fonts.mono,
-    color: '#6582A6',
+    fontSize: 11,
+    fontFamily: Fonts.sans,
+    color: '#8896AB',
   },
 
   // --- Modal ---
@@ -1349,78 +1345,78 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: 'rgba(0,0,0,0.85)',
     justifyContent: 'center',
-    padding: Spacing.three,
+    padding: Spacing.threeHalf,
   },
   modalContent: {
-    backgroundColor: '#0D1424',
-    borderWidth: 1.5,
-    borderColor: '#00A8FF',
-    borderRadius: 14,
+    backgroundColor: '#111827',
+    borderWidth: 1,
+    borderColor: '#1E293B',
+    borderRadius: 18,
     padding: Spacing.four,
     gap: Spacing.three,
     maxHeight: '85%',
   },
   modalTitle: {
-    fontSize: 14,
-    fontWeight: '900',
-    fontFamily: Fonts.mono,
-    color: '#00F0FF',
+    fontSize: 18,
+    fontWeight: '700',
+    fontFamily: Fonts.sans,
+    color: '#E8ECF4',
     textAlign: 'center',
-    letterSpacing: 1.5,
   },
   modalForm: {
-    gap: Spacing.two,
+    gap: Spacing.three,
   },
   inputGroup: {
     gap: 6,
   },
   inputLabel: {
-    fontSize: 10,
-    fontFamily: Fonts.mono,
-    color: '#7A96BA',
-    letterSpacing: 1,
+    fontSize: 12,
+    fontFamily: Fonts.sans,
+    color: '#8896AB',
+    fontWeight: '500',
   },
   typeGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: 6,
+    gap: 8,
   },
   typeOption: {
     width: '48%',
-    backgroundColor: '#090E1A',
+    backgroundColor: '#0E1726',
     borderWidth: 1,
-    borderColor: '#192E50',
-    borderRadius: 8,
-    padding: 8,
+    borderColor: '#1E293B',
+    borderRadius: 10,
+    padding: 10,
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 6,
+    gap: 8,
   },
   typeOptionActive: {
-    borderColor: '#00F0FF',
-    backgroundColor: 'rgba(0, 240, 255, 0.1)',
+    borderColor: '#00A8FF',
+    backgroundColor: 'rgba(0, 168, 255, 0.08)',
   },
   typeEmoji: {
     fontSize: 16,
   },
   typeLabel: {
-    fontSize: 11,
-    fontWeight: '700',
-    color: '#7A96BA',
+    fontSize: 13,
+    fontWeight: '600',
+    fontFamily: Fonts.sans,
+    color: '#8896AB',
   },
   typeLabelActive: {
-    color: '#00F0FF',
+    color: '#00A8FF',
   },
   textInput: {
-    backgroundColor: '#090E1A',
+    backgroundColor: '#0E1726',
     borderWidth: 1,
-    borderColor: '#1C335C',
-    borderRadius: 8,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-    color: '#E0E8FF',
-    fontFamily: Fonts.mono,
-    fontSize: 14,
+    borderColor: '#1E293B',
+    borderRadius: 10,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    color: '#E8ECF4',
+    fontFamily: Fonts.sans,
+    fontSize: 15,
   },
   modalButtons: {
     flexDirection: 'row',
@@ -1429,31 +1425,30 @@ const styles = StyleSheet.create({
   },
   cancelBtn: {
     flex: 1,
-    backgroundColor: '#090E1A',
+    backgroundColor: '#0E1726',
     borderWidth: 1,
-    borderColor: '#1C335C',
-    borderRadius: 8,
-    paddingVertical: 12,
+    borderColor: '#1E293B',
+    borderRadius: 12,
+    paddingVertical: 14,
     alignItems: 'center',
   },
   cancelBtnText: {
-    fontFamily: Fonts.mono,
-    fontSize: 12,
-    fontWeight: '700',
-    color: '#7A96BA',
+    fontFamily: Fonts.sans,
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#8896AB',
   },
   createBtn: {
     flex: 2,
     backgroundColor: '#00A8FF',
-    borderRadius: 8,
-    paddingVertical: 12,
+    borderRadius: 12,
+    paddingVertical: 14,
     alignItems: 'center',
   },
   createBtnText: {
-    fontFamily: Fonts.mono,
-    fontSize: 12,
-    fontWeight: '900',
-    color: '#070B14',
-    letterSpacing: 1,
+    fontFamily: Fonts.sans,
+    fontSize: 14,
+    fontWeight: '700',
+    color: '#0B1120',
   },
 });

@@ -23,8 +23,8 @@ export function StatBars({ profile }: StatBarsProps) {
   return (
     <View style={styles.container}>
       <View style={styles.header}>
-        <Text style={styles.headerTitle}>STATS MATRIX</Text>
-        <Text style={styles.headerSub}>CORE ATTRIBUTES</Text>
+        <Text style={styles.headerTitle}>Core Stats</Text>
+        <Text style={styles.headerSub}>Attributes</Text>
       </View>
 
       <View style={styles.list}>
@@ -68,40 +68,40 @@ export function StatBars({ profile }: StatBarsProps) {
 
 const styles = StyleSheet.create({
   container: {
-    backgroundColor: 'rgba(13, 20, 36, 0.75)',
-    borderRadius: 10,
+    backgroundColor: 'rgba(17, 24, 39, 0.75)',
+    borderRadius: 14,
     borderWidth: 1,
-    borderColor: '#1C2F52',
-    padding: Spacing.three,
-    gap: Spacing.two,
+    borderColor: '#1E293B',
+    padding: Spacing.threeHalf,
+    gap: Spacing.three,
   },
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'baseline',
     borderBottomWidth: 1,
-    borderBottomColor: '#172744',
-    paddingBottom: 6,
+    borderBottomColor: '#1E293B',
+    paddingBottom: 8,
   },
   headerTitle: {
-    fontSize: 13,
-    fontWeight: '800',
-    fontFamily: Fonts.mono,
-    color: '#00F0FF',
-    letterSpacing: 1.5,
+    fontSize: 15,
+    fontWeight: '700',
+    fontFamily: Fonts.sans,
+    color: '#E8ECF4',
+    letterSpacing: 0.3,
   },
   headerSub: {
-    fontSize: 10,
-    fontFamily: Fonts.mono,
-    color: '#4B6282',
-    letterSpacing: 1,
+    fontSize: 11,
+    fontFamily: Fonts.sans,
+    color: '#6B7B8F',
+    fontWeight: '500',
   },
   list: {
-    gap: Spacing.two,
+    gap: Spacing.three,
     marginTop: 4,
   },
   row: {
-    gap: 4,
+    gap: 6,
   },
   statMeta: {
     flexDirection: 'row',
@@ -119,16 +119,18 @@ const styles = StyleSheet.create({
   },
   infoWrapper: {
     flex: 1,
-    paddingHorizontal: 6,
+    paddingHorizontal: 8,
   },
   statName: {
-    fontSize: 12,
-    fontWeight: '700',
+    fontSize: 13,
+    fontWeight: '600',
+    fontFamily: Fonts.sans,
     color: '#D2E0F5',
   },
   statDesc: {
-    fontSize: 9,
-    color: '#556C8C',
+    fontSize: 10,
+    fontFamily: Fonts.sans,
+    color: '#6B7B8F',
   },
   statValue: {
     fontSize: 14,
@@ -136,18 +138,18 @@ const styles = StyleSheet.create({
     fontFamily: Fonts.mono,
   },
   barTrack: {
-    height: 7,
-    backgroundColor: '#090E1A',
-    borderRadius: 3.5,
+    height: 8,
+    backgroundColor: '#0B1120',
+    borderRadius: 4,
     overflow: 'hidden',
     borderWidth: 1,
-    borderColor: '#14223A',
+    borderColor: '#1E293B',
   },
   barFill: {
     height: '100%',
-    borderRadius: 3,
+    borderRadius: 4,
     shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 0.8,
+    shadowOpacity: 0.6,
     shadowRadius: 4,
     elevation: 3,
   },

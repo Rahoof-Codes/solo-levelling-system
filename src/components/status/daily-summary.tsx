@@ -26,10 +26,10 @@ export function DailySummary({
 
   return (
     <View style={styles.container}>
-      {/* MANA / ENERGY BAR */}
+      {/* ENERGY INTAKE BAR */}
       <View style={styles.section}>
         <View style={styles.sectionHeader}>
-          <Text style={styles.manaTitle}>MANA (CALORIES)</Text>
+          <Text style={styles.manaTitle}>Energy Intake</Text>
           <Text style={styles.manaNumbers}>
             {Math.round(calorieSummary.consumed)} / {Math.round(manaTarget)} kcal
           </Text>
@@ -70,7 +70,7 @@ export function DailySummary({
         <View style={styles.card}>
           <Text style={styles.cardIcon}>📜</Text>
           <View>
-            <Text style={styles.cardLabel}>QUESTS</Text>
+            <Text style={styles.cardLabel}>Quests</Text>
             <Text style={styles.cardValue}>
               {completedQuestsCount}/{totalQuestsCount}
             </Text>
@@ -81,7 +81,7 @@ export function DailySummary({
         <View style={styles.card}>
           <Text style={styles.cardIcon}>⚡</Text>
           <View>
-            <Text style={styles.cardLabel}>10K STREAK</Text>
+            <Text style={styles.cardLabel}>Steps</Text>
             <Text style={styles.cardValue}>{stepsStreak}d</Text>
           </View>
         </View>
@@ -90,7 +90,7 @@ export function DailySummary({
         <View style={styles.card}>
           <Text style={styles.cardIcon}>🔥</Text>
           <View>
-            <Text style={styles.cardLabel}>QUESTS</Text>
+            <Text style={styles.cardLabel}>Quest Streak</Text>
             <Text style={styles.cardValue}>{questStreak}d</Text>
           </View>
         </View>
@@ -99,7 +99,7 @@ export function DailySummary({
         <View style={styles.card}>
           <Text style={styles.cardIcon}>⚔️</Text>
           <View>
-            <Text style={styles.cardLabel}>WORKOUTS</Text>
+            <Text style={styles.cardLabel}>Workouts</Text>
             <Text style={styles.cardValue}>{workoutStreak}d</Text>
           </View>
         </View>
@@ -110,12 +110,12 @@ export function DailySummary({
 
 const styles = StyleSheet.create({
   container: {
-    backgroundColor: 'rgba(13, 20, 36, 0.75)',
-    borderRadius: 10,
+    backgroundColor: 'rgba(17, 24, 39, 0.75)',
+    borderRadius: 14,
     borderWidth: 1,
-    borderColor: '#1C2F52',
-    padding: Spacing.three,
-    gap: Spacing.two,
+    borderColor: '#1E293B',
+    padding: Spacing.threeHalf,
+    gap: Spacing.three,
   },
   section: {
     gap: 6,
@@ -126,30 +126,29 @@ const styles = StyleSheet.create({
     alignItems: 'baseline',
   },
   manaTitle: {
-    fontSize: 12,
-    fontWeight: '800',
-    fontFamily: Fonts.mono,
+    fontSize: 14,
+    fontWeight: '700',
+    fontFamily: Fonts.sans,
     color: '#0088FF',
-    letterSpacing: 1,
   },
   manaNumbers: {
-    fontSize: 11,
+    fontSize: 12,
     fontFamily: Fonts.mono,
-    color: '#7F9BBF',
+    color: '#8896AB',
   },
   barTrack: {
     height: 8,
-    backgroundColor: '#090E1A',
+    backgroundColor: '#0B1120',
     borderRadius: 4,
     overflow: 'hidden',
     borderWidth: 1,
-    borderColor: '#14223A',
+    borderColor: '#1E293B',
   },
   barFill: {
     height: '100%',
     borderRadius: 3,
     shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 0.9,
+    shadowOpacity: 0.6,
     shadowRadius: 5,
     elevation: 3,
   },
@@ -159,13 +158,13 @@ const styles = StyleSheet.create({
     paddingTop: 2,
   },
   macroText: {
-    fontSize: 10,
-    fontFamily: Fonts.mono,
-    color: '#5A6F8C',
+    fontSize: 11,
+    fontFamily: Fonts.sans,
+    color: '#6B7B8F',
   },
   macroVal: {
-    color: '#A0BBE0',
-    fontWeight: '700',
+    color: '#A8B8CC',
+    fontWeight: '600',
   },
   cardsRow: {
     flexDirection: 'row',
@@ -176,11 +175,11 @@ const styles = StyleSheet.create({
     flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#090E1A',
+    backgroundColor: '#0E1726',
     borderWidth: 1,
-    borderColor: '#192C4D',
-    borderRadius: 8,
-    paddingVertical: 8,
+    borderColor: '#1E293B',
+    borderRadius: 10,
+    paddingVertical: 10,
     paddingHorizontal: 8,
     gap: 6,
   },
@@ -188,15 +187,15 @@ const styles = StyleSheet.create({
     fontSize: 16,
   },
   cardLabel: {
-    fontSize: 8,
-    fontFamily: Fonts.mono,
-    color: '#556C8C',
-    letterSpacing: 0.5,
+    fontSize: 9,
+    fontFamily: Fonts.sans,
+    color: '#6B7B8F',
+    fontWeight: '500',
   },
   cardValue: {
     fontSize: 13,
     fontWeight: '800',
     fontFamily: Fonts.mono,
-    color: '#00F0FF',
+    color: '#00A8FF',
   },
 });

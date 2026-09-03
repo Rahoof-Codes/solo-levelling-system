@@ -36,7 +36,7 @@ export function HunterInfo({ profile }: HunterInfoProps) {
             {profile.title || `${profile.rank}-Rank Hunter`}
           </Text>
           <View style={styles.levelBadge}>
-            <Text style={styles.levelLabel}>LEVEL</Text>
+            <Text style={styles.levelLabel}>Level</Text>
             <Text style={[styles.levelValue, { color: rankColor }]}>{profile.level}</Text>
           </View>
         </View>
@@ -72,28 +72,28 @@ export function HunterInfo({ profile }: HunterInfoProps) {
 
 const styles = StyleSheet.create({
   container: {
-    backgroundColor: 'rgba(13, 20, 36, 0.85)',
-    borderRadius: 12,
-    borderWidth: 1.2,
-    borderColor: '#1C2F52',
-    padding: Spacing.three,
-    gap: Spacing.two,
+    backgroundColor: 'rgba(17, 24, 39, 0.85)',
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: '#1E293B',
+    padding: Spacing.threeHalf,
+    gap: Spacing.three,
   },
   topRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 12,
+    gap: 14,
   },
   avatarContainer: {
-    width: 62,
-    height: 62,
-    borderRadius: 12,
+    width: 64,
+    height: 64,
+    borderRadius: 14,
     borderWidth: 2,
     overflow: 'hidden',
     position: 'relative',
-    backgroundColor: '#070C16',
+    backgroundColor: '#0B1120',
     shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 0.8,
+    shadowOpacity: 0.5,
     shadowRadius: 8,
     elevation: 6,
   },
@@ -106,31 +106,31 @@ const styles = StyleSheet.create({
     bottom: 0,
     right: 0,
     borderTopLeftRadius: 6,
-    paddingHorizontal: 5,
-    paddingVertical: 1,
+    paddingHorizontal: 6,
+    paddingVertical: 2,
   },
   rankMiniTagText: {
-    fontSize: 9,
+    fontSize: 10,
     fontFamily: Fonts.mono,
     fontWeight: '900',
-    color: '#070B14',
+    color: '#0B1120',
   },
   identity: {
     flex: 1,
-    gap: 2,
+    gap: 3,
   },
   name: {
-    fontSize: 18,
-    fontWeight: '900',
-    color: '#E6F0FF',
-    letterSpacing: 0.5,
+    fontSize: 19,
+    fontWeight: '800',
+    fontFamily: Fonts.sans,
+    color: '#E8ECF4',
+    letterSpacing: 0.2,
   },
   title: {
-    fontSize: 11,
-    fontFamily: Fonts.mono,
-    letterSpacing: 1,
-    textTransform: 'uppercase',
-    fontWeight: '700',
+    fontSize: 12,
+    fontFamily: Fonts.sans,
+    letterSpacing: 0.5,
+    fontWeight: '600',
   },
   levelBadge: {
     flexDirection: 'row',
@@ -139,11 +139,10 @@ const styles = StyleSheet.create({
     marginTop: 2,
   },
   levelLabel: {
-    fontSize: 10,
-    color: '#6B82A8',
-    fontFamily: Fonts.mono,
-    letterSpacing: 1,
-    fontWeight: '700',
+    fontSize: 11,
+    color: '#8896AB',
+    fontFamily: Fonts.sans,
+    fontWeight: '600',
   },
   levelValue: {
     fontSize: 18,
@@ -151,8 +150,8 @@ const styles = StyleSheet.create({
     fontFamily: Fonts.mono,
   },
   xpSection: {
-    marginTop: 4,
-    gap: 4,
+    marginTop: 2,
+    gap: 6,
   },
   xpLabels: {
     flexDirection: 'row',
@@ -160,30 +159,29 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   xpTitle: {
-    fontSize: 10,
+    fontSize: 11,
     fontFamily: Fonts.mono,
     fontWeight: '800',
   },
   xpNumbers: {
-    fontSize: 10,
+    fontSize: 11,
     fontFamily: Fonts.mono,
-    color: '#7F9BBF',
+    color: '#8896AB',
   },
   barTrack: {
     height: 8,
-    backgroundColor: '#090E1A',
+    backgroundColor: '#0B1120',
     borderRadius: 4,
     overflow: 'hidden',
     borderWidth: 1,
-    borderColor: '#192C4D',
+    borderColor: '#1E293B',
   },
   barFill: {
     height: '100%',
     borderRadius: 4,
     shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 1,
-    shadowRadius: 6,
-    elevation: 4,
+    shadowOpacity: 0.6,
+    shadowRadius: 4,
+    elevation: 3,
   },
 });
-

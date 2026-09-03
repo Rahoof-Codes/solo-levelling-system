@@ -26,7 +26,7 @@ export default function LoginScreen() {
     } catch (err: any) {
       const message = err?.message ?? 'Sign-in failed. Please try again.';
       setError(message);
-      Alert.alert('SYSTEM ERROR', message);
+      Alert.alert('Error', message);
     }
   };
 
@@ -37,20 +37,20 @@ export default function LoginScreen() {
       <View style={styles.glowBottom} />
 
       <View style={styles.content}>
-        {/* System Header with Logo */}
+        {/* Header with Logo */}
         <View style={styles.headerSection}>
           <Image
             source={require('@/../assets/images/shadow-logo.png')}
             style={styles.logoImage}
             resizeMode="cover"
           />
-          <Text style={styles.systemLabel}>[ SYSTEM PORTAL ]</Text>
+          <Text style={styles.systemLabel}>Shadow Fitness</Text>
           <View style={styles.titleContainer}>
             <Text style={styles.title}>SHADOW</Text>
             <Text style={styles.titleAccent}>FITNESS</Text>
           </View>
           <Text style={styles.subtitle}>
-            TRAIN • LEVEL • CONQUER
+            Train • Level Up • Conquer
           </Text>
           <View style={styles.divider} />
           <Text style={styles.tagline}>
@@ -62,10 +62,10 @@ export default function LoginScreen() {
         <View style={styles.statusBox}>
           <View style={styles.statusRow}>
             <View style={styles.statusDot} />
-            <Text style={styles.statusText}>SYSTEM READY</Text>
+            <Text style={styles.statusText}>Ready</Text>
           </View>
           <Text style={styles.statusDetail}>
-            Authenticate to access Hunter Registry
+            Sign in to start your journey
           </Text>
         </View>
 
@@ -79,11 +79,11 @@ export default function LoginScreen() {
             activeOpacity={0.8}
           >
             {isAuthenticating ? (
-              <ActivityIndicator color="#070B14" size="small" />
+              <ActivityIndicator color="#0B1120" size="small" />
             ) : (
               <>
                 <Text style={styles.googleIcon}>G</Text>
-                <Text style={styles.googleButtonText}>ENTER WITH GOOGLE</Text>
+                <Text style={styles.googleButtonText}>Continue with Google</Text>
               </>
             )}
           </TouchableOpacity>
@@ -96,7 +96,7 @@ export default function LoginScreen() {
             activeOpacity={0.7}
           >
             <Text style={styles.guestButtonText}>
-              CONTINUE AS GUEST (LOCAL ONLY)
+              Play as Guest (local only)
             </Text>
           </TouchableOpacity>
 
@@ -108,10 +108,9 @@ export default function LoginScreen() {
         {/* Footer */}
         <View style={styles.footer}>
           <Text style={styles.footerText}>
-            Offline-First Architecture{'\n'}
-            Your data is always saved locally
+            Offline-first · Your data is always saved locally
           </Text>
-          <Text style={styles.versionText}>v1.0.0 — THE SYSTEM</Text>
+          <Text style={styles.versionText}>v1.0.0</Text>
         </View>
       </View>
     </SafeAreaView>
@@ -121,7 +120,7 @@ export default function LoginScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#070B14',
+    backgroundColor: '#0B1120',
   },
   glowTop: {
     position: 'absolute',
@@ -130,7 +129,7 @@ const styles = StyleSheet.create({
     width: width * 0.6,
     height: height * 0.35,
     borderRadius: 999,
-    backgroundColor: 'rgba(0, 168, 255, 0.06)',
+    backgroundColor: 'rgba(0, 168, 255, 0.05)',
   },
   glowBottom: {
     position: 'absolute',
@@ -139,7 +138,7 @@ const styles = StyleSheet.create({
     width: width * 0.5,
     height: height * 0.25,
     borderRadius: 999,
-    backgroundColor: 'rgba(0, 240, 255, 0.04)',
+    backgroundColor: 'rgba(0, 168, 255, 0.03)',
   },
   content: {
     flex: 1,
@@ -149,7 +148,7 @@ const styles = StyleSheet.create({
   },
   headerSection: {
     alignItems: 'center',
-    gap: 6,
+    gap: 8,
   },
   logoImage: {
     width: 120,
@@ -157,14 +156,13 @@ const styles = StyleSheet.create({
     borderRadius: 60,
     borderWidth: 2,
     borderColor: '#8A3FFC',
-    marginBottom: 6,
+    marginBottom: 8,
   },
   systemLabel: {
-    fontSize: 10,
-    fontFamily: Fonts.mono,
+    fontSize: 12,
+    fontFamily: Fonts.sans,
     color: '#00A8FF',
-    letterSpacing: 4,
-    fontWeight: '700',
+    fontWeight: '600',
   },
   titleContainer: {
     flexDirection: 'row',
@@ -175,7 +173,7 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 42,
     fontWeight: '900',
-    color: '#E0E8FF',
+    color: '#E8ECF4',
     letterSpacing: 6,
   },
   titleAccent: {
@@ -185,31 +183,32 @@ const styles = StyleSheet.create({
     letterSpacing: 3,
   },
   subtitle: {
-    fontSize: 10,
-    fontFamily: Fonts.mono,
-    color: '#4B6282',
-    letterSpacing: 2,
+    fontSize: 13,
+    fontFamily: Fonts.sans,
+    color: '#6B7B8F',
     marginTop: 8,
+    fontWeight: '500',
   },
   divider: {
     width: 60,
     height: 2,
     backgroundColor: '#00A8FF',
-    marginTop: 12,
+    marginTop: 14,
     borderRadius: 1,
   },
   tagline: {
-    fontSize: 14,
+    fontSize: 15,
     fontStyle: 'italic',
-    color: '#6582A6',
-    marginTop: 8,
+    fontFamily: Fonts.sans,
+    color: '#8896AB',
+    marginTop: 10,
   },
   statusBox: {
-    backgroundColor: 'rgba(0, 168, 255, 0.06)',
+    backgroundColor: 'rgba(0, 168, 255, 0.04)',
     borderWidth: 1,
-    borderColor: '#19315A',
-    borderRadius: 10,
-    padding: Spacing.three,
+    borderColor: '#1E293B',
+    borderRadius: 14,
+    padding: Spacing.threeHalf,
     gap: 6,
   },
   statusRow: {
@@ -224,16 +223,15 @@ const styles = StyleSheet.create({
     backgroundColor: '#00FF88',
   },
   statusText: {
-    fontSize: 11,
-    fontFamily: Fonts.mono,
-    fontWeight: '800',
+    fontSize: 13,
+    fontFamily: Fonts.sans,
+    fontWeight: '600',
     color: '#00FF88',
-    letterSpacing: 1.5,
   },
   statusDetail: {
-    fontSize: 11,
-    fontFamily: Fonts.mono,
-    color: '#4B6282',
+    fontSize: 13,
+    fontFamily: Fonts.sans,
+    color: '#8896AB',
     marginLeft: 16,
   },
   buttonsSection: {
@@ -241,50 +239,48 @@ const styles = StyleSheet.create({
   },
   googleButton: {
     backgroundColor: '#00A8FF',
-    borderRadius: 12,
+    borderRadius: 14,
     paddingVertical: 16,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     gap: 10,
     shadowColor: '#00A8FF',
-    shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 0.4,
-    shadowRadius: 16,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.25,
+    shadowRadius: 12,
     elevation: 8,
   },
   googleIcon: {
     fontSize: 18,
     fontWeight: '900',
-    color: '#070B14',
+    color: '#0B1120',
   },
   googleButtonText: {
-    fontSize: 14,
-    fontFamily: Fonts.mono,
-    fontWeight: '900',
-    color: '#070B14',
-    letterSpacing: 2,
+    fontSize: 16,
+    fontFamily: Fonts.sans,
+    fontWeight: '700',
+    color: '#0B1120',
   },
   buttonDisabled: {
     opacity: 0.6,
   },
   guestButton: {
-    borderWidth: 1.5,
-    borderColor: '#19315A',
-    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#1E293B',
+    borderRadius: 14,
     paddingVertical: 14,
     alignItems: 'center',
   },
   guestButtonText: {
-    fontSize: 11,
-    fontFamily: Fonts.mono,
-    fontWeight: '700',
-    color: '#4B6282',
-    letterSpacing: 1.5,
+    fontSize: 14,
+    fontFamily: Fonts.sans,
+    fontWeight: '600',
+    color: '#8896AB',
   },
   errorText: {
-    fontSize: 10,
-    fontFamily: Fonts.mono,
+    fontSize: 12,
+    fontFamily: Fonts.sans,
     color: '#FF4444',
     textAlign: 'center',
   },
@@ -293,16 +289,15 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   footerText: {
-    fontSize: 9,
-    fontFamily: Fonts.mono,
-    color: '#2A3F5F',
+    fontSize: 11,
+    fontFamily: Fonts.sans,
+    color: '#3A4A5F',
     textAlign: 'center',
-    lineHeight: 14,
+    lineHeight: 16,
   },
   versionText: {
-    fontSize: 8,
-    fontFamily: Fonts.mono,
-    color: '#1A2A45',
-    letterSpacing: 2,
+    fontSize: 10,
+    fontFamily: Fonts.sans,
+    color: '#2A3A50',
   },
 });

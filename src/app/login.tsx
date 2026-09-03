@@ -110,7 +110,7 @@ export default function LoginScreen() {
           <Text style={styles.footerText}>
             Offline-first · Your data is always saved locally
           </Text>
-          <Text style={styles.versionText}>v1.0.0</Text>
+          <Text style={styles.versionText}>v1.2.1</Text>
         </View>
       </View>
     </SafeAreaView>

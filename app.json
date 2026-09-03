@@ -2,7 +2,7 @@
   "expo": {
     "name": "SOLO",
     "slug": "SOLO",
-    "version": "1.0.0",
+    "version": "1.2.1",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
     "scheme": "solo",
@@ -27,6 +27,7 @@
     },
     "android": {
       "package": "com.abdul.sololevelling",
+      "versionCode": 3,
       "googleServicesFile": "./google-services.json",
       "adaptiveIcon": {
         "backgroundColor": "#070B14",

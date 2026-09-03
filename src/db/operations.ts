@@ -33,7 +33,23 @@ import { generateWorkoutsForPlan, PLAN_METADATA, getPlanPhaseInfo } from '@/data
 // --- PROFILE OPERATIONS ---
 
 export async function getProfile(db: SQLiteDatabase): Promise<Profile | null> {
-  return await db.getFirstAsync<Profile>('SELECT * FROM profiles LIMIT 1;');
+  return await db.getFirstAsync<Profile>(
+    'SELECT * FROM profiles ORDER BY total_xp DESC, level DESC, updated_at DESC LIMIT 1;'
+  );
+}
+
+export async function deduplicateProfiles(db: SQLiteDatabase): Promise<void> {
+  try {
+    const profiles = await db.getAllAsync<{ id: string }>(
+      'SELECT id FROM profiles ORDER BY total_xp DESC, level DESC, updated_at DESC;'
+    );
+    if (profiles.length > 1) {
+      const bestId = profiles[0].id;
+      await db.runAsync('DELETE FROM profiles WHERE id != ?;', [bestId]);
+    }
+  } catch (err) {
+    console.warn('[DB] Profile deduplication error:', err);
+  }
 }
 
 export async function updateProfileOnboarding(
@@ -245,22 +261,61 @@ export async function awardXP(
 
 // --- QUESTS OPERATIONS ---
 
+export async function deduplicateQuests(db: SQLiteDatabase, dateStr?: string): Promise<void> {
+  try {
+    const whereClause = dateStr ? 'WHERE due_date = ?' : '';
+    const params = dateStr ? [dateStr] : [];
+
+    const dupGroups = await db.getAllAsync<{ title_lower: string; due_date: string; total: number }>(
+      `SELECT LOWER(TRIM(title)) as title_lower, due_date, COUNT(*) as total
+       FROM quests
+       ${whereClause}
+       GROUP BY LOWER(TRIM(title)), due_date
+       HAVING COUNT(*) > 1;`,
+      params
+    );
+
+    for (const group of dupGroups) {
+      const rows = await db.getAllAsync<{ id: string; is_completed: number; updated_at: string }>(
+        `SELECT id, is_completed, updated_at FROM quests
+         WHERE LOWER(TRIM(title)) = ? AND due_date = ?
+         ORDER BY is_completed DESC, updated_at DESC;`,
+        [group.title_lower, group.due_date]
+      );
+
+      if (rows.length <= 1) continue;
+
+      const keep = rows[0];
+      const duplicates = rows.slice(1);
+
+      for (const dup of duplicates) {
+        // Re-point any quest_logs referencing dup.id to keep.id
+        await db.runAsync('UPDATE quest_logs SET quest_id = ? WHERE quest_id = ?;', [keep.id, dup.id]);
+        // Delete the duplicate quest
+        await db.runAsync('DELETE FROM quests WHERE id = ?;', [dup.id]);
+      }
+    }
+  } catch (err) {
+    console.warn('[DB] Quest deduplication error:', err);
+  }
+}
+
 export async function ensureDaily10kStepQuest(db: SQLiteDatabase, dateStr?: string): Promise<Quest> {
   const date = dateStr ?? new Date().toISOString().split('T')[0];
   const now = new Date().toISOString();
+  const deterministicId = `quest-daily-steps-${date}`;
 
   let quest = await db.getFirstAsync<Quest>(
-    "SELECT * FROM quests WHERE due_date = ? AND title LIKE '%10,000 Steps%' LIMIT 1;",
-    [date]
+    "SELECT * FROM quests WHERE due_date = ? AND (title LIKE '%10,000 Steps%' OR id = ?) ORDER BY is_completed DESC, updated_at DESC LIMIT 1;",
+    [date, deterministicId]
   );
 
   if (!quest) {
-    const id = Crypto.randomUUID();
     await db.runAsync(
       `INSERT INTO quests (id, title, description, category, xp_reward, stat_affected, due_date, is_completed, is_auto_generated, updated_at, synced)
-       VALUES (?, ?, ?, ?, ?, ?, ?, 0, 1, ?, 0);`,
+       VALUES (?, ?, ?, ?, ?, ?, ?, 0, 1, ?, 1);`,
       [
-        id,
+        deterministicId,
         '10,000 Steps Daily Quest',
         'Complete 10,000 steps of movement today to boost AGI & VIT stats',
         QuestCategory.FITNESS,
@@ -270,7 +325,7 @@ export async function ensureDaily10kStepQuest(db: SQLiteDatabase, dateStr?: stri
         now,
       ]
     );
-    quest = await db.getFirstAsync<Quest>('SELECT * FROM quests WHERE id = ?;', [id]);
+    quest = await db.getFirstAsync<Quest>('SELECT * FROM quests WHERE id = ?;', [deterministicId]);
   }
 
   return quest!;
@@ -279,6 +334,7 @@ export async function ensureDaily10kStepQuest(db: SQLiteDatabase, dateStr?: stri
 export async function getQuestsForDate(db: SQLiteDatabase, dateStr?: string): Promise<Quest[]> {
   const date = dateStr ?? new Date().toISOString().split('T')[0];
   await ensureDaily10kStepQuest(db, date);
+  await deduplicateQuests(db, date);
   return await db.getAllAsync<Quest>(
     'SELECT * FROM quests WHERE due_date = ? ORDER BY is_completed ASC, xp_reward DESC;',
     [date]
@@ -1110,19 +1166,80 @@ export async function upsertRemoteRows(
         remoteUpdatedAt = new Date().toISOString();
       }
 
-      // Last-write-wins: check local row's updated_at
-      try {
-        const local = await db.getFirstAsync<{ updated_at: string }>(
-          `SELECT updated_at FROM ${tableName} WHERE id = ?;`,
-          [rowId]
+      // ============================================================
+      // TABLE-SPECIFIC CONFLICT / DEDUPLICATION CHECKS
+      // ============================================================
+      if (tableName === 'profiles') {
+        const localProfile = await db.getFirstAsync<Profile>(
+          'SELECT * FROM profiles ORDER BY total_xp DESC, level DESC, updated_at DESC LIMIT 1;'
+        );
+        if (localProfile) {
+          const localXP = Number(localProfile.total_xp ?? 0);
+          const remoteXP = Number(row.total_xp ?? 0);
+
+          // If local has strictly more XP, or local is newer with equal XP, do not overwrite with remote
+          if (localXP > remoteXP) {
+            continue;
+          }
+          if (localXP === remoteXP && localProfile.updated_at && new Date(localProfile.updated_at) > new Date(remoteUpdatedAt)) {
+            continue;
+          }
+
+          // Remote wins: remove duplicate local profiles and harmonize ID
+          if (localProfile.id !== rowId) {
+            await db.runAsync('UPDATE profiles SET id = ? WHERE id = ?;', [rowId, localProfile.id]);
+          }
+          await db.runAsync('DELETE FROM profiles WHERE id != ?;', [rowId]);
+        }
+      } else if (tableName === 'quests' && row.title && row.due_date) {
+        const titleClean = String(row.title).trim();
+        const existingQuest = await db.getFirstAsync<{ id: string; is_completed: number; updated_at: string }>(
+          'SELECT id, is_completed, updated_at FROM quests WHERE LOWER(TRIM(title)) = LOWER(?) AND due_date = ? LIMIT 1;',
+          [titleClean, String(row.due_date)]
         );
 
-        if (local && local.updated_at && new Date(local.updated_at) > new Date(remoteUpdatedAt)) {
-          // Local version is newer, skip remote overwrite
-          continue;
+        if (existingQuest) {
+          // If existing quest was already completed locally, preserve completion
+          if (existingQuest.is_completed && !row.is_completed) {
+            row.is_completed = 1;
+          }
+          // Harmonize ID so we do NOT insert a second duplicate row
+          if (existingQuest.id !== rowId) {
+            await db.runAsync('UPDATE quest_logs SET quest_id = ? WHERE quest_id = ?;', [rowId, existingQuest.id]);
+            await db.runAsync('DELETE FROM quests WHERE id = ?;', [existingQuest.id]);
+          }
         }
-      } catch {
-        // Continue to insert if query fails
+      } else if (tableName === 'daily_steps' && row.date) {
+        const existingStep = await db.getFirstAsync<{ id: string }>(
+          'SELECT id FROM daily_steps WHERE date = ? LIMIT 1;',
+          [String(row.date)]
+        );
+        if (existingStep && existingStep.id !== rowId) {
+          await db.runAsync('DELETE FROM daily_steps WHERE id = ?;', [existingStep.id]);
+        }
+      } else if (tableName === 'streaks' && row.type) {
+        const existingStreak = await db.getFirstAsync<{ id: string }>(
+          'SELECT id FROM streaks WHERE type = ? LIMIT 1;',
+          [String(row.type)]
+        );
+        if (existingStreak && existingStreak.id !== rowId) {
+          await db.runAsync('DELETE FROM streaks WHERE id = ?;', [existingStreak.id]);
+        }
+      } else {
+        // Last-write-wins check for generic tables
+        try {
+          const local = await db.getFirstAsync<{ updated_at: string }>(
+            `SELECT updated_at FROM ${tableName} WHERE id = ?;`,
+            [rowId]
+          );
+
+          if (local && local.updated_at && new Date(local.updated_at) > new Date(remoteUpdatedAt)) {
+            // Local version is newer, skip remote overwrite
+            continue;
+          }
+        } catch {
+          // Continue to insert if query fails
+        }
       }
 
       // Build safe column & value lists from only existing SQLite columns (excluding 'synced')

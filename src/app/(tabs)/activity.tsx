@@ -221,6 +221,17 @@ export default function ActivityScreen() {
     }
   };
 
+  const getDayWeekdayName = (dayNum: number, startDate?: string | null, fallbackIndex: number = 0): string => {
+    if (!startDate) return WEEKDAY_NAMES[fallbackIndex];
+    try {
+      const d = new Date(startDate + 'T00:00:00');
+      d.setDate(d.getDate() + (dayNum - 1));
+      return d.toLocaleDateString('en-US', { weekday: 'short' }).toUpperCase();
+    } catch {
+      return WEEKDAY_NAMES[fallbackIndex];
+    }
+  };
+
   const handleStartWorkout = (workout: Workout) => {
     if (completedIds.has(workout.id)) {
       Alert.alert('Already Complete', 'This workout has already been completed.');
@@ -525,7 +536,7 @@ export default function ActivityScreen() {
                         isCompleted && styles.weekDayLabelDone,
                       ]}
                     >
-                      {WEEKDAY_NAMES[i]}
+                      {getDayWeekdayName(dayNum, profile?.plan_start_date, i)}
                     </Text>
 
                     <Text style={[styles.weekDayNum, isSelected && styles.weekDayNumSelected]}>
@@ -680,7 +691,7 @@ export default function ActivityScreen() {
                     ▶ Start Workout (+{displayWorkout.xp_value} XP)
                   </Text>
                   <Text style={styles.startWorkoutHint}>
-                    Timer + exercise check-off required
+                    30 min workout • Exercise check-off
                   </Text>
                 </TouchableOpacity>
               ) : (
@@ -1063,12 +1074,12 @@ const styles = StyleSheet.create({
     gap: 4,
   },
   weekDayCellToday: {
-    borderColor: '#00A8FF',
-    backgroundColor: 'rgba(0, 168, 255, 0.08)',
+    backgroundColor: 'rgba(0, 168, 255, 0.06)',
   },
   weekDayCellSelected: {
     borderColor: '#00A8FF',
-    backgroundColor: 'rgba(0, 168, 255, 0.15)',
+    borderWidth: 1.5,
+    backgroundColor: 'rgba(0, 168, 255, 0.18)',
   },
   weekDayCellDone: {
     backgroundColor: 'rgba(0, 255, 136, 0.06)',
@@ -1160,12 +1171,10 @@ const styles = StyleSheet.create({
   },
   calendarDayCurrent: {
     backgroundColor: 'rgba(0, 168, 255, 0.12)',
-    borderWidth: 1,
-    borderColor: '#00A8FF',
   },
   calendarDaySelected: {
-    backgroundColor: 'rgba(0, 168, 255, 0.2)',
-    borderWidth: 1,
+    backgroundColor: 'rgba(0, 168, 255, 0.25)',
+    borderWidth: 1.5,
     borderColor: '#00A8FF',
   },
   calendarDayDone: {

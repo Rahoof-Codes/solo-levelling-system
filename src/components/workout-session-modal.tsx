@@ -31,8 +31,8 @@ import Animated, {
 import type { Exercise, Workout } from '@/types';
 import { Fonts, Spacing } from '@/constants/theme';
 import {
-  estimateWorkoutDuration,
-  getMinimumTimerThreshold,
+  DEFAULT_TRAINING_SECONDS,
+  DEFAULT_TRAINING_MINUTES,
   formatTimerDisplay,
 } from '@/lib/calculations/workout-duration';
 
@@ -71,20 +71,13 @@ export function WorkoutSessionModal({
   const [checkedExercises, setCheckedExercises] = useState<Set<number>>(new Set());
 
   // Computed values
-  const estimatedMinutes = useMemo(() => estimateWorkoutDuration(exercises), [exercises]);
-  const minimumThreshold = useMemo(
-    () => (isRestDay ? 0 : getMinimumTimerThreshold(estimatedMinutes)),
-    [estimatedMinutes, isRestDay]
-  );
-  const timerMet = isRestDay || elapsedSeconds >= minimumThreshold;
-  const allChecked = checkedExercises.size >= exercises.length;
-  const canComplete = timerMet && allChecked;
-  const thresholdMinutes = Math.ceil(minimumThreshold / 60);
+  const targetDurationSeconds = DEFAULT_TRAINING_SECONDS; // 30 minutes (1800s)
+  const allChecked = exercises.length === 0 || checkedExercises.size >= exercises.length;
+  const canComplete = isRestDay || allChecked;
+  const isSessionTargetReached = elapsedSeconds >= targetDurationSeconds;
 
-  // Timer progress (0 → 1)
-  const timerProgress = minimumThreshold > 0
-    ? Math.min(elapsedSeconds / minimumThreshold, 1)
-    : 1;
+  // Timer progress toward the 30-minute target (0 → 1)
+  const timerProgress = Math.min(elapsedSeconds / targetDurationSeconds, 1);
 
   // Animations
   const ringProgress = useSharedValue(0);
@@ -223,16 +216,11 @@ export function WorkoutSessionModal({
 
   // Get lock status text
   const getLockHint = (): string => {
-    const hints: string[] = [];
-    if (!timerMet) {
-      const remaining = minimumThreshold - elapsedSeconds;
-      hints.push(`Train for ${formatTimerDisplay(Math.max(0, remaining))} more`);
-    }
     if (!allChecked) {
       const remaining = exercises.length - checkedExercises.size;
-      hints.push(`${remaining} exercise${remaining !== 1 ? 's' : ''} remaining`);
+      return `Check off ${remaining} more exercise${remaining !== 1 ? 's' : ''} to complete`;
     }
-    return hints.join(' • ');
+    return '';
   };
 
   if (!workout) return null;
@@ -273,7 +261,7 @@ export function WorkoutSessionModal({
                     style={[
                       styles.timerRingFill,
                       {
-                        borderColor: timerMet ? '#00FF88' : '#00A8FF',
+                        borderColor: isSessionTargetReached ? '#00FF88' : '#00A8FF',
                         // Use rotation to simulate circular progress
                         // This creates a visual indicator without SVG
                       },
@@ -294,7 +282,7 @@ export function WorkoutSessionModal({
                             left: RING_SIZE / 2 + Math.cos(rad) * dotRadius - 4,
                             top: RING_SIZE / 2 + Math.sin(rad) * dotRadius - 4,
                             backgroundColor: isActive
-                              ? timerMet ? '#00FF88' : '#00A8FF'
+                              ? isSessionTargetReached ? '#00FF88' : '#00A8FF'
                               : '#1E293B',
                           },
                         ]}
@@ -305,11 +293,11 @@ export function WorkoutSessionModal({
 
                 {/* Timer display */}
                 <View style={styles.timerTextContainer}>
-                  <Text style={[styles.timerText, timerMet && styles.timerTextComplete]}>
+                  <Text style={[styles.timerText, isSessionTargetReached && styles.timerTextComplete]}>
                     {formatTimerDisplay(elapsedSeconds)}
                   </Text>
                   <Text style={styles.timerEstimate}>
-                    {timerMet ? '✓ Minimum reached' : `Min: ${thresholdMinutes}m`}
+                    30 min session
                   </Text>
                 </View>
               </View>

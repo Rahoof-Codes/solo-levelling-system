@@ -1,11 +1,79 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
+import Animated, {
+  useSharedValue,
+  useAnimatedStyle,
+  withTiming,
+  withDelay,
+  withSpring,
+  Easing,
+  FadeIn,
+  ZoomIn,
+} from 'react-native-reanimated';
 import { type Profile, Stat } from '@/types';
 import { StatColors, Fonts, Spacing } from '@/constants/theme';
 import { STAT_INFO } from '@/lib/calculations/leveling';
 
 interface StatBarsProps {
   profile: Profile;
+}
+
+function AnimatedStatBar({
+  statKey,
+  label,
+  xp,
+  maxXP,
+  index,
+}: {
+  statKey: Stat;
+  label: string;
+  xp: number;
+  maxXP: number;
+  index: number;
+}) {
+  const color = StatColors[statKey];
+  const info = STAT_INFO[statKey];
+  const targetPct = Math.max(3, Math.min(100, (xp / maxXP) * 100));
+
+  const barWidth = useSharedValue(0);
+
+  useEffect(() => {
+    barWidth.value = withDelay(
+      200 + index * 120,
+      withTiming(targetPct, {
+        duration: 800,
+        easing: Easing.out(Easing.cubic),
+      })
+    );
+  }, [targetPct, index]);
+
+  const barAnimStyle = useAnimatedStyle(() => ({
+    width: `${barWidth.value}%`,
+    backgroundColor: color,
+    shadowColor: color,
+  }));
+
+  return (
+    <Animated.View
+      entering={FadeIn.duration(400).delay(150 + index * 80)}
+      style={styles.row}
+    >
+      <View style={styles.statMeta}>
+        <View style={styles.badgeWrapper}>
+          <Text style={[styles.statKey, { color }]}>{statKey}</Text>
+        </View>
+        <View style={styles.infoWrapper}>
+          <Text style={styles.statName}>{info.label}</Text>
+          <Text style={styles.statDesc}>{info.description}</Text>
+        </View>
+        <Text style={[styles.statValue, { color }]}>{xp}</Text>
+      </View>
+
+      <View style={styles.barTrack}>
+        <Animated.View style={[styles.barFill, barAnimStyle]} />
+      </View>
+    </Animated.View>
+  );
 }
 
 export function StatBars({ profile }: StatBarsProps) {
@@ -28,39 +96,16 @@ export function StatBars({ profile }: StatBarsProps) {
       </View>
 
       <View style={styles.list}>
-        {statsList.map((item) => {
-          const color = StatColors[item.key];
-          const info = STAT_INFO[item.key];
-          const pct = Math.max(3, Math.min(100, (item.xp / maxStatXP) * 100));
-
-          return (
-            <View key={item.key} style={styles.row}>
-              <View style={styles.statMeta}>
-                <View style={styles.badgeWrapper}>
-                  <Text style={[styles.statKey, { color }]}>{item.key}</Text>
-                </View>
-                <View style={styles.infoWrapper}>
-                  <Text style={styles.statName}>{info.label}</Text>
-                  <Text style={styles.statDesc}>{info.description}</Text>
-                </View>
-                <Text style={[styles.statValue, { color }]}>{item.xp}</Text>
-              </View>
-
-              <View style={styles.barTrack}>
-                <View
-                  style={[
-                    styles.barFill,
-                    {
-                      width: `${pct}%`,
-                      backgroundColor: color,
-                      shadowColor: color,
-                    },
-                  ]}
-                />
-              </View>
-            </View>
-          );
-        })}
+        {statsList.map((item, index) => (
+          <AnimatedStatBar
+            key={item.key}
+            statKey={item.key}
+            label={item.label}
+            xp={item.xp}
+            maxXP={maxStatXP}
+            index={index}
+          />
+        ))}
       </View>
     </View>
   );

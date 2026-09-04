@@ -1,5 +1,14 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
+import Animated, {
+  useSharedValue,
+  useAnimatedStyle,
+  withTiming,
+  withDelay,
+  Easing,
+  ZoomIn,
+  FadeIn,
+} from 'react-native-reanimated';
 import { Image } from 'expo-image';
 import { type Profile } from '@/types';
 import { getXPProgress } from '@/lib/calculations/leveling';
@@ -16,16 +25,38 @@ export function HunterInfo({ profile }: HunterInfoProps) {
   const rankColor = RankColors[profile.rank] || RankColors.E;
   const rankImage = getRankImage(profile.rank);
 
+  const targetPct = Math.max(2, Math.min(100, xp.percentage));
+  const xpBarWidth = useSharedValue(0);
+
+  useEffect(() => {
+    xpBarWidth.value = withDelay(
+      300,
+      withTiming(targetPct, {
+        duration: 900,
+        easing: Easing.out(Easing.cubic),
+      })
+    );
+  }, [targetPct]);
+
+  const animatedXPBarStyle = useAnimatedStyle(() => ({
+    width: `${xpBarWidth.value}%`,
+    backgroundColor: rankColor,
+    shadowColor: rankColor,
+  }));
+
   return (
     <View style={styles.container}>
       <View style={styles.topRow}>
         {/* Hunter Rank Portrait */}
-        <View style={[styles.avatarContainer, { borderColor: rankColor, shadowColor: rankColor }]}>
+        <Animated.View
+          entering={ZoomIn.springify().damping(12)}
+          style={[styles.avatarContainer, { borderColor: rankColor, shadowColor: rankColor }]}
+        >
           <Image source={rankImage} style={styles.avatarImage} contentFit="cover" />
           <View style={[styles.rankMiniTag, { backgroundColor: rankColor }]}>
             <Text style={styles.rankMiniTagText}>{profile.rank}</Text>
           </View>
-        </View>
+        </Animated.View>
 
         {/* Identity & Level */}
         <View style={styles.identity}>
@@ -54,16 +85,7 @@ export function HunterInfo({ profile }: HunterInfoProps) {
         </View>
 
         <View style={styles.barTrack}>
-          <View
-            style={[
-              styles.barFill,
-              {
-                width: `${Math.max(2, Math.min(100, xp.percentage))}%`,
-                backgroundColor: rankColor,
-                shadowColor: rankColor,
-              },
-            ]}
-          />
+          <Animated.View style={[styles.barFill, animatedXPBarStyle]} />
         </View>
       </View>
     </View>

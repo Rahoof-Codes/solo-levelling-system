@@ -36,7 +36,13 @@ import {
 } from '@/types';
 import { ACTIVITY_TYPE_OPTIONS } from '@/lib/calculations/met';
 import { StatColors, Fonts, Spacing } from '@/constants/theme';
+import Animated, {
+  FadeInDown,
+  FadeInUp,
+  FadeIn,
+} from 'react-native-reanimated';
 import { XPClaimModal } from '@/components/xp-claim-modal';
+import { WorkoutSessionModal } from '@/components/workout-session-modal';
 import { StepTrackerCard } from '@/components/status/step-tracker-card';
 
 interface PendingClaim {
@@ -77,6 +83,10 @@ export default function ActivityScreen() {
   const [selectedWeekDay, setSelectedWeekDay] = useState<Workout | null>(null);
   const [showCalendar, setShowCalendar] = useState(false);
   const [activating, setActivating] = useState(false);
+
+  // Workout Session Modal State
+  const [sessionModalVisible, setSessionModalVisible] = useState(false);
+  const [sessionWorkout, setSessionWorkout] = useState<Workout | null>(null);
 
   // Custom Activity Modal
   const [modalVisible, setModalVisible] = useState(false);
@@ -211,28 +221,42 @@ export default function ActivityScreen() {
     }
   };
 
-  const handleCompleteWorkout = async (workout: Workout) => {
+  const handleStartWorkout = (workout: Workout) => {
     if (completedIds.has(workout.id)) {
       Alert.alert('Already Complete', 'This workout has already been completed.');
       return;
     }
+    setSessionWorkout(workout);
+    setSessionModalVisible(true);
+  };
+
+  const handleSessionComplete = async (durationActual: number) => {
+    if (!sessionWorkout) return;
+    setSessionModalVisible(false);
 
     try {
-      const { pendingXP } = await completeWorkoutWithoutXP(db, workout.id);
+      const { pendingXP } = await completeWorkoutWithoutXP(db, sessionWorkout.id, durationActual);
       await loadData();
 
       setClaimResult(null);
       setPendingClaim({
-        id: workout.id,
+        id: sessionWorkout.id,
         type: 'workout',
-        name: workout.name,
+        name: sessionWorkout.name,
         xpAmount: pendingXP.xp,
         stat: pendingXP.stat,
       });
       setClaimModalVisible(true);
     } catch (err: any) {
       Alert.alert('Error', err?.message ?? 'Could not complete workout');
+    } finally {
+      setSessionWorkout(null);
     }
+  };
+
+  const handleSessionCancel = () => {
+    setSessionModalVisible(false);
+    setSessionWorkout(null);
   };
 
   const handleLogActivity = async () => {
@@ -338,19 +362,23 @@ export default function ActivityScreen() {
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#00A8FF" />}
       >
         {/* HEADER */}
-        <View style={styles.header}>
+        <Animated.View entering={FadeInDown.duration(450)} style={styles.header}>
           <View>
             <Text style={styles.systemTag}>Workouts & Activities</Text>
             <Text style={styles.title}>Training</Text>
           </View>
-          <TouchableOpacity style={styles.addBtn} onPress={() => setModalVisible(true)}>
+          <TouchableOpacity
+            style={styles.addBtn}
+            onPress={() => setModalVisible(true)}
+            activeOpacity={0.7}
+          >
             <Text style={styles.addBtnText}>+ Log Activity</Text>
           </TouchableOpacity>
-        </View>
+        </Animated.View>
 
         {/* 1. PLAN PROGRESS HEADER */}
         {progress ? (
-          <View style={styles.planProgressCard}>
+          <Animated.View entering={FadeInDown.duration(450).delay(80)} style={styles.planProgressCard}>
             <View style={styles.planProgressTop}>
               <View style={{ flex: 1 }}>
                 <Text style={styles.planProgressTag}>
@@ -380,10 +408,10 @@ export default function ActivityScreen() {
                 Week {progress.currentWeek} of {progress.totalWeeks} • {progress.completedCount} workouts done ({progress.progressPercent}%)
               </Text>
             </View>
-          </View>
+          </Animated.View>
         ) : (
           /* NO PLAN ACTIVE — ONE-TAP QUICK ACTIVATION */
-          <View style={styles.noPlanCard}>
+          <Animated.View entering={FadeInDown.duration(450).delay(80)} style={styles.noPlanCard}>
             <Text style={styles.noPlanEmoji}>⚔️</Text>
             <Text style={styles.noPlanTitle}>No Training Plan Active</Text>
             <Text style={styles.noPlanSub}>
@@ -423,12 +451,12 @@ export default function ActivityScreen() {
                 ⚙️ Set up body stats →
               </Text>
             </TouchableOpacity>
-          </View>
+          </Animated.View>
         )}
 
         {/* 2. WEEK VIEW & DATE-BASED SCHEDULE */}
         {progress && (
-          <View style={styles.weekSection}>
+          <Animated.View entering={FadeInDown.duration(450).delay(150)} style={styles.weekSection}>
             <View style={styles.weekHeader}>
               <View style={styles.weekNavGroup}>
                 <TouchableOpacity
@@ -575,12 +603,12 @@ export default function ActivityScreen() {
                 </View>
               </View>
             )}
-          </View>
+          </Animated.View>
         )}
 
         {/* 3. WORKOUT DETAILS CARD (Shows Workout Plan for Selected Day / Today) */}
         {displayWorkout && (
-          <View style={styles.section}>
+          <Animated.View entering={FadeInDown.duration(450).delay(220)} style={styles.section}>
             <View style={styles.workoutHeaderRow}>
               <Text style={styles.sectionTitle}>
                 {displayWorkout.id === todayWorkout?.id
@@ -641,15 +669,18 @@ export default function ActivityScreen() {
                 ))}
               </View>
 
-              {/* Completion Action */}
+              {/* Completion Action — Start Workout Session */}
               {!completedIds.has(displayWorkout.id) ? (
                 <TouchableOpacity
-                  style={styles.completeWorkoutBtn}
-                  onPress={() => handleCompleteWorkout(displayWorkout)}
+                  style={styles.startWorkoutBtn}
+                  onPress={() => handleStartWorkout(displayWorkout)}
                   activeOpacity={0.8}
                 >
-                  <Text style={styles.completeWorkoutBtnText}>
-                    ⚔️ Complete Workout (+{displayWorkout.xp_value} XP)
+                  <Text style={styles.startWorkoutBtnText}>
+                    ▶ Start Workout (+{displayWorkout.xp_value} XP)
+                  </Text>
+                  <Text style={styles.startWorkoutHint}>
+                    Timer + exercise check-off required
                   </Text>
                 </TouchableOpacity>
               ) : (
@@ -658,27 +689,33 @@ export default function ActivityScreen() {
                 </View>
               )}
             </View>
-          </View>
+          </Animated.View>
         )}
 
         {/* 10,000 STEPS DAILY DIRECTIVE & MOTION TRACKER */}
-        <StepTrackerCard onQuestClaimed={loadData} />
+        <Animated.View entering={FadeInDown.duration(450).delay(280)}>
+          <StepTrackerCard onQuestClaimed={loadData} />
+        </Animated.View>
 
         {/* TODAY'S LOGGED ACTIVITIES */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Activities Logged ({activities.length})</Text>
 
           {activities.length === 0 ? (
-            <View style={styles.emptyCard}>
+            <Animated.View entering={FadeIn.duration(400).delay(120)} style={styles.emptyCard}>
               <Text style={styles.emptyEmoji}>⚡</Text>
               <Text style={styles.emptyText}>No activities logged today.</Text>
               <Text style={styles.emptySub}>Log running, lifting, or study to earn XP & burn calories.</Text>
-            </View>
+            </Animated.View>
           ) : (
-            activities.map((a) => {
+            activities.map((a, index) => {
               const statColor = StatColors[a.stat_affected] || '#00F0FF';
               return (
-                <View key={a.id} style={styles.activityCard}>
+                <Animated.View
+                  key={a.id}
+                  entering={FadeInUp.duration(400).delay(100 + index * 50)}
+                  style={styles.activityCard}
+                >
                   <View style={styles.activityMain}>
                     <Text style={styles.activityTypeName}>{a.type.toUpperCase()}</Text>
                     <Text style={[styles.activityXP, { color: statColor }]}>
@@ -690,7 +727,7 @@ export default function ActivityScreen() {
                     <Text style={styles.activityMetaText}>🔥 -{Math.round(a.calories_burned)} kcal</Text>
                     <Text style={styles.activityMetaText}>MET: {a.met_value}</Text>
                   </View>
-                </View>
+                </Animated.View>
               );
             })
           )}
@@ -767,6 +804,16 @@ export default function ActivityScreen() {
           </View>
         </View>
       </Modal>
+
+      {/* WORKOUT SESSION MODAL — Timer + Exercise Check-off */}
+      {sessionWorkout && (
+        <WorkoutSessionModal
+          visible={sessionModalVisible}
+          workout={sessionWorkout}
+          onComplete={handleSessionComplete}
+          onCancel={handleSessionCancel}
+        />
+      )}
 
       {/* LOCKED XP CLAIM MODAL */}
       {pendingClaim && (
@@ -1250,20 +1297,27 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     color: '#E8ECF4',
   },
-  completeWorkoutBtn: {
-    backgroundColor: '#0066BB',
-    borderWidth: 1,
+  startWorkoutBtn: {
+    backgroundColor: 'rgba(0, 168, 255, 0.1)',
+    borderWidth: 1.5,
     borderColor: '#00A8FF',
     borderRadius: 12,
     paddingVertical: 14,
     alignItems: 'center',
     marginTop: 4,
+    gap: 4,
   },
-  completeWorkoutBtnText: {
+  startWorkoutBtnText: {
     fontFamily: Fonts.sans,
-    fontSize: 14,
+    fontSize: 15,
     fontWeight: '700',
-    color: '#FFFFFF',
+    color: '#00A8FF',
+  },
+  startWorkoutHint: {
+    fontFamily: Fonts.sans,
+    fontSize: 11,
+    fontWeight: '500',
+    color: '#6B7B8F',
   },
   completedBadge: {
     backgroundColor: 'rgba(0, 255, 136, 0.06)',

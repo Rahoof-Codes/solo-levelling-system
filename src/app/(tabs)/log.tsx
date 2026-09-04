@@ -11,6 +11,11 @@ import {
   Alert,
   RefreshControl,
 } from 'react-native';
+import Animated, {
+  FadeInDown,
+  FadeInUp,
+  FadeIn,
+} from 'react-native-reanimated';
 import { useSQLiteContext } from 'expo-sqlite';
 import { useFocusEffect } from 'expo-router';
 import { getTodayMeals, logMeal, getDailyCalorieSummary, getProfile } from '@/db/operations';
@@ -134,18 +139,22 @@ export default function MealLogScreen() {
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#00A8FF" />}
       >
         {/* HEADER */}
-        <View style={styles.header}>
+        <Animated.View entering={FadeInDown.duration(450)} style={styles.header}>
           <View>
             <Text style={styles.systemTag}>Nutrition</Text>
             <Text style={styles.title}>Meal Log</Text>
           </View>
-          <TouchableOpacity style={styles.addBtn} onPress={() => setModalVisible(true)}>
+          <TouchableOpacity
+            style={styles.addBtn}
+            onPress={() => setModalVisible(true)}
+            activeOpacity={0.7}
+          >
             <Text style={styles.addBtnText}>+ Log Meal</Text>
           </TouchableOpacity>
-        </View>
+        </Animated.View>
 
         {/* ENERGY / MANA SUMMARY CARD */}
-        <View style={styles.summaryCard}>
+        <Animated.View entering={FadeInDown.duration(450).delay(80)} style={styles.summaryCard}>
           <View style={styles.summaryTop}>
             <View>
               <Text style={styles.summaryLabel}>TOTAL INTAKE</Text>
@@ -224,21 +233,25 @@ export default function MealLogScreen() {
               </View>
             </View>
           </View>
-        </View>
+        </Animated.View>
 
         {/* LOGGED MEALS LIST */}
         <View style={styles.mealSection}>
           <Text style={styles.sectionTitle}>Today's Meals ({meals.length})</Text>
 
           {meals.length === 0 ? (
-            <View style={styles.emptyCard}>
+            <Animated.View entering={FadeIn.duration(400).delay(150)} style={styles.emptyCard}>
               <Text style={styles.emptyEmoji}>🍽️</Text>
               <Text style={styles.emptyText}>No food entries logged today.</Text>
               <Text style={styles.emptySub}>Log meals to replenish energy & track macros.</Text>
-            </View>
+            </Animated.View>
           ) : (
-            meals.map((meal) => (
-              <View key={meal.id} style={styles.mealCard}>
+            meals.map((meal, index) => (
+              <Animated.View
+                key={meal.id}
+                entering={FadeInUp.duration(400).delay(120 + index * 50)}
+                style={styles.mealCard}
+              >
                 <View style={styles.mealMain}>
                   <Text style={styles.mealName}>{meal.name}</Text>
                   <Text style={styles.mealCalories}>+{Math.round(meal.calories)} kcal</Text>
@@ -251,7 +264,7 @@ export default function MealLogScreen() {
                     {new Date(meal.logged_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                   </Text>
                 </View>
-              </View>
+              </Animated.View>
             ))
           )}
         </View>

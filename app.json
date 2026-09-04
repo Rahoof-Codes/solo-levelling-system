@@ -7,16 +7,6 @@
     "icon": "./assets/images/icon.png",
     "scheme": "solo",
     "userInterfaceStyle": "automatic",
-    "androidStatusBar": {
-      "hidden": true,
-      "translucent": true,
-      "backgroundColor": "#070B14"
-    },
-    "androidNavigationBar": {
-      "visible": "sticky-immersive",
-      "backgroundColor": "#070B14",
-      "barStyle": "light-content"
-    },
     "ios": {
       "icon": "./assets/expo.icon",
       "infoPlist": {
@@ -57,7 +47,7 @@
         }
       ],
       "expo-sqlite",
-      "@react-native-google-signin/google-signin",
+      "@react-native-google-signin/google-signin/app.plugin.js",
       [
         "expo-sensors",
         {
@@ -69,6 +59,12 @@
         {
           "hidden": true,
           "style": "dark"
+        }
+      ],
+      [
+        "expo-status-bar",
+        {
+          "style": "light"
         }
       ]
     ],

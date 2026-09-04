@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   StyleSheet,
   Text,
@@ -10,6 +10,17 @@ import {
   Dimensions,
   Image,
 } from 'react-native';
+import Animated, {
+  useSharedValue,
+  useAnimatedStyle,
+  withRepeat,
+  withSequence,
+  withTiming,
+  Easing,
+  FadeInDown,
+  FadeInUp,
+  ZoomIn,
+} from 'react-native-reanimated';
 import { useAuth } from '@/contexts/AuthContext';
 import { Fonts, Spacing } from '@/constants/theme';
 
@@ -18,6 +29,98 @@ const { width, height } = Dimensions.get('window');
 export default function LoginScreen() {
   const { signIn, continueAsGuest, isAuthenticating } = useAuth();
   const [error, setError] = useState<string | null>(null);
+
+  // Floating background glow orb animations
+  const orb1TranslateX = useSharedValue(0);
+  const orb1TranslateY = useSharedValue(0);
+  const orb2TranslateX = useSharedValue(0);
+  const orb2TranslateY = useSharedValue(0);
+
+  // Status dot pulse
+  const dotScale = useSharedValue(1);
+
+  // Button subtle pulse
+  const btnPulse = useSharedValue(1);
+
+  useEffect(() => {
+    // Orb 1 subtle drift
+    orb1TranslateX.value = withRepeat(
+      withSequence(
+        withTiming(25, { duration: 4000, easing: Easing.inOut(Easing.quad) }),
+        withTiming(-20, { duration: 4000, easing: Easing.inOut(Easing.quad) })
+      ),
+      -1,
+      true
+    );
+    orb1TranslateY.value = withRepeat(
+      withSequence(
+        withTiming(20, { duration: 3500, easing: Easing.inOut(Easing.quad) }),
+        withTiming(-15, { duration: 4500, easing: Easing.inOut(Easing.quad) })
+      ),
+      -1,
+      true
+    );
+
+    // Orb 2 subtle drift
+    orb2TranslateX.value = withRepeat(
+      withSequence(
+        withTiming(-30, { duration: 5000, easing: Easing.inOut(Easing.quad) }),
+        withTiming(15, { duration: 4500, easing: Easing.inOut(Easing.quad) })
+      ),
+      -1,
+      true
+    );
+    orb2TranslateY.value = withRepeat(
+      withSequence(
+        withTiming(-20, { duration: 4200, easing: Easing.inOut(Easing.quad) }),
+        withTiming(25, { duration: 3800, easing: Easing.inOut(Easing.quad) })
+      ),
+      -1,
+      true
+    );
+
+    // Status dot pulse
+    dotScale.value = withRepeat(
+      withSequence(
+        withTiming(1.4, { duration: 900, easing: Easing.inOut(Easing.ease) }),
+        withTiming(1, { duration: 900, easing: Easing.inOut(Easing.ease) })
+      ),
+      -1,
+      true
+    );
+
+    // Button pulse
+    btnPulse.value = withRepeat(
+      withSequence(
+        withTiming(1.02, { duration: 1200, easing: Easing.inOut(Easing.ease) }),
+        withTiming(1, { duration: 1200, easing: Easing.inOut(Easing.ease) })
+      ),
+      -1,
+      true
+    );
+  }, []);
+
+  const orb1Style = useAnimatedStyle(() => ({
+    transform: [
+      { translateX: orb1TranslateX.value },
+      { translateY: orb1TranslateY.value },
+    ],
+  }));
+
+  const orb2Style = useAnimatedStyle(() => ({
+    transform: [
+      { translateX: orb2TranslateX.value },
+      { translateY: orb2TranslateY.value },
+    ],
+  }));
+
+  const dotAnimStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: dotScale.value }],
+  }));
+
+  const btnAnimStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: btnPulse.value }],
+  }));
 
   const handleGoogleSignIn = async () => {
     setError(null);
@@ -32,73 +135,86 @@ export default function LoginScreen() {
 
   return (
     <SafeAreaView style={styles.container}>
-      {/* Background glow effects */}
-      <View style={styles.glowTop} />
-      <View style={styles.glowBottom} />
+      {/* Background glow effects with animated floating drift */}
+      <Animated.View style={[styles.glowTop, orb1Style]} />
+      <Animated.View style={[styles.glowBottom, orb2Style]} />
 
       <View style={styles.content}>
         {/* Header with Logo */}
         <View style={styles.headerSection}>
-          <Image
-            source={require('@/../assets/images/shadow-logo.png')}
-            style={styles.logoImage}
-            resizeMode="cover"
-          />
-          <Text style={styles.systemLabel}>Shadow Fitness</Text>
-          <View style={styles.titleContainer}>
+          <Animated.View entering={ZoomIn.springify().damping(12)}>
+            <Image
+              source={require('@/../assets/images/shadow-logo.png')}
+              style={styles.logoImage}
+              resizeMode="cover"
+            />
+          </Animated.View>
+
+          <Animated.Text entering={FadeInDown.duration(450).delay(100)} style={styles.systemLabel}>
+            Shadow Fitness
+          </Animated.Text>
+
+          <Animated.View entering={FadeInDown.duration(450).delay(180)} style={styles.titleContainer}>
             <Text style={styles.title}>SHADOW</Text>
             <Text style={styles.titleAccent}>FITNESS</Text>
-          </View>
-          <Text style={styles.subtitle}>
+          </Animated.View>
+
+          <Animated.Text entering={FadeInDown.duration(450).delay(260)} style={styles.subtitle}>
             Train • Level Up • Conquer
-          </Text>
-          <View style={styles.divider} />
-          <Text style={styles.tagline}>
+          </Animated.Text>
+
+          <Animated.View entering={FadeInDown.duration(450).delay(320)} style={styles.divider} />
+
+          <Animated.Text entering={FadeInDown.duration(450).delay(380)} style={styles.tagline}>
             "Only I level up."
-          </Text>
+          </Animated.Text>
         </View>
 
         {/* Status Box */}
-        <View style={styles.statusBox}>
+        <Animated.View entering={FadeInDown.duration(450).delay(440)} style={styles.statusBox}>
           <View style={styles.statusRow}>
-            <View style={styles.statusDot} />
-            <Text style={styles.statusText}>Ready</Text>
+            <Animated.View style={[styles.statusDot, dotAnimStyle]} />
+            <Text style={styles.statusText}>System Ready</Text>
           </View>
           <Text style={styles.statusDetail}>
             Sign in to start your journey
           </Text>
-        </View>
+        </Animated.View>
 
         {/* Auth Buttons */}
         <View style={styles.buttonsSection}>
           {/* Google Sign-In Button */}
-          <TouchableOpacity
-            style={[styles.googleButton, isAuthenticating && styles.buttonDisabled]}
-            onPress={handleGoogleSignIn}
-            disabled={isAuthenticating}
-            activeOpacity={0.8}
-          >
-            {isAuthenticating ? (
-              <ActivityIndicator color="#0B1120" size="small" />
-            ) : (
-              <>
-                <Text style={styles.googleIcon}>G</Text>
-                <Text style={styles.googleButtonText}>Continue with Google</Text>
-              </>
-            )}
-          </TouchableOpacity>
+          <Animated.View entering={FadeInUp.duration(450).delay(500)} style={btnAnimStyle}>
+            <TouchableOpacity
+              style={[styles.googleButton, isAuthenticating && styles.buttonDisabled]}
+              onPress={handleGoogleSignIn}
+              disabled={isAuthenticating}
+              activeOpacity={0.8}
+            >
+              {isAuthenticating ? (
+                <ActivityIndicator color="#0B1120" size="small" />
+              ) : (
+                <>
+                  <Text style={styles.googleIcon}>G</Text>
+                  <Text style={styles.googleButtonText}>Continue with Google</Text>
+                </>
+              )}
+            </TouchableOpacity>
+          </Animated.View>
 
           {/* Guest Mode */}
-          <TouchableOpacity
-            style={styles.guestButton}
-            onPress={continueAsGuest}
-            disabled={isAuthenticating}
-            activeOpacity={0.7}
-          >
-            <Text style={styles.guestButtonText}>
-              Play as Guest (local only)
-            </Text>
-          </TouchableOpacity>
+          <Animated.View entering={FadeInUp.duration(450).delay(580)}>
+            <TouchableOpacity
+              style={styles.guestButton}
+              onPress={continueAsGuest}
+              disabled={isAuthenticating}
+              activeOpacity={0.7}
+            >
+              <Text style={styles.guestButtonText}>
+                Play as Guest (local only)
+              </Text>
+            </TouchableOpacity>
+          </Animated.View>
 
           {error && (
             <Text style={styles.errorText}>⚠️ {error}</Text>
@@ -106,12 +222,12 @@ export default function LoginScreen() {
         </View>
 
         {/* Footer */}
-        <View style={styles.footer}>
+        <Animated.View entering={FadeInUp.duration(450).delay(640)} style={styles.footer}>
           <Text style={styles.footerText}>
             Offline-first · Your data is always saved locally
           </Text>
           <Text style={styles.versionText}>v1.2.1</Text>
-        </View>
+        </Animated.View>
       </View>
     </SafeAreaView>
   );
@@ -129,7 +245,7 @@ const styles = StyleSheet.create({
     width: width * 0.6,
     height: height * 0.35,
     borderRadius: 999,
-    backgroundColor: 'rgba(0, 168, 255, 0.05)',
+    backgroundColor: 'rgba(0, 168, 255, 0.08)',
   },
   glowBottom: {
     position: 'absolute',
@@ -138,7 +254,7 @@ const styles = StyleSheet.create({
     width: width * 0.5,
     height: height * 0.25,
     borderRadius: 999,
-    backgroundColor: 'rgba(0, 168, 255, 0.03)',
+    backgroundColor: 'rgba(138, 63, 252, 0.06)',
   },
   content: {
     flex: 1,
@@ -221,6 +337,11 @@ const styles = StyleSheet.create({
     height: 8,
     borderRadius: 4,
     backgroundColor: '#00FF88',
+    shadowColor: '#00FF88',
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.6,
+    shadowRadius: 4,
+    elevation: 3,
   },
   statusText: {
     fontSize: 13,

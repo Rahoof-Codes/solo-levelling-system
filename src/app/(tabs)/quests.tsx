@@ -11,6 +11,11 @@ import {
   Alert,
   RefreshControl,
 } from 'react-native';
+import Animated, {
+  FadeInDown,
+  FadeInUp,
+  ZoomIn,
+} from 'react-native-reanimated';
 import { useSQLiteContext } from 'expo-sqlite';
 import { useFocusEffect } from 'expo-router';
 import { getQuestsForDate, completeQuest, createQuest, getTodaySteps } from '@/db/operations';
@@ -133,18 +138,22 @@ export default function QuestsScreen() {
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#00A8FF" />}
       >
         {/* HEADER */}
-        <View style={styles.header}>
+        <Animated.View entering={FadeInDown.duration(450)} style={styles.header}>
           <View>
             <Text style={styles.systemTag}>Daily</Text>
             <Text style={styles.title}>Quests</Text>
           </View>
-          <TouchableOpacity style={styles.addBtn} onPress={() => setModalVisible(true)}>
+          <TouchableOpacity
+            style={styles.addBtn}
+            onPress={() => setModalVisible(true)}
+            activeOpacity={0.7}
+          >
             <Text style={styles.addBtnText}>+ New Quest</Text>
           </TouchableOpacity>
-        </View>
+        </Animated.View>
 
         {/* PROGRESS OVERVIEW */}
-        <View style={styles.progressCard}>
+        <Animated.View entering={FadeInDown.duration(450).delay(90)} style={styles.progressCard}>
           <View style={styles.progressRow}>
             <Text style={styles.progressLabel}>Today's progress</Text>
             <Text style={styles.progressValue}>
@@ -161,15 +170,16 @@ export default function QuestsScreen() {
               ]}
             />
           </View>
-        </View>
+        </Animated.View>
 
         {/* QUESTS LIST */}
         <View style={styles.questList}>
-          {quests.map((quest) => {
+          {quests.map((quest, index) => {
             const statColor = StatColors[quest.stat_affected] || '#00F0FF';
             return (
-              <View
+              <Animated.View
                 key={quest.id}
+                entering={FadeInUp.duration(400).delay(140 + index * 60)}
                 style={[
                   styles.questCard,
                   quest.is_completed === 1 && styles.questCardCompleted,
@@ -221,13 +231,14 @@ export default function QuestsScreen() {
                 )}
 
                 {quest.is_completed === 1 ? (
-                  <View style={styles.completedBadge}>
+                  <Animated.View entering={ZoomIn.springify()} style={styles.completedBadge}>
                     <Text style={styles.completedText}>✓ Done</Text>
-                  </View>
+                  </Animated.View>
                 ) : quest.title.toLowerCase().includes('step') && todaySteps < 10000 ? (
                   <TouchableOpacity
                     style={[styles.completeBtn, styles.stepIncompleteBtn]}
                     onPress={() => handleStartClaim(quest)}
+                    activeOpacity={0.7}
                   >
                     <Text style={styles.stepIncompleteText}>
                       {(10000 - todaySteps).toLocaleString()} steps remaining
@@ -237,11 +248,12 @@ export default function QuestsScreen() {
                   <TouchableOpacity
                     style={styles.completeBtn}
                     onPress={() => handleStartClaim(quest)}
+                    activeOpacity={0.8}
                   >
                     <Text style={styles.completeBtnText}>Complete Quest</Text>
                   </TouchableOpacity>
                 )}
-              </View>
+              </Animated.View>
             );
           })}
         </View>

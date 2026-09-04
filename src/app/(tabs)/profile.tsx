@@ -19,6 +19,10 @@ import { RankBadge } from '@/components/status/rank-badge';
 import { isFirebaseConfigured } from '@/lib/firebase';
 import { useAuth } from '@/contexts/AuthContext';
 import { Fonts, Spacing, RankColors, StatColors } from '@/constants/theme';
+import Animated, {
+  FadeInDown,
+  FadeInUp,
+} from 'react-native-reanimated';
 import { getRankImage } from '@/constants/rankImages';
 import { getXPProgress } from '@/lib/calculations/leveling';
 import { GOAL_CONFIG } from '@/lib/calculations/bmr';
@@ -132,7 +136,7 @@ export default function ProfileScreen() {
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#00A8FF" />}
       >
         {/* TOP HEADER */}
-        <View style={styles.header}>
+        <Animated.View entering={FadeInDown.duration(450)} style={styles.header}>
           <View style={styles.headerLeft}>
             <Text style={styles.systemTag}>Hunter Profile</Text>
             <Text style={styles.title}>Your Dossier</Text>
@@ -140,14 +144,14 @@ export default function ProfileScreen() {
           <View style={[styles.statusPill, { borderColor: rankColor }]}>
             <View style={[styles.statusDot, { backgroundColor: rankColor }]} />
             <Text style={[styles.statusPillText, { color: rankColor }]}>
-              {profile ? `${profile.rank}-Rank` : 'Identifying'}
+               {profile ? `${profile.rank}-Rank` : 'Identifying'}
             </Text>
           </View>
-        </View>
+        </Animated.View>
 
         {/* 1. HUNTER IDENTIFICATION LICENSE CARD */}
         {profile && (
-          <View style={[styles.licenseCard, { borderColor: rankColor }]}>
+          <Animated.View entering={FadeInDown.duration(450).delay(80)} style={[styles.licenseCard, { borderColor: rankColor }]}>
             {/* Card Watermark Header */}
             <View style={styles.licenseHeaderBar}>
               <Text style={styles.licenseHeaderTag}>Hunter License</Text>
@@ -210,12 +214,12 @@ export default function ProfileScreen() {
                 </View>
               </View>
             )}
-          </View>
+          </Animated.View>
         )}
 
         {/* 2. 5 CORE RPG ATTRIBUTES */}
         {profile && (
-          <View style={styles.matrixCard}>
+          <Animated.View entering={FadeInDown.duration(450).delay(150)} style={styles.matrixCard}>
             <View style={styles.matrixHeader}>
               <Text style={styles.matrixTitle}>Core Attributes</Text>
               <Text style={styles.matrixSubtitle}>Growth Record</Text>
@@ -322,11 +326,11 @@ export default function ProfileScreen() {
                 </View>
               </View>
             </View>
-          </View>
+          </Animated.View>
         )}
 
         {/* 3. ACTIVE TRAINING PROGRAM & GOALS */}
-        <View style={styles.protocolCard}>
+        <Animated.View entering={FadeInDown.duration(450).delay(220)} style={styles.protocolCard}>
           <View style={styles.protocolHeader}>
             <Text style={styles.protocolHeaderTag}>Programs & Goals</Text>
             <TouchableOpacity onPress={() => router.push('/onboarding')} activeOpacity={0.7}>
@@ -373,11 +377,11 @@ export default function ProfileScreen() {
               </Text>
             </View>
           </View>
-        </View>
+        </Animated.View>
 
         {/* 4. PHYSIOLOGICAL BIO STATS */}
         {profile && (
-          <View style={styles.bioCard}>
+          <Animated.View entering={FadeInDown.duration(450).delay(290)} style={styles.bioCard}>
             <View style={styles.bioHeader}>
               <Text style={styles.bioTitle}>Body Stats & Targets</Text>
               <TouchableOpacity onPress={() => router.push('/onboarding')} activeOpacity={0.7}>
@@ -443,11 +447,11 @@ export default function ProfileScreen() {
             >
               <Text style={styles.recalibrateFullBtnText}>Update Body Stats & Goals ⚙️</Text>
             </TouchableOpacity>
-          </View>
+          </Animated.View>
         )}
 
         {/* 5. CLOUD SYNC & ACCOUNT */}
-        <View style={styles.syncCard}>
+        <Animated.View entering={FadeInDown.duration(450).delay(360)} style={styles.syncCard}>
           <View style={styles.syncHeader}>
             <Text style={styles.syncTitle}>Cloud Sync</Text>
             <View style={styles.liveIndicatorRow}>
@@ -499,15 +503,17 @@ export default function ProfileScreen() {
               {syncing ? 'Syncing...' : '⚡ Sync Data with Cloud'}
             </Text>
           </TouchableOpacity>
-        </View>
+        </Animated.View>
 
         {/* 6. SIGN OUT BUTTON */}
         {(user || isGuest) && (
-          <TouchableOpacity style={styles.signOutBtn} onPress={handleSignOut} activeOpacity={0.7}>
-            <Text style={styles.signOutBtnText}>
-              {user ? 'Sign Out' : 'Exit Guest Mode'}
-            </Text>
-          </TouchableOpacity>
+          <Animated.View entering={FadeInUp.duration(450).delay(420)}>
+            <TouchableOpacity style={styles.signOutBtn} onPress={handleSignOut} activeOpacity={0.7}>
+              <Text style={styles.signOutBtnText}>
+                {user ? 'Sign Out' : 'Exit Guest Mode'}
+              </Text>
+            </TouchableOpacity>
+          </Animated.View>
         )}
 
         {/* FOOTER */}

@@ -15,6 +15,7 @@ import Animated, {
   withTiming,
   Easing,
   SlideInUp,
+  ZoomIn,
 } from 'react-native-reanimated';
 import { type Streak } from '@/types';
 import { type DayActivityStatus } from '@/db/operations';
@@ -30,13 +31,24 @@ export function DailyStreakCard({ streaks, weekHistory = [] }: DailyStreakCardPr
   const [modalVisible, setModalVisible] = useState(false);
 
   // Find streaks
-  const loginStreak = streaks.find((s) => s.type === 'login')?.current_count ?? 0;
   const questStreak = streaks.find((s) => s.type === 'daily_quest')?.current_count ?? 0;
-  const workoutStreak = streaks.find((s) => s.type === 'workout')?.current_count ?? 0;
-  const mealStreak = streaks.find((s) => s.type === 'meal_log')?.current_count ?? 0;
+  const longestQuest = streaks.find((s) => s.type === 'daily_quest')?.longest_count ?? questStreak;
 
+  const workoutStreak = streaks.find((s) => s.type === 'workout')?.current_count ?? 0;
+  const longestWorkout = streaks.find((s) => s.type === 'workout')?.longest_count ?? workoutStreak;
+
+  const stepStreak = streaks.find((s) => s.type === 'steps')?.current_count ?? 0;
+  const longestSteps = streaks.find((s) => s.type === 'steps')?.longest_count ?? stepStreak;
+
+  const mealStreak = streaks.find((s) => s.type === 'meal_log')?.current_count ?? 0;
+  const longestMeal = streaks.find((s) => s.type === 'meal_log')?.longest_count ?? mealStreak;
+
+  const loginStreak = streaks.find((s) => s.type === 'login')?.current_count ?? 0;
   const longestLogin = streaks.find((s) => s.type === 'login')?.longest_count ?? loginStreak;
-  const primaryStreak = Math.max(loginStreak, questStreak, 1);
+
+  // Primary streak reflects actual daily activity (quests or workouts completed consecutively)
+  const primaryStreak = Math.max(questStreak, workoutStreak);
+  const bestRecord = Math.max(longestQuest, longestWorkout, primaryStreak);
 
   // Flame animation shared values
   const flameScale = useSharedValue(1);
@@ -88,7 +100,7 @@ export function DailyStreakCard({ streaks, weekHistory = [] }: DailyStreakCardPr
   }));
 
   // Calculate hunter buff
-  const expBuffPercent = Math.min(25, Math.max(5, primaryStreak * 3));
+  const expBuffPercent = primaryStreak > 0 ? Math.min(25, Math.max(5, primaryStreak * 3)) : 0;
 
   return (
     <View style={styles.container}>
@@ -123,8 +135,14 @@ export function DailyStreakCard({ streaks, weekHistory = [] }: DailyStreakCardPr
       <View style={styles.buffBadge}>
         <Text style={styles.buffIcon}>⚡</Text>
         <Text style={styles.buffText}>
-          Resonance Buff:{' '}
-          <Text style={styles.buffHighlight}>+{expBuffPercent}% EXP</Text>
+          {primaryStreak > 0 ? (
+            <>
+              Resonance Buff:{' '}
+              <Text style={styles.buffHighlight}>+{expBuffPercent}% EXP</Text>
+            </>
+          ) : (
+            'Complete daily quests to activate Resonance Buff'
+          )}
         </Text>
       </View>
 
@@ -134,7 +152,11 @@ export function DailyStreakCard({ streaks, weekHistory = [] }: DailyStreakCardPr
           ? weekHistory.map((day, idx) => {
               const isFuture = !day.isCompleted && !day.isToday;
               return (
-                <View key={day.date || idx} style={styles.dayNode}>
+                <Animated.View
+                  key={day.date || idx}
+                  entering={ZoomIn.duration(350).delay(100 + idx * 50)}
+                  style={styles.dayNode}
+                >
                   <Text style={[styles.dayLabel, day.isToday && styles.dayLabelToday]}>
                     {day.dayLabel}
                   </Text>
@@ -154,12 +176,16 @@ export function DailyStreakCard({ streaks, weekHistory = [] }: DailyStreakCardPr
                       <Text style={styles.nodeLocked}>•</Text>
                     )}
                   </View>
-                </View>
+                </Animated.View>
               );
             })
           : // Fallback 7 dummy nodes if history is loading
             ['M', 'T', 'W', 'T', 'F', 'S', 'S'].map((letter, i) => (
-              <View key={i} style={styles.dayNode}>
+              <Animated.View
+                key={i}
+                entering={ZoomIn.duration(350).delay(100 + i * 50)}
+                style={styles.dayNode}
+              >
                 <Text style={styles.dayLabel}>{letter}</Text>
                 <View
                   style={[
@@ -175,14 +201,14 @@ export function DailyStreakCard({ streaks, weekHistory = [] }: DailyStreakCardPr
                     {i < Math.min(primaryStreak, 6) ? '✓' : i === 6 ? '⚡' : '•'}
                   </Text>
                 </View>
-              </View>
+              </Animated.View>
             ))}
       </View>
 
       {/* FOOTER INFO */}
       <View style={styles.footerRow}>
         <Text style={styles.longestStreak}>
-          👑 Best: <Text style={styles.longestVal}>{longestLogin} days</Text>
+          👑 Best: <Text style={styles.longestVal}>{bestRecord} days</Text>
         </Text>
         <Text style={styles.streakHint}>Complete quests to maintain</Text>
       </View>
@@ -208,21 +234,6 @@ export function DailyStreakCard({ streaks, weekHistory = [] }: DailyStreakCardPr
             </View>
 
             <ScrollView contentContainerStyle={styles.streakGrid}>
-              {/* Login Streak */}
-              <View style={styles.streakItem}>
-                <View style={styles.streakItemLeft}>
-                  <Text style={styles.streakItemIcon}>⚡</Text>
-                  <View>
-                    <Text style={styles.streakItemTitle}>Daily Login</Text>
-                    <Text style={styles.streakItemSub}>Days opened the app</Text>
-                  </View>
-                </View>
-                <View style={styles.streakItemRight}>
-                  <Text style={styles.streakItemVal}>{loginStreak}d</Text>
-                  <Text style={styles.streakItemRecord}>Best {longestLogin}d</Text>
-                </View>
-              </View>
-
               {/* Quest Streak */}
               <View style={styles.streakItem}>
                 <View style={styles.streakItemLeft}>
@@ -236,7 +247,7 @@ export function DailyStreakCard({ streaks, weekHistory = [] }: DailyStreakCardPr
                   <Text style={[styles.streakItemVal, { color: '#00A8FF' }]}>
                     {questStreak}d
                   </Text>
-                  <Text style={styles.streakItemRecord}>Active</Text>
+                  <Text style={styles.streakItemRecord}>Best {longestQuest}d</Text>
                 </View>
               </View>
 
@@ -253,7 +264,24 @@ export function DailyStreakCard({ streaks, weekHistory = [] }: DailyStreakCardPr
                   <Text style={[styles.streakItemVal, { color: '#FF3366' }]}>
                     {workoutStreak}d
                   </Text>
-                  <Text style={styles.streakItemRecord}>Active</Text>
+                  <Text style={styles.streakItemRecord}>Best {longestWorkout}d</Text>
+                </View>
+              </View>
+
+              {/* Steps Streak */}
+              <View style={styles.streakItem}>
+                <View style={styles.streakItemLeft}>
+                  <Text style={styles.streakItemIcon}>👟</Text>
+                  <View>
+                    <Text style={styles.streakItemTitle}>Step Goal</Text>
+                    <Text style={styles.streakItemSub}>10,000 steps reached</Text>
+                  </View>
+                </View>
+                <View style={styles.streakItemRight}>
+                  <Text style={[styles.streakItemVal, { color: '#FFB800' }]}>
+                    {stepStreak}d
+                  </Text>
+                  <Text style={styles.streakItemRecord}>Best {longestSteps}d</Text>
                 </View>
               </View>
 
@@ -270,7 +298,22 @@ export function DailyStreakCard({ streaks, weekHistory = [] }: DailyStreakCardPr
                   <Text style={[styles.streakItemVal, { color: '#00FF88' }]}>
                     {mealStreak}d
                   </Text>
-                  <Text style={styles.streakItemRecord}>Active</Text>
+                  <Text style={styles.streakItemRecord}>Best {longestMeal}d</Text>
+                </View>
+              </View>
+
+              {/* Login Streak */}
+              <View style={styles.streakItem}>
+                <View style={styles.streakItemLeft}>
+                  <Text style={styles.streakItemIcon}>⚡</Text>
+                  <View>
+                    <Text style={styles.streakItemTitle}>Daily Login</Text>
+                    <Text style={styles.streakItemSub}>Days opened the app</Text>
+                  </View>
+                </View>
+                <View style={styles.streakItemRight}>
+                  <Text style={styles.streakItemVal}>{loginStreak}d</Text>
+                  <Text style={styles.streakItemRecord}>Best {longestLogin}d</Text>
                 </View>
               </View>
             </ScrollView>

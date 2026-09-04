@@ -854,28 +854,85 @@ export async function claimActivityXP(
   stat: Stat,
   xpAmount: number
 ): Promise<{ newProfile: Profile; leveledUp: boolean; rankChanged: boolean }> {
-  return await awardXP(db, stat, xpAmount, 'activity', activityId);
+  const xpResult = await awardXP(db, stat, xpAmount, 'activity', activityId);
+  try {
+    await updateStreak(db, 'workout');
+  } catch (e) {
+    console.warn('[claimActivityXP] Failed to update workout streak:', e);
+  }
+  return xpResult;
 }
 
 export async function getTodayActivities(db: SQLiteDatabase): Promise<Activity[]> {
-  const today = new Date().toISOString().split('T')[0];
+  const today = getLocalDateString();
   return await db.getAllAsync<Activity>(
-    "SELECT * FROM activities WHERE date(logged_at) = date(?) ORDER BY logged_at DESC;",
-    [today]
+    "SELECT * FROM activities WHERE date(logged_at, 'localtime') = date(?) OR date(logged_at) = date(?) ORDER BY logged_at DESC;",
+    [today, today]
   );
 }
 
 // --- STREAK MANAGEMENT ---
 
+/**
+ * Returns YYYY-MM-DD in the device's local timezone.
+ */
+export function getLocalDateString(d: Date = new Date()): string {
+  const year = d.getFullYear();
+  const month = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+}
+
+/**
+ * Safely computes the calendar day difference between two dates (dateStr2 - dateStr1).
+ * Uses UTC components to avoid timezone offsets and DST distortion.
+ */
 export function getDayDifference(dateStr1: string, dateStr2: string): number {
-  const d1 = new Date(dateStr1.split('T')[0] + 'T00:00:00Z');
-  const d2 = new Date(dateStr2.split('T')[0] + 'T00:00:00Z');
-  return Math.round((d2.getTime() - d1.getTime()) / (1000 * 3600 * 24));
+  if (!dateStr1 || !dateStr2) return 999;
+  const p1 = dateStr1.split('T')[0].split('-').map(Number);
+  const p2 = dateStr2.split('T')[0].split('-').map(Number);
+  if (p1.length < 3 || p2.length < 3 || isNaN(p1[0]) || isNaN(p2[0])) return 999;
+  const utc1 = Date.UTC(p1[0], p1[1] - 1, p1[2]);
+  const utc2 = Date.UTC(p2[0], p2[1] - 1, p2[2]);
+  return Math.round((utc2 - utc1) / (1000 * 60 * 60 * 24));
+}
+
+/**
+ * Validates all streaks against today's date.
+ * If a streak was not completed yesterday or today (diffDays > 1), resets current_count to 0.
+ */
+export async function refreshAndValidateStreaks(db: SQLiteDatabase): Promise<Streak[]> {
+  const today = getLocalDateString();
+  const streaks = await db.getAllAsync<Streak>('SELECT * FROM streaks;');
+  const validated: Streak[] = [];
+
+  for (const s of streaks) {
+    if (!s.last_activity_date) {
+      if (s.current_count !== 0) {
+        await db.runAsync('UPDATE streaks SET current_count = 0, synced = 0 WHERE id = ?;', [s.id]);
+        s.current_count = 0;
+      }
+      validated.push(s);
+      continue;
+    }
+
+    const diffDays = getDayDifference(s.last_activity_date, today);
+
+    // If last activity was 2 or more days ago (neither today nor yesterday), the streak is broken
+    if (diffDays > 1 && s.current_count > 0) {
+      await db.runAsync('UPDATE streaks SET current_count = 0, synced = 0 WHERE id = ?;', [s.id]);
+      s.current_count = 0;
+    }
+
+    validated.push(s);
+  }
+
+  return validated;
 }
 
 export async function updateStreak(db: SQLiteDatabase, type: string): Promise<Streak> {
   const streak = await db.getFirstAsync<Streak>('SELECT * FROM streaks WHERE type = ?;', [type]);
-  const today = new Date().toISOString().split('T')[0];
+  const today = getLocalDateString();
   const now = new Date().toISOString();
 
   if (!streak) {
@@ -888,7 +945,7 @@ export async function updateStreak(db: SQLiteDatabase, type: string): Promise<St
     return (await db.getFirstAsync<Streak>('SELECT * FROM streaks WHERE id = ?;', [id]))!;
   }
 
-  // If already updated today, do nothing
+  // If already updated today, do not double-increment
   if (streak.last_activity_date === today) {
     return streak;
   }
@@ -900,10 +957,8 @@ export async function updateStreak(db: SQLiteDatabase, type: string): Promise<St
   if (diffDays === 1) {
     // Consecutive day
     newCurrent += 1;
-  } else if (diffDays > 1) {
-    // Streak broken
-    newCurrent = 1;
-  } else if (!streak.last_activity_date) {
+  } else {
+    // Streak broken or brand new
     newCurrent = 1;
   }
 
@@ -928,7 +983,7 @@ export async function checkAndUpdateDailyLoginStreak(db: SQLiteDatabase): Promis
 }
 
 export async function getStreaks(db: SQLiteDatabase): Promise<Streak[]> {
-  return await db.getAllAsync<Streak>('SELECT * FROM streaks;');
+  return await refreshAndValidateStreaks(db);
 }
 
 export interface DayActivityStatus {
@@ -940,33 +995,36 @@ export interface DayActivityStatus {
 
 export async function getPastWeekActivity(db: SQLiteDatabase): Promise<DayActivityStatus[]> {
   const dayNames = ['SUN', 'MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT'];
-  const today = new Date();
-  const todayStr = today.toISOString().split('T')[0];
+  const todayStr = getLocalDateString();
   const results: DayActivityStatus[] = [];
 
   for (let i = 6; i >= 0; i--) {
     const d = new Date();
-    d.setDate(today.getDate() - i);
-    const dateStr = d.toISOString().split('T')[0];
+    d.setDate(d.getDate() - i);
+    const dateStr = getLocalDateString(d);
     const dayLabel = dayNames[d.getDay()];
     const isToday = dateStr === todayStr;
 
-    // Check if any quest, workout, activity, or meal was completed on this date
+    // Check if any quest, workout, activity, meal, or step goal was completed on this date
     const questCount = await db.getFirstAsync<{ count: number }>(
-      'SELECT COUNT(*) as count FROM quest_logs WHERE date(completed_at) = date(?);',
-      [dateStr]
+      `SELECT COUNT(*) as count FROM quest_logs 
+       WHERE date(completed_at, 'localtime') = date(?) OR date(completed_at) = date(?);`,
+      [dateStr, dateStr]
     );
     const workoutCount = await db.getFirstAsync<{ count: number }>(
-      'SELECT COUNT(*) as count FROM workout_logs WHERE date(completed_at) = date(?);',
-      [dateStr]
+      `SELECT COUNT(*) as count FROM workout_logs 
+       WHERE date(completed_at, 'localtime') = date(?) OR date(completed_at) = date(?);`,
+      [dateStr, dateStr]
     );
     const actCount = await db.getFirstAsync<{ count: number }>(
-      'SELECT COUNT(*) as count FROM activities WHERE date(logged_at) = date(?);',
-      [dateStr]
+      `SELECT COUNT(*) as count FROM activities 
+       WHERE date(logged_at, 'localtime') = date(?) OR date(logged_at) = date(?);`,
+      [dateStr, dateStr]
     );
     const mealCount = await db.getFirstAsync<{ count: number }>(
-      'SELECT COUNT(*) as count FROM meals WHERE date(logged_at) = date(?);',
-      [dateStr]
+      `SELECT COUNT(*) as count FROM meals 
+       WHERE date(logged_at, 'localtime') = date(?) OR date(logged_at) = date(?);`,
+      [dateStr, dateStr]
     );
 
     const stepCount = await db.getFirstAsync<{ count: number }>(

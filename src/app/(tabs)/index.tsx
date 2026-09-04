@@ -8,6 +8,11 @@ import {
   TouchableOpacity,
   RefreshControl,
 } from 'react-native';
+import Animated, {
+  FadeInDown,
+  FadeInUp,
+  SlideInDown,
+} from 'react-native-reanimated';
 import { useRouter, useFocusEffect, usePathname } from 'expo-router';
 import { useSQLiteContext } from 'expo-sqlite';
 import {
@@ -63,13 +68,15 @@ export default function StatusScreen() {
 
         const q = await getQuestsForDate(db);
         setQuests(q);
-
-        const s = await getStreaks(db);
-        setStreaks(s);
-
-        const wh = await getPastWeekActivity(db);
-        setWeekHistory(wh);
       }
+
+      // Always load and validate streaks and week activity history
+      const [s, wh] = await Promise.all([
+        getStreaks(db),
+        getPastWeekActivity(db),
+      ]);
+      setStreaks(s);
+      setWeekHistory(wh);
     } catch (err) {
       console.error('Error loading status data:', err);
     }
@@ -103,72 +110,79 @@ export default function StatusScreen() {
       >
         {/* ONBOARDING BANNER IF NOT ONBOARDED */}
         {profile && profile.onboarding_complete === 0 && (
-          <TouchableOpacity
-            style={styles.onboardingBanner}
-            onPress={() => router.push('/onboarding')}
-          >
-            <Text style={styles.bannerIcon}>⚠️</Text>
-            <View style={{ flex: 1 }}>
-              <Text style={styles.bannerTitle}>Complete your profile</Text>
-              <Text style={styles.bannerSub}>Set up your body stats to unlock custom nutrition targets</Text>
-            </View>
-            <Text style={styles.bannerArrow}>→</Text>
-          </TouchableOpacity>
+          <Animated.View entering={SlideInDown.duration(450)}>
+            <TouchableOpacity
+              style={styles.onboardingBanner}
+              onPress={() => router.push('/onboarding')}
+              activeOpacity={0.8}
+            >
+              <Text style={styles.bannerIcon}>⚠️</Text>
+              <View style={{ flex: 1 }}>
+                <Text style={styles.bannerTitle}>Complete your profile</Text>
+                <Text style={styles.bannerSub}>Set up your body stats to unlock custom nutrition targets</Text>
+              </View>
+              <Text style={styles.bannerArrow}>→</Text>
+            </TouchableOpacity>
+          </Animated.View>
         )}
 
         {/* ACTIVE GOAL BANNER */}
         {profile && (
-          <View style={styles.activeDirectiveBanner}>
-            <View style={styles.directiveTop}>
-              <Text style={styles.directiveSystemTag}>Your Goal</Text>
-              <TouchableOpacity
-                style={styles.recalibrateBtn}
-                onPress={() => router.push('/onboarding')}
-                activeOpacity={0.7}
-              >
-                <Text style={styles.recalibrateBtnText}>Edit ⚙️</Text>
-              </TouchableOpacity>
-            </View>
+          <Animated.View entering={FadeInDown.duration(450).delay(80)}>
+            <View style={styles.activeDirectiveBanner}>
+              <View style={styles.directiveTop}>
+                <Text style={styles.directiveSystemTag}>Your Goal</Text>
+                <TouchableOpacity
+                  style={styles.recalibrateBtn}
+                  onPress={() => router.push('/onboarding')}
+                  activeOpacity={0.7}
+                >
+                  <Text style={styles.recalibrateBtnText}>Edit ⚙️</Text>
+                </TouchableOpacity>
+              </View>
 
-            <View style={styles.directiveBody}>
-              <Text style={styles.directiveEmoji}>
-                {GOAL_CONFIG[profile.goal_type]?.emoji || '⚖️'}
-              </Text>
-              <View style={{ flex: 1, gap: 3 }}>
-                <Text style={styles.directiveTitle}>
-                  {GOAL_CONFIG[profile.goal_type]?.label || 'Maintain Weight'}
+              <View style={styles.directiveBody}>
+                <Text style={styles.directiveEmoji}>
+                  {GOAL_CONFIG[profile.goal_type]?.emoji || '⚖️'}
                 </Text>
-                <Text style={styles.directiveSub}>
-                  {GOAL_CONFIG[profile.goal_type]?.calorieOffset === 0
-                    ? 'Energy balance (TDEE match)'
-                    : `${GOAL_CONFIG[profile.goal_type]?.calorieOffset > 0 ? '+' : ''}${GOAL_CONFIG[profile.goal_type]?.calorieOffset} kcal/day`}
-                  {' • '}Target: {Math.round(profile.daily_calories ?? 2000)} kcal
-                </Text>
+                <View style={{ flex: 1, gap: 3 }}>
+                  <Text style={styles.directiveTitle}>
+                    {GOAL_CONFIG[profile.goal_type]?.label || 'Maintain Weight'}
+                  </Text>
+                  <Text style={styles.directiveSub}>
+                    {GOAL_CONFIG[profile.goal_type]?.calorieOffset === 0
+                      ? 'Energy balance (TDEE match)'
+                      : `${GOAL_CONFIG[profile.goal_type]?.calorieOffset > 0 ? '+' : ''}${GOAL_CONFIG[profile.goal_type]?.calorieOffset} kcal/day`}
+                    {' • '}Target: {Math.round(profile.daily_calories ?? 2000)} kcal
+                  </Text>
+                </View>
               </View>
             </View>
-          </View>
+          </Animated.View>
         )}
 
         {/* MAIN STATUS WINDOW */}
         {profile ? (
-          <StatusWindow title="Your Status">
-            {/* Hunter Identity & XP */}
-            <HunterInfo profile={profile} />
+          <Animated.View entering={FadeInDown.duration(500).delay(160)}>
+            <StatusWindow title="Your Status">
+              {/* Hunter Identity & XP */}
+              <HunterInfo profile={profile} />
 
-            {/* Daily Streak & Resonance Buff */}
-            <DailyStreakCard streaks={streaks} weekHistory={weekHistory} />
+              {/* Daily Streak & Resonance Buff */}
+              <DailyStreakCard streaks={streaks} weekHistory={weekHistory} />
 
-            {/* Daily Calorie & Energy Balance */}
-            <DailySummary
-              calorieSummary={calorieSummary}
-              completedQuestsCount={completedQuestsCount}
-              totalQuestsCount={quests.length}
-              streaks={streaks}
-            />
+              {/* Daily Calorie & Energy Balance */}
+              <DailySummary
+                calorieSummary={calorieSummary}
+                completedQuestsCount={completedQuestsCount}
+                totalQuestsCount={quests.length}
+                streaks={streaks}
+              />
 
-            {/* 5 Core Stat Progress Bars */}
-            <StatBars profile={profile} />
-          </StatusWindow>
+              {/* 5 Core Stat Progress Bars */}
+              <StatBars profile={profile} />
+            </StatusWindow>
+          </Animated.View>
         ) : (
           <View style={styles.loadingContainer}>
             <Text style={styles.loadingText}>Loading your status...</Text>
@@ -176,13 +190,16 @@ export default function StatusScreen() {
         )}
 
         {/* STEP TRACKER */}
-        <StepTrackerCard onQuestClaimed={loadData} />
+        <Animated.View entering={FadeInDown.duration(450).delay(240)}>
+          <StepTrackerCard onQuestClaimed={loadData} />
+        </Animated.View>
 
         {/* QUICK ACCESS ACTION ROW */}
-        <View style={styles.actionsRow}>
+        <Animated.View entering={FadeInUp.duration(450).delay(320)} style={styles.actionsRow}>
           <TouchableOpacity
             style={styles.actionButton}
             onPress={() => router.push('/(tabs)/quests')}
+            activeOpacity={0.7}
           >
             <Text style={styles.actionEmoji}>📜</Text>
             <Text style={styles.actionLabel}>Quests</Text>
@@ -191,6 +208,7 @@ export default function StatusScreen() {
           <TouchableOpacity
             style={styles.actionButton}
             onPress={() => router.push('/(tabs)/log')}
+            activeOpacity={0.7}
           >
             <Text style={styles.actionEmoji}>🍽️</Text>
             <Text style={styles.actionLabel}>Log Meal</Text>
@@ -199,11 +217,12 @@ export default function StatusScreen() {
           <TouchableOpacity
             style={styles.actionButton}
             onPress={() => router.push('/(tabs)/activity')}
+            activeOpacity={0.7}
           >
             <Text style={styles.actionEmoji}>⚡</Text>
             <Text style={styles.actionLabel}>Train</Text>
           </TouchableOpacity>
-        </View>
+        </Animated.View>
       </ScrollView>
     </SafeAreaView>
   );

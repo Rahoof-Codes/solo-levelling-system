@@ -1,5 +1,14 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
+import Animated, {
+  useSharedValue,
+  useAnimatedStyle,
+  withRepeat,
+  withSequence,
+  withTiming,
+  Easing,
+  FadeIn,
+} from 'react-native-reanimated';
 import { Fonts, Spacing } from '@/constants/theme';
 
 interface StatusWindowProps {
@@ -11,12 +20,47 @@ export function StatusWindow({
   title = 'Your Status',
   children,
 }: StatusWindowProps) {
+  // Breathing pulse for the status dot
+  const dotScale = useSharedValue(1);
+  const dotOpacity = useSharedValue(1);
+
+  useEffect(() => {
+    dotScale.value = withRepeat(
+      withSequence(
+        withTiming(1.35, { duration: 1000, easing: Easing.inOut(Easing.ease) }),
+        withTiming(1, { duration: 1000, easing: Easing.inOut(Easing.ease) })
+      ),
+      -1,
+      true
+    );
+    dotOpacity.value = withRepeat(
+      withSequence(
+        withTiming(0.5, { duration: 1000, easing: Easing.inOut(Easing.ease) }),
+        withTiming(1, { duration: 1000, easing: Easing.inOut(Easing.ease) })
+      ),
+      -1,
+      true
+    );
+  }, []);
+
+  const dotAnimStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: dotScale.value }],
+    opacity: dotOpacity.value,
+  }));
+
   return (
-    <View style={styles.windowFrame}>
+    <Animated.View
+      entering={FadeIn.duration(500).delay(100)}
+      style={styles.windowFrame}
+    >
       {/* Title Bar */}
       <View style={styles.titleBar}>
         <View style={styles.titleLeft}>
-          <View style={styles.statusDot} />
+          <View style={styles.dotWrapper}>
+            {/* Glow ring behind the dot */}
+            <Animated.View style={[styles.dotGlow, dotAnimStyle]} />
+            <View style={styles.statusDot} />
+          </View>
           <Text style={styles.titleText}>{title}</Text>
         </View>
         <Text style={styles.systemTag}>Active</Text>
@@ -24,7 +68,7 @@ export function StatusWindow({
 
       {/* Main Content Area */}
       <View style={styles.content}>{children}</View>
-    </View>
+    </Animated.View>
   );
 }
 
@@ -55,6 +99,19 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 10,
+  },
+  dotWrapper: {
+    width: 16,
+    height: 16,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  dotGlow: {
+    position: 'absolute',
+    width: 14,
+    height: 14,
+    borderRadius: 7,
+    backgroundColor: 'rgba(0, 255, 136, 0.3)',
   },
   statusDot: {
     width: 8,

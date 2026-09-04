@@ -1,5 +1,13 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
+import Animated, {
+  useSharedValue,
+  useAnimatedStyle,
+  withTiming,
+  withDelay,
+  Easing,
+  FadeInUp,
+} from 'react-native-reanimated';
 import { type DailyCalorieSummary, type Streak } from '@/types';
 import { Fonts, Spacing } from '@/constants/theme';
 
@@ -24,6 +32,31 @@ export function DailySummary({
   const manaTarget = Math.max(1000, calorieSummary.target);
   const manaPercent = Math.min(100, Math.max(0, (calorieSummary.consumed / manaTarget) * 100));
 
+  const barWidth = useSharedValue(0);
+
+  useEffect(() => {
+    barWidth.value = withDelay(
+      350,
+      withTiming(Math.max(3, manaPercent), {
+        duration: 850,
+        easing: Easing.out(Easing.cubic),
+      })
+    );
+  }, [manaPercent]);
+
+  const animatedBarStyle = useAnimatedStyle(() => ({
+    width: `${barWidth.value}%`,
+    backgroundColor: manaPercent > 100 ? '#FF3366' : '#0088FF',
+    shadowColor: manaPercent > 100 ? '#FF3366' : '#00A8FF',
+  }));
+
+  const quickCards = [
+    { icon: '📜', label: 'Quests', value: `${completedQuestsCount}/${totalQuestsCount}` },
+    { icon: '⚡', label: 'Steps', value: `${stepsStreak}d` },
+    { icon: '🔥', label: 'Quest Streak', value: `${questStreak}d` },
+    { icon: '⚔️', label: 'Workouts', value: `${workoutStreak}d` },
+  ];
+
   return (
     <View style={styles.container}>
       {/* ENERGY INTAKE BAR */}
@@ -36,16 +69,7 @@ export function DailySummary({
         </View>
 
         <View style={styles.barTrack}>
-          <View
-            style={[
-              styles.barFill,
-              {
-                width: `${Math.max(3, manaPercent)}%`,
-                backgroundColor: manaPercent > 100 ? '#FF3366' : '#0088FF',
-                shadowColor: manaPercent > 100 ? '#FF3366' : '#00A8FF',
-              },
-            ]}
-          />
+          <Animated.View style={[styles.barFill, animatedBarStyle]} />
         </View>
 
         <View style={styles.macroRow}>
@@ -66,43 +90,19 @@ export function DailySummary({
 
       {/* QUICK STATS CARDS */}
       <View style={styles.cardsRow}>
-        {/* Quests Today */}
-        <View style={styles.card}>
-          <Text style={styles.cardIcon}>📜</Text>
-          <View>
-            <Text style={styles.cardLabel}>Quests</Text>
-            <Text style={styles.cardValue}>
-              {completedQuestsCount}/{totalQuestsCount}
-            </Text>
-          </View>
-        </View>
-
-        {/* Steps Streak */}
-        <View style={styles.card}>
-          <Text style={styles.cardIcon}>⚡</Text>
-          <View>
-            <Text style={styles.cardLabel}>Steps</Text>
-            <Text style={styles.cardValue}>{stepsStreak}d</Text>
-          </View>
-        </View>
-
-        {/* Quest Streak */}
-        <View style={styles.card}>
-          <Text style={styles.cardIcon}>🔥</Text>
-          <View>
-            <Text style={styles.cardLabel}>Quest Streak</Text>
-            <Text style={styles.cardValue}>{questStreak}d</Text>
-          </View>
-        </View>
-
-        {/* Workout Streak */}
-        <View style={styles.card}>
-          <Text style={styles.cardIcon}>⚔️</Text>
-          <View>
-            <Text style={styles.cardLabel}>Workouts</Text>
-            <Text style={styles.cardValue}>{workoutStreak}d</Text>
-          </View>
-        </View>
+        {quickCards.map((card, idx) => (
+          <Animated.View
+            key={card.label}
+            entering={FadeInUp.duration(400).delay(200 + idx * 80)}
+            style={styles.card}
+          >
+            <Text style={styles.cardIcon}>{card.icon}</Text>
+            <View>
+              <Text style={styles.cardLabel}>{card.label}</Text>
+              <Text style={styles.cardValue}>{card.value}</Text>
+            </View>
+          </Animated.View>
+        ))}
       </View>
     </View>
   );

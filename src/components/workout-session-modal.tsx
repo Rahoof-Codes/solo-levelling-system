@@ -33,6 +33,7 @@ import { Fonts, Spacing } from '@/constants/theme';
 import {
   DEFAULT_TRAINING_SECONDS,
   DEFAULT_TRAINING_MINUTES,
+  MINIMUM_SESSION_SECONDS,
   formatTimerDisplay,
 } from '@/lib/calculations/workout-duration';
 
@@ -72,8 +73,9 @@ export function WorkoutSessionModal({
 
   // Computed values
   const targetDurationSeconds = DEFAULT_TRAINING_SECONDS; // 30 minutes (1800s)
+  const isMinTimeReached = isRestDay || elapsedSeconds >= MINIMUM_SESSION_SECONDS;
   const allChecked = exercises.length === 0 || checkedExercises.size >= exercises.length;
-  const canComplete = isRestDay || allChecked;
+  const canComplete = isMinTimeReached && allChecked;
   const isSessionTargetReached = elapsedSeconds >= targetDurationSeconds;
 
   // Timer progress toward the 30-minute target (0 → 1)
@@ -187,25 +189,43 @@ export function WorkoutSessionModal({
   }, [canComplete, elapsedSeconds, onComplete]);
 
   const handleCancel = useCallback(() => {
+    const doCancel = () => {
+      if (timerRef.current) {
+        clearInterval(timerRef.current);
+        timerRef.current = null;
+      }
+      onCancel();
+    };
+
+    // If timer just started (under 2 seconds), close immediately without prompt
+    if (elapsedSeconds < 2) {
+      doCancel();
+      return;
+    }
+
+    if (Platform.OS === 'web') {
+      const confirmed = typeof window !== 'undefined'
+        ? window.confirm("Quit Workout?\nYour progress won't be saved. No XP will be awarded.")
+        : true;
+      if (confirmed) {
+        doCancel();
+      }
+      return;
+    }
+
     Alert.alert(
       'Quit Workout?',
-      'Your progress won\'t be saved. No XP will be awarded.',
+      "Your progress won't be saved. No XP will be awarded.",
       [
         { text: 'Keep Training', style: 'cancel' },
         {
           text: 'Quit',
           style: 'destructive',
-          onPress: () => {
-            if (timerRef.current) {
-              clearInterval(timerRef.current);
-              timerRef.current = null;
-            }
-            onCancel();
-          },
+          onPress: doCancel,
         },
       ]
     );
-  }, [onCancel]);
+  }, [elapsedSeconds, onCancel]);
 
   // Animated styles
 
@@ -230,7 +250,12 @@ export function WorkoutSessionModal({
       <View style={styles.container}>
         {/* TOP BAR */}
         <View style={styles.topBar}>
-          <TouchableOpacity onPress={handleCancel} style={styles.closeBtn}>
+          <TouchableOpacity
+            onPress={handleCancel}
+            style={styles.closeBtn}
+            hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+            activeOpacity={0.7}
+          >
             <Text style={styles.closeBtnText}>✕</Text>
           </TouchableOpacity>
           <View style={styles.topBarCenter}>
@@ -410,42 +435,60 @@ export function WorkoutSessionModal({
 
         {/* BOTTOM ACTION AREA */}
         <View style={styles.bottomArea}>
-          {/* Lock hint */}
-          {!canComplete && (
-            <Text style={styles.lockHint}>
-              🔒 {getLockHint()}
-            </Text>
+          {!isMinTimeReached ? (
+            <View style={styles.monitoringBadge}>
+              <Text style={styles.monitoringTag}>SYSTEM DIRECTIVE</Text>
+              <Text style={styles.monitoringText}>⚡ Session in progress • Maintain form and intensity</Text>
+            </View>
+          ) : (
+            <>
+              {/* Lock hint if exercises remain */}
+              {!allChecked && (
+                <Text style={styles.lockHint}>
+                  🔒 {getLockHint()}
+                </Text>
+              )}
+
+              {canComplete && (
+                <Animated.View entering={FadeIn.duration(300)}>
+                  <Text style={styles.unlockHint}>
+                    ⚡ Workout verified — Claim your reward!
+                  </Text>
+                </Animated.View>
+              )}
+
+              {/* Complete Button (Hidden until min time reached) */}
+              <Animated.View entering={FadeIn.duration(400)} style={[styles.completeBtnWrapper, completeBtnAnimStyle]}>
+                <TouchableOpacity
+                  style={[
+                    styles.completeBtn,
+                    !canComplete && styles.completeBtnLocked,
+                  ]}
+                  onPress={handleComplete}
+                  disabled={!canComplete}
+                  activeOpacity={0.8}
+                >
+                  <Text style={[
+                    styles.completeBtnText,
+                    !canComplete && styles.completeBtnTextLocked,
+                  ]}>
+                    {canComplete
+                      ? `⚔️ Complete Workout (+${workout.xp_value} XP)`
+                      : `🔒 Complete Workout (+${workout.xp_value} XP)`}
+                  </Text>
+                </TouchableOpacity>
+              </Animated.View>
+            </>
           )}
 
-          {canComplete && (
-            <Animated.View entering={FadeIn.duration(300)}>
-              <Text style={styles.unlockHint}>
-                ⚡ Workout verified — Claim your reward!
-              </Text>
-            </Animated.View>
-          )}
-
-          {/* Complete Button */}
-          <Animated.View style={[styles.completeBtnWrapper, completeBtnAnimStyle]}>
-            <TouchableOpacity
-              style={[
-                styles.completeBtn,
-                !canComplete && styles.completeBtnLocked,
-              ]}
-              onPress={handleComplete}
-              disabled={!canComplete}
-              activeOpacity={0.8}
-            >
-              <Text style={[
-                styles.completeBtnText,
-                !canComplete && styles.completeBtnTextLocked,
-              ]}>
-                {canComplete
-                  ? `⚔️ Complete Workout (+${workout.xp_value} XP)`
-                  : `🔒 Complete Workout (+${workout.xp_value} XP)`}
-              </Text>
-            </TouchableOpacity>
-          </Animated.View>
+          {/* Cancel Workout Button */}
+          <TouchableOpacity
+            style={styles.cancelActionBtn}
+            onPress={handleCancel}
+            activeOpacity={0.7}
+          >
+            <Text style={styles.cancelActionText}>Cancel Workout</Text>
+          </TouchableOpacity>
         </View>
       </View>
     </Modal>
@@ -775,5 +818,45 @@ const styles = StyleSheet.create({
   },
   completeBtnTextLocked: {
     color: '#6B7B8F',
+  },
+  monitoringBadge: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: Spacing.three,
+    paddingHorizontal: Spacing.four,
+    backgroundColor: 'rgba(0, 168, 255, 0.05)',
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: 'rgba(0, 168, 255, 0.2)',
+    gap: 4,
+  },
+  monitoringTag: {
+    fontFamily: Fonts.mono,
+    fontSize: 10,
+    letterSpacing: 2,
+    color: '#00A8FF',
+    textTransform: 'uppercase',
+  },
+  monitoringText: {
+    fontFamily: Fonts.mono,
+    fontSize: 12,
+    color: '#94A3B8',
+    textAlign: 'center',
+  },
+  cancelActionBtn: {
+    paddingVertical: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderRadius: 10,
+    backgroundColor: 'rgba(255, 255, 255, 0.04)',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.08)',
+    marginTop: 4,
+  },
+  cancelActionText: {
+    fontFamily: Fonts.sans,
+    fontSize: 13,
+    fontWeight: '600',
+    color: '#94A3B8',
   },
 });

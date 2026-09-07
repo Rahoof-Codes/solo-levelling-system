@@ -33,11 +33,13 @@ import { DailyStreakCard } from '@/components/status/daily-streak-card';
 import { StepTrackerCard } from '@/components/status/step-tracker-card';
 import { GOAL_CONFIG } from '@/lib/calculations/bmr';
 import { Fonts, Spacing } from '@/constants/theme';
+import { useAudio } from '@/contexts/AudioContext';
 
 export default function StatusScreen() {
   const router = useRouter();
   const pathname = usePathname();
   const db = useSQLiteContext();
+  const { bgmEnabled, toggleBGM } = useAudio();
 
   const [profile, setProfile] = useState<Profile | null>(null);
   const [calorieSummary, setCalorieSummary] = useState<DailyCalorieSummary>({
@@ -108,6 +110,24 @@ export default function StatusScreen() {
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#00A8FF" />
         }
       >
+        {/* TOP SYSTEM HEADER & QUICK BGM TOGGLE */}
+        <Animated.View entering={FadeInDown.duration(350)} style={styles.topHeaderBar}>
+          <View style={styles.systemTagContainer}>
+            <View style={styles.onlineDot} />
+            <Text style={styles.systemTagText}>SYSTEM // ONLINE</Text>
+          </View>
+          <TouchableOpacity
+            style={[styles.audioPillBtn, bgmEnabled && styles.audioPillBtnActive]}
+            onPress={toggleBGM}
+            activeOpacity={0.7}
+          >
+            <Text style={styles.audioPillIcon}>{bgmEnabled ? '🎵' : '🔇'}</Text>
+            <Text style={[styles.audioPillText, bgmEnabled && styles.audioPillTextActive]}>
+              {bgmEnabled ? 'BGM ON' : 'BGM OFF'}
+            </Text>
+          </TouchableOpacity>
+        </Animated.View>
+
         {/* ONBOARDING BANNER IF NOT ONBOARDED */}
         {profile && profile.onboarding_complete === 0 && (
           <Animated.View entering={SlideInDown.duration(450)}>
@@ -357,5 +377,63 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontFamily: Fonts.sans,
     color: '#8896AB',
+  },
+  topHeaderBar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingVertical: 2,
+    marginBottom: 4,
+  },
+  systemTagContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  onlineDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: '#00F0FF',
+    shadowColor: '#00F0FF',
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.9,
+    shadowRadius: 5,
+    elevation: 4,
+  },
+  systemTagText: {
+    fontFamily: Fonts.sans,
+    fontSize: 11,
+    fontWeight: '700',
+    letterSpacing: 1.5,
+    color: '#6B7B8F',
+  },
+  audioPillBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 20,
+    backgroundColor: '#111827',
+    borderWidth: 1,
+    borderColor: '#1E293B',
+  },
+  audioPillBtnActive: {
+    backgroundColor: 'rgba(0, 168, 255, 0.1)',
+    borderColor: 'rgba(0, 168, 255, 0.4)',
+  },
+  audioPillIcon: {
+    fontSize: 12,
+  },
+  audioPillText: {
+    fontFamily: Fonts.sans,
+    fontSize: 11,
+    fontWeight: '700',
+    letterSpacing: 0.5,
+    color: '#6B7B8F',
+  },
+  audioPillTextActive: {
+    color: '#00A8FF',
   },
 });

@@ -8,8 +8,10 @@ import {
   TouchableOpacity,
   Alert,
   RefreshControl,
+  Switch,
 } from 'react-native';
 import { Image } from 'expo-image';
+import { useAudio } from '@/contexts/AudioContext';
 import { useRouter, useFocusEffect, usePathname } from 'expo-router';
 import { useSQLiteContext } from 'expo-sqlite';
 import { getProfile, getLastSyncedAt, getCurrentPlanProgress } from '@/db/operations';
@@ -32,6 +34,16 @@ export default function ProfileScreen() {
   const pathname = usePathname();
   const db = useSQLiteContext();
   const { user, signOut, isGuest } = useAuth();
+  const {
+    bgmEnabled,
+    sfxEnabled,
+    bgmVolume,
+    setBGMEnabled,
+    setSFXEnabled,
+    setBGMVolume,
+    playClaimSound,
+    isBgmPlaying,
+  } = useAudio();
   const [profile, setProfile] = useState<Profile | null>(null);
   const [planProgress, setPlanProgress] = useState<any | null>(null);
   const [lastSynced, setLastSynced] = useState<string | null>(null);
@@ -502,6 +514,83 @@ export default function ProfileScreen() {
             <Text style={styles.syncActionText}>
               {syncing ? 'Syncing...' : '⚡ Sync Data with Cloud'}
             </Text>
+          </TouchableOpacity>
+        </Animated.View>
+
+        {/* 5.5 AUDIO & BGM CONFIGURATION */}
+        <Animated.View entering={FadeInUp.duration(450).delay(380)} style={styles.syncCard}>
+          <View style={styles.audioCardHeader}>
+            <View>
+              <Text style={styles.audioCardTag}>SYSTEM AUDIO // BGM & SFX</Text>
+              <Text style={styles.audioCardTitle}>Sound & Music</Text>
+            </View>
+            <View style={[styles.audioStatusBadge, bgmEnabled && styles.audioStatusBadgeActive]}>
+              <Text style={styles.audioStatusBadgeText}>
+                {bgmEnabled ? (isBgmPlaying ? '🎵 PLAYING' : '🎵 ACTIVE') : '🔇 MUTED'}
+              </Text>
+            </View>
+          </View>
+
+          {/* BGM Toggle Row */}
+          <View style={styles.audioSettingRow}>
+            <View style={styles.audioSettingInfo}>
+              <Text style={styles.audioSettingTitle}>Background Music (BGM)</Text>
+              <Text style={styles.audioSettingSub}>Loop atmospheric dungeon theme</Text>
+            </View>
+            <Switch
+              value={bgmEnabled}
+              onValueChange={setBGMEnabled}
+              trackColor={{ false: '#1E293B', true: '#0066BB' }}
+              thumbColor={bgmEnabled ? '#00F0FF' : '#6B7B8F'}
+            />
+          </View>
+
+          {/* BGM Volume Selector */}
+          {bgmEnabled && (
+            <View style={styles.volumeRow}>
+              <Text style={styles.volumeLabel}>BGM Volume</Text>
+              <View style={styles.volumePillsContainer}>
+                {[0.2, 0.35, 0.6, 1.0].map((vol) => {
+                  const isSelected = Math.abs(bgmVolume - vol) < 0.08;
+                  const label = `${Math.round(vol * 100)}%`;
+                  return (
+                    <TouchableOpacity
+                      key={vol}
+                      style={[styles.volumePill, isSelected && styles.volumePillActive]}
+                      onPress={() => setBGMVolume(vol)}
+                      activeOpacity={0.7}
+                    >
+                      <Text style={[styles.volumePillText, isSelected && styles.volumePillTextActive]}>
+                        {label}
+                      </Text>
+                    </TouchableOpacity>
+                  );
+                })}
+              </View>
+            </View>
+          )}
+
+          {/* SFX Toggle Row */}
+          <View style={styles.audioSettingRow}>
+            <View style={styles.audioSettingInfo}>
+              <Text style={styles.audioSettingTitle}>Sound Effects (SFX)</Text>
+              <Text style={styles.audioSettingSub}>Play reward claim & achievement sounds</Text>
+            </View>
+            <Switch
+              value={sfxEnabled}
+              onValueChange={setSFXEnabled}
+              trackColor={{ false: '#1E293B', true: '#0066BB' }}
+              thumbColor={sfxEnabled ? '#00F0FF' : '#6B7B8F'}
+            />
+          </View>
+
+          {/* Test Sound Button */}
+          <TouchableOpacity
+            style={styles.testSfxBtn}
+            onPress={playClaimSound}
+            activeOpacity={0.75}
+          >
+            <Text style={styles.testSfxBtnText}>⚡ Test Reward Claim Sound</Text>
           </TouchableOpacity>
         </Animated.View>
 
@@ -1111,5 +1200,126 @@ const styles = StyleSheet.create({
     fontSize: 10,
     fontFamily: Fonts.sans,
     color: '#2A3A50',
+  },
+
+  // --- Audio Settings ---
+  audioCardHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    borderBottomWidth: 1,
+    borderBottomColor: '#1E293B',
+    paddingBottom: 10,
+  },
+  audioCardTag: {
+    fontFamily: Fonts.sans,
+    fontSize: 10,
+    fontWeight: '700',
+    letterSpacing: 1.2,
+    color: '#00F0FF',
+    marginBottom: 2,
+  },
+  audioCardTitle: {
+    fontFamily: Fonts.sans,
+    fontSize: 15,
+    fontWeight: '700',
+    color: '#E8ECF4',
+  },
+  audioStatusBadge: {
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 8,
+    backgroundColor: '#1E293B',
+    borderWidth: 1,
+    borderColor: '#334155',
+  },
+  audioStatusBadgeActive: {
+    backgroundColor: 'rgba(0, 168, 255, 0.12)',
+    borderColor: 'rgba(0, 168, 255, 0.35)',
+  },
+  audioStatusBadgeText: {
+    fontFamily: Fonts.sans,
+    fontSize: 10,
+    fontWeight: '700',
+    letterSpacing: 0.5,
+    color: '#8896AB',
+  },
+  audioSettingRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingVertical: 6,
+    borderBottomWidth: 1,
+    borderBottomColor: 'rgba(30, 41, 59, 0.6)',
+  },
+  audioSettingInfo: {
+    flex: 1,
+    gap: 2,
+    paddingRight: 12,
+  },
+  audioSettingTitle: {
+    fontFamily: Fonts.sans,
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#E8ECF4',
+  },
+  audioSettingSub: {
+    fontFamily: Fonts.sans,
+    fontSize: 11,
+    color: '#6B7B8F',
+  },
+  volumeRow: {
+    gap: 8,
+    paddingVertical: 4,
+  },
+  volumeLabel: {
+    fontFamily: Fonts.sans,
+    fontSize: 11,
+    fontWeight: '600',
+    color: '#8896AB',
+    letterSpacing: 0.5,
+  },
+  volumePillsContainer: {
+    flexDirection: 'row',
+    gap: 8,
+  },
+  volumePill: {
+    flex: 1,
+    alignItems: 'center',
+    paddingVertical: 6,
+    borderRadius: 8,
+    backgroundColor: '#0F172A',
+    borderWidth: 1,
+    borderColor: '#1E293B',
+  },
+  volumePillActive: {
+    backgroundColor: 'rgba(0, 168, 255, 0.15)',
+    borderColor: '#00A8FF',
+  },
+  volumePillText: {
+    fontFamily: Fonts.sans,
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#6B7B8F',
+  },
+  volumePillTextActive: {
+    color: '#00F0FF',
+    fontWeight: '700',
+  },
+  testSfxBtn: {
+    marginTop: 6,
+    borderWidth: 1,
+    borderColor: 'rgba(0, 240, 255, 0.3)',
+    backgroundColor: 'rgba(0, 240, 255, 0.06)',
+    borderRadius: 10,
+    paddingVertical: 10,
+    alignItems: 'center',
+  },
+  testSfxBtnText: {
+    fontFamily: Fonts.sans,
+    fontSize: 12,
+    fontWeight: '700',
+    letterSpacing: 0.5,
+    color: '#00F0FF',
   },
 });

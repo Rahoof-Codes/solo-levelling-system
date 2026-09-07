@@ -22,6 +22,8 @@ import { getQuestsForDate, completeQuest, createQuest, getTodaySteps } from '@/d
 import { type Quest, Stat, QuestCategory } from '@/types';
 import { StatColors, Fonts, Spacing } from '@/constants/theme';
 import { XPClaimModal } from '@/components/xp-claim-modal';
+import { QuestSessionModal } from '@/components/quest-session-modal';
+import { isTimedQuest } from '@/lib/calculations/workout-duration';
 
 export default function QuestsScreen() {
   const db = useSQLiteContext();
@@ -29,6 +31,10 @@ export default function QuestsScreen() {
   const [todaySteps, setTodaySteps] = useState(0);
   const [refreshing, setRefreshing] = useState(false);
   const [modalVisible, setModalVisible] = useState(false);
+
+  // Quest Session Modal State (Timer System)
+  const [sessionQuest, setSessionQuest] = useState<Quest | null>(null);
+  const [sessionModalVisible, setSessionModalVisible] = useState(false);
 
   // XP Claim Modal State
   const [claimModalVisible, setClaimModalVisible] = useState(false);
@@ -75,6 +81,28 @@ export default function QuestsScreen() {
     setSelectedQuest(quest);
     setClaimResult(null);
     setClaimModalVisible(true);
+  };
+
+  const handleStartQuest = (quest: Quest) => {
+    if (quest.is_completed === 1) return;
+    setSessionQuest(quest);
+    setSessionModalVisible(true);
+  };
+
+  const handleQuestSessionComplete = async (_durationActual: number) => {
+    if (!sessionQuest) return;
+    const questToClaim = sessionQuest;
+    setSessionModalVisible(false);
+
+    // Open XP Claim modal for this verified quest
+    setSelectedQuest(questToClaim);
+    setClaimResult(null);
+    setClaimModalVisible(true);
+  };
+
+  const handleQuestSessionCancel = () => {
+    setSessionModalVisible(false);
+    setSessionQuest(null);
   };
 
   const handleClaimQuestXP = async () => {
@@ -235,14 +263,26 @@ export default function QuestsScreen() {
                     <Text style={styles.completedText}>✓ Done</Text>
                   </Animated.View>
                 ) : quest.title.toLowerCase().includes('step') && todaySteps < 10000 ? (
-                  <TouchableOpacity
-                    style={[styles.completeBtn, styles.stepIncompleteBtn]}
-                    onPress={() => handleStartClaim(quest)}
-                    activeOpacity={0.7}
-                  >
+                  <View style={[styles.completeBtn, styles.stepIncompleteBtn]}>
                     <Text style={styles.stepIncompleteText}>
                       {(10000 - todaySteps).toLocaleString()} steps remaining
                     </Text>
+                  </View>
+                ) : quest.title.toLowerCase().includes('step') && todaySteps >= 10000 ? (
+                  <TouchableOpacity
+                    style={styles.completeBtn}
+                    onPress={() => handleStartClaim(quest)}
+                    activeOpacity={0.8}
+                  >
+                    <Text style={styles.completeBtnText}>Complete Quest</Text>
+                  </TouchableOpacity>
+                ) : isTimedQuest(quest) ? (
+                  <TouchableOpacity
+                    style={styles.startBtn}
+                    onPress={() => handleStartQuest(quest)}
+                    activeOpacity={0.8}
+                  >
+                    <Text style={styles.startBtnText}>⚡ Start Quest</Text>
                   </TouchableOpacity>
                 ) : (
                   <TouchableOpacity
@@ -338,6 +378,16 @@ export default function QuestsScreen() {
           </View>
         </View>
       </Modal>
+
+      {/* QUEST SESSION MODAL — Timer System */}
+      {sessionQuest && (
+        <QuestSessionModal
+          visible={sessionModalVisible}
+          quest={sessionQuest}
+          onComplete={handleQuestSessionComplete}
+          onCancel={handleQuestSessionCancel}
+        />
+      )}
 
       {/* LOCKED XP CLAIM MODAL FOR QUESTS */}
       {selectedQuest && (
@@ -514,6 +564,26 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '700',
     color: '#FFFFFF',
+  },
+  startBtn: {
+    backgroundColor: '#005299',
+    borderWidth: 1,
+    borderColor: '#00A8FF',
+    borderRadius: 12,
+    paddingVertical: 12,
+    alignItems: 'center',
+    shadowColor: '#00A8FF',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.3,
+    shadowRadius: 6,
+    elevation: 3,
+  },
+  startBtnText: {
+    fontFamily: Fonts.sans,
+    fontSize: 14,
+    fontWeight: '700',
+    color: '#FFFFFF',
+    letterSpacing: 0.5,
   },
   modalOverlay: {
     flex: 1,

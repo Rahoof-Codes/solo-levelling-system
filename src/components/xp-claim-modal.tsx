@@ -23,6 +23,7 @@ import { type Stat, Rank } from '@/types';
 import { StatColors, Fonts, Spacing, RankColors } from '@/constants/theme';
 import { STAT_INFO } from '@/lib/calculations/leveling';
 import { getRankImage } from '@/constants/rankImages';
+import { useAudio } from '@/contexts/AudioContext';
 
 const { width, height } = Dimensions.get('window');
 
@@ -52,6 +53,8 @@ export function XPClaimModal({
   onDismiss,
   claimResult,
 }: XPClaimModalProps) {
+  const { playClaimSound } = useAudio();
+
   const lockScale = useSharedValue(1);
   const lockRotation = useSharedValue(0);
   const lockOpacity = useSharedValue(1);
@@ -93,6 +96,9 @@ export function XPClaimModal({
   }, [visible]);
 
   const handleClaim = useCallback(() => {
+    // Play reward claiming sound effect
+    playClaimSound();
+
     // Lock breaking animation
     lockRotation.value = withSequence(
       withTiming(-16, { duration: 80 }),

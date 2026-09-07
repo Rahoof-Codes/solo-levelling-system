@@ -8,10 +8,12 @@ import { setVisibilityAsync } from 'expo-navigation-bar';
 import { initializeDatabase, DATABASE_NAME } from '@/db/database';
 import { useNetworkSync } from '@/services/networkMonitor';
 import { AuthProvider, useAuth } from '@/contexts/AuthContext';
+import { AudioProvider } from '@/contexts/AudioContext';
 import { Fonts } from '@/constants/theme';
+import { SplashOverlay } from '@/components/splash-overlay';
 
-// Prevent auto-hiding native splash until JS loads
-SplashScreen.preventAutoHideAsync().catch(() => {});
+// Hide native splash immediately so app opens directly into the Solo Leveling animation
+SplashScreen.hideAsync().catch(() => {});
 
 // Enable full-screen immersive mode on Android
 if (Platform.OS === 'android') {
@@ -42,7 +44,7 @@ function AuthRoutingHandler() {
     } else if (isAuthenticated && inAuthGroup) {
       router.replace('/(tabs)' as any);
     }
-  }, [user, isGuest, isLoading, segments]);
+  }, [user, isGuest, isLoading, segments, router]);
 
   return null;
 }
@@ -50,6 +52,7 @@ function AuthRoutingHandler() {
 function MainNavigation() {
   const db = useSQLiteContext();
   const { user } = useAuth();
+  const [showOpeningAnimation, setShowOpeningAnimation] = useState(true);
 
   const userId = user?.uid ?? null;
   useNetworkSync(db, userId);
@@ -79,6 +82,9 @@ function MainNavigation() {
         <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
         <Stack.Screen name="onboarding/index" options={{ headerShown: false }} />
       </Stack>
+      {showOpeningAnimation && (
+        <SplashOverlay onFinish={() => setShowOpeningAnimation(false)} />
+      )}
     </>
   );
 }
@@ -188,18 +194,17 @@ function DatabaseProvider({ children }: { children: React.ReactNode }) {
 
 export default function RootLayout() {
   useEffect(() => {
-    // Hide the native splash screen once the JS bundle is loaded and layout mounts
-    const timer = setTimeout(() => {
-      SplashScreen.hideAsync().catch(() => {});
-    }, 100);
-    return () => clearTimeout(timer);
+    // Ensure native splash is hidden immediately
+    SplashScreen.hideAsync().catch(() => {});
   }, []);
 
   return (
     <AuthProvider>
-      <DatabaseProvider>
-        <MainNavigation />
-      </DatabaseProvider>
+      <AudioProvider>
+        <DatabaseProvider>
+          <MainNavigation />
+        </DatabaseProvider>
+      </AudioProvider>
     </AuthProvider>
   );
 }

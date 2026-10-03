@@ -22,17 +22,14 @@ import Animated, {
   withTiming,
   withRepeat,
   withSequence,
-  withSpring,
   Easing,
-  SlideInUp,
   FadeIn,
   FadeInDown,
 } from 'react-native-reanimated';
 import type { Exercise, Workout } from '@/types';
-import { Fonts, Spacing } from '@/constants/theme';
+import { Fonts, Spacing, Colors } from '@/constants/theme';
 import {
   DEFAULT_TRAINING_SECONDS,
-  DEFAULT_TRAINING_MINUTES,
   MINIMUM_SESSION_SECONDS,
   formatTimerDisplay,
 } from '@/lib/calculations/workout-duration';
@@ -228,7 +225,6 @@ export function WorkoutSessionModal({
   }, [elapsedSeconds, onCancel]);
 
   // Animated styles
-
   const completeBtnAnimStyle = useAnimatedStyle(() => ({
     transform: [{ scale: completeBtnScale.value }],
     shadowOpacity: completeBtnGlow.value * 0.5,
@@ -259,7 +255,7 @@ export function WorkoutSessionModal({
             <Text style={styles.closeBtnText}>✕</Text>
           </TouchableOpacity>
           <View style={styles.topBarCenter}>
-            <Text style={styles.topBarTag}>ACTIVE WORKOUT</Text>
+            <Text style={styles.topBarTag}>⟨ SYSTEM PROTOCOL ⟩</Text>
             <Text style={styles.topBarTitle} numberOfLines={1}>
               {workout.name}
             </Text>
@@ -280,15 +276,13 @@ export function WorkoutSessionModal({
                 {/* Background ring */}
                 <View style={styles.timerRingBg} />
 
-                {/* Progress ring (using View-based approach for RN compatibility) */}
+                {/* Progress ring */}
                 <View style={styles.timerRingProgress}>
                   <View
                     style={[
                       styles.timerRingFill,
                       {
-                        borderColor: isSessionTargetReached ? '#00FF88' : '#00A8FF',
-                        // Use rotation to simulate circular progress
-                        // This creates a visual indicator without SVG
+                        borderColor: isSessionTargetReached ? Colors.dark.success : Colors.dark.accent,
                       },
                     ]}
                   />
@@ -307,8 +301,8 @@ export function WorkoutSessionModal({
                             left: RING_SIZE / 2 + Math.cos(rad) * dotRadius - 4,
                             top: RING_SIZE / 2 + Math.sin(rad) * dotRadius - 4,
                             backgroundColor: isActive
-                              ? isSessionTargetReached ? '#00FF88' : '#00A8FF'
-                              : '#1E293B',
+                              ? isSessionTargetReached ? Colors.dark.success : Colors.dark.accent
+                              : Colors.dark.border,
                           },
                         ]}
                       />
@@ -322,7 +316,7 @@ export function WorkoutSessionModal({
                     {formatTimerDisplay(elapsedSeconds)}
                   </Text>
                   <Text style={styles.timerEstimate}>
-                    30 min session
+                    30 MIN SESSION
                   </Text>
                 </View>
               </View>
@@ -333,13 +327,13 @@ export function WorkoutSessionModal({
                 onPress={togglePause}
                 activeOpacity={0.7}
               >
-                <Text style={styles.pauseBtnText}>
-                  {isPaused ? '▶ Resume' : '⏸ Pause'}
+                <Text style={[styles.pauseBtnText, isPaused && styles.pauseBtnTextPaused]}>
+                  {isPaused ? '▶ RESUME' : '⏸ PAUSE'}
                 </Text>
               </TouchableOpacity>
 
               {isPaused && (
-                <Text style={styles.pausedLabel}>Timer Paused</Text>
+                <Text style={styles.pausedLabel}>TIMER PAUSED</Text>
               )}
             </Animated.View>
           )}
@@ -347,12 +341,12 @@ export function WorkoutSessionModal({
           {/* EXERCISE CHECK-OFF SECTION */}
           <View style={styles.exerciseSection}>
             <View style={styles.exerciseSectionHeader}>
-              <Text style={styles.exerciseSectionTitle}>Exercises</Text>
+              <Text style={styles.exerciseSectionTitle}>TRAINING OBJECTIVES</Text>
               <Text style={[
                 styles.exerciseProgress,
                 allChecked && styles.exerciseProgressComplete,
               ]}>
-                {checkedExercises.size}/{exercises.length} done
+                {checkedExercises.size}/{exercises.length} DONE
               </Text>
             </View>
 
@@ -363,7 +357,7 @@ export function WorkoutSessionModal({
                   styles.exerciseProgressFill,
                   {
                     width: `${exercises.length > 0 ? (checkedExercises.size / exercises.length) * 100 : 0}%`,
-                    backgroundColor: allChecked ? '#00FF88' : '#00A8FF',
+                    backgroundColor: allChecked ? Colors.dark.success : Colors.dark.accent,
                   },
                 ]}
               />
@@ -437,7 +431,7 @@ export function WorkoutSessionModal({
         <View style={styles.bottomArea}>
           {!isMinTimeReached ? (
             <View style={styles.monitoringBadge}>
-              <Text style={styles.monitoringTag}>SYSTEM DIRECTIVE</Text>
+              <Text style={styles.monitoringTag}>⟨ SYSTEM DIRECTIVE ⟩</Text>
               <Text style={styles.monitoringText}>⚡ Session in progress • Maintain form and intensity</Text>
             </View>
           ) : (
@@ -457,7 +451,7 @@ export function WorkoutSessionModal({
                 </Animated.View>
               )}
 
-              {/* Complete Button (Hidden until min time reached) */}
+              {/* Complete Button */}
               <Animated.View entering={FadeIn.duration(400)} style={[styles.completeBtnWrapper, completeBtnAnimStyle]}>
                 <TouchableOpacity
                   style={[
@@ -473,8 +467,8 @@ export function WorkoutSessionModal({
                     !canComplete && styles.completeBtnTextLocked,
                   ]}>
                     {canComplete
-                      ? `⚔️ Complete Workout (+${workout.xp_value} XP)`
-                      : `🔒 Complete Workout (+${workout.xp_value} XP)`}
+                      ? `⚔️ COMPLETE WORKOUT (+${workout.xp_value} XP)`
+                      : `🔒 COMPLETE WORKOUT (+${workout.xp_value} XP)`}
                   </Text>
                 </TouchableOpacity>
               </Animated.View>
@@ -487,7 +481,7 @@ export function WorkoutSessionModal({
             onPress={handleCancel}
             activeOpacity={0.7}
           >
-            <Text style={styles.cancelActionText}>Cancel Workout</Text>
+            <Text style={styles.cancelActionText}>ABANDON WORKOUT</Text>
           </TouchableOpacity>
         </View>
       </View>
@@ -498,7 +492,7 @@ export function WorkoutSessionModal({
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#0B1120',
+    backgroundColor: Colors.dark.backgroundDeep,
   },
 
   // --- Top Bar ---
@@ -508,56 +502,57 @@ const styles = StyleSheet.create({
     paddingHorizontal: Spacing.threeHalf,
     paddingTop: Platform.OS === 'ios' ? 56 : 40,
     paddingBottom: Spacing.three,
-    backgroundColor: '#0E1726',
+    backgroundColor: Colors.dark.backgroundCard,
     borderBottomWidth: 1,
-    borderBottomColor: '#1E293B',
+    borderBottomColor: Colors.dark.border,
     gap: 12,
   },
   closeBtn: {
     width: 36,
     height: 36,
     borderRadius: 18,
-    backgroundColor: 'rgba(255, 51, 102, 0.12)',
+    backgroundColor: 'rgba(239, 68, 68, 0.1)',
     borderWidth: 1,
-    borderColor: 'rgba(255, 51, 102, 0.3)',
+    borderColor: 'rgba(239, 68, 68, 0.3)',
     justifyContent: 'center',
     alignItems: 'center',
   },
   closeBtnText: {
     fontSize: 16,
-    color: '#FF3366',
+    color: '#EF4444',
     fontWeight: '700',
   },
   topBarCenter: {
     flex: 1,
+    gap: 2,
   },
   topBarTag: {
     fontSize: 10,
-    fontFamily: Fonts.sans,
+    fontFamily: Fonts.display,
     fontWeight: '700',
-    color: '#00A8FF',
-    letterSpacing: 1,
+    color: Colors.dark.accent,
+    letterSpacing: 1.5,
   },
   topBarTitle: {
-    fontSize: 16,
-    fontFamily: Fonts.sans,
+    fontSize: 17,
+    fontFamily: Fonts.display,
     fontWeight: '700',
-    color: '#E8ECF4',
-    marginTop: 2,
+    color: Colors.dark.textBright,
+    letterSpacing: 0.5,
   },
   xpBadge: {
     borderWidth: 1,
-    borderColor: 'rgba(0, 168, 255, 0.3)',
+    borderColor: 'rgba(139, 92, 246, 0.3)',
     borderRadius: 8,
     paddingHorizontal: 10,
     paddingVertical: 5,
-    backgroundColor: 'rgba(0, 168, 255, 0.06)',
+    backgroundColor: 'rgba(139, 92, 246, 0.12)',
   },
   xpBadgeText: {
     fontSize: 12,
     fontFamily: Fonts.mono,
     fontWeight: '800',
-    color: '#00A8FF',
+    color: Colors.dark.accentBright,
   },
 
   scrollContent: {
@@ -585,7 +580,7 @@ const styles = StyleSheet.create({
     height: RING_SIZE,
     borderRadius: RING_SIZE / 2,
     borderWidth: 8,
-    borderColor: '#1E293B',
+    borderColor: Colors.dark.border,
   },
   timerRingProgress: {
     position: 'absolute',
@@ -598,8 +593,7 @@ const styles = StyleSheet.create({
     height: RING_SIZE,
     borderRadius: RING_SIZE / 2,
     borderWidth: 8,
-    borderColor: '#00A8FF',
-    opacity: 0, // Hidden — we use dots instead for RN compatibility
+    opacity: 0,
   },
   timerDot: {
     position: 'absolute',
@@ -615,40 +609,46 @@ const styles = StyleSheet.create({
     fontSize: 36,
     fontFamily: Fonts.mono,
     fontWeight: '900',
-    color: '#E8ECF4',
+    color: Colors.dark.textBright,
   },
   timerTextComplete: {
-    color: '#00FF88',
+    color: Colors.dark.success,
   },
   timerEstimate: {
-    fontSize: 12,
-    fontFamily: Fonts.sans,
-    color: '#8896AB',
-    fontWeight: '600',
+    fontSize: 10,
+    fontFamily: Fonts.display,
+    color: Colors.dark.textMuted,
+    letterSpacing: 1.5,
+    fontWeight: '700',
   },
   pauseBtn: {
-    backgroundColor: '#111827',
-    borderWidth: 1,
-    borderColor: '#1E293B',
-    borderRadius: 12,
-    paddingHorizontal: 24,
+    backgroundColor: 'rgba(139, 92, 246, 0.12)',
+    borderWidth: 1.5,
+    borderColor: Colors.dark.accent,
+    borderRadius: 20,
+    paddingHorizontal: 26,
     paddingVertical: 10,
   },
   pauseBtnPaused: {
-    borderColor: 'rgba(255, 170, 0, 0.4)',
-    backgroundColor: 'rgba(255, 170, 0, 0.08)',
+    borderColor: '#F59E0B',
+    backgroundColor: 'rgba(245, 158, 11, 0.15)',
   },
   pauseBtnText: {
-    fontSize: 14,
-    fontFamily: Fonts.sans,
+    fontSize: 13,
+    fontFamily: Fonts.display,
     fontWeight: '700',
-    color: '#E8ECF4',
+    color: Colors.dark.accentBright,
+    letterSpacing: 1,
+  },
+  pauseBtnTextPaused: {
+    color: '#F59E0B',
   },
   pausedLabel: {
-    fontSize: 12,
-    fontFamily: Fonts.sans,
-    fontWeight: '600',
-    color: '#FFAA00',
+    fontSize: 11,
+    fontFamily: Fonts.display,
+    fontWeight: '700',
+    color: '#F59E0B',
+    letterSpacing: 1.5,
   },
 
   // --- Exercise Section ---
@@ -661,23 +661,24 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   exerciseSectionTitle: {
-    fontSize: 16,
-    fontFamily: Fonts.sans,
+    fontSize: 13,
+    fontFamily: Fonts.display,
     fontWeight: '700',
-    color: '#00A8FF',
+    color: Colors.dark.accent,
+    letterSpacing: 1,
   },
   exerciseProgress: {
-    fontSize: 13,
+    fontSize: 12,
     fontFamily: Fonts.mono,
     fontWeight: '700',
-    color: '#8896AB',
+    color: Colors.dark.textMuted,
   },
   exerciseProgressComplete: {
-    color: '#00FF88',
+    color: Colors.dark.success,
   },
   exerciseProgressBar: {
     height: 4,
-    backgroundColor: '#1E293B',
+    backgroundColor: Colors.dark.border,
     borderRadius: 2,
     overflow: 'hidden',
     marginBottom: 4,
@@ -689,75 +690,76 @@ const styles = StyleSheet.create({
   exerciseRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#111827',
+    backgroundColor: Colors.dark.backgroundCard,
     borderWidth: 1,
-    borderColor: '#1E293B',
-    borderRadius: 12,
+    borderColor: Colors.dark.borderBright,
+    borderRadius: 14,
     padding: 14,
     gap: 12,
   },
   exerciseRowChecked: {
-    backgroundColor: 'rgba(0, 255, 136, 0.04)',
-    borderColor: 'rgba(0, 255, 136, 0.2)',
+    backgroundColor: 'rgba(16, 185, 129, 0.05)',
+    borderColor: 'rgba(16, 185, 129, 0.25)',
   },
   checkbox: {
-    width: 28,
-    height: 28,
-    borderRadius: 14,
-    borderWidth: 2,
-    borderColor: '#2A3A5C',
-    backgroundColor: '#0E1726',
+    width: 26,
+    height: 26,
+    borderRadius: 8,
+    borderWidth: 1.5,
+    borderColor: Colors.dark.border,
+    backgroundColor: Colors.dark.backgroundElement,
     justifyContent: 'center',
     alignItems: 'center',
   },
   checkboxChecked: {
-    backgroundColor: '#00FF88',
-    borderColor: '#00FF88',
+    backgroundColor: Colors.dark.success,
+    borderColor: Colors.dark.success,
   },
   checkmark: {
     fontSize: 14,
     fontWeight: '900',
-    color: '#0B1120',
+    color: Colors.dark.backgroundDeep,
   },
   exerciseInfo: {
     flex: 1,
     gap: 2,
   },
   exerciseName: {
-    fontSize: 14,
-    fontFamily: Fonts.sans,
+    fontSize: 15,
+    fontFamily: Fonts.display,
     fontWeight: '700',
-    color: '#E8ECF4',
+    color: Colors.dark.textBright,
+    letterSpacing: 0.3,
   },
   exerciseNameChecked: {
-    color: '#8896AB',
+    color: Colors.dark.textMuted,
     textDecorationLine: 'line-through',
   },
   exerciseDetail: {
     fontSize: 12,
     fontFamily: Fonts.sans,
-    color: '#6B7B8F',
+    color: Colors.dark.textSecondary,
   },
   exerciseStatus: {
     borderWidth: 1,
-    borderColor: '#1E293B',
+    borderColor: Colors.dark.border,
     borderRadius: 6,
     paddingHorizontal: 8,
     paddingVertical: 3,
-    backgroundColor: '#0E1726',
+    backgroundColor: Colors.dark.backgroundElement,
   },
   exerciseStatusDone: {
-    borderColor: 'rgba(0, 255, 136, 0.3)',
-    backgroundColor: 'rgba(0, 255, 136, 0.08)',
+    borderColor: 'rgba(16, 185, 129, 0.3)',
+    backgroundColor: 'rgba(16, 185, 129, 0.1)',
   },
   exerciseStatusText: {
     fontSize: 10,
     fontFamily: Fonts.mono,
     fontWeight: '700',
-    color: '#6B7B8F',
+    color: Colors.dark.textMuted,
   },
   exerciseStatusTextDone: {
-    color: '#00FF88',
+    color: Colors.dark.success,
   },
 
   // --- Bottom Action Area ---
@@ -769,9 +771,9 @@ const styles = StyleSheet.create({
     paddingHorizontal: Spacing.threeHalf,
     paddingBottom: Platform.OS === 'ios' ? 36 : 24,
     paddingTop: Spacing.three,
-    backgroundColor: '#0E1726',
+    backgroundColor: Colors.dark.backgroundCard,
     borderTopWidth: 1,
-    borderTopColor: '#1E293B',
+    borderTopColor: Colors.dark.border,
     gap: 10,
     alignItems: 'center',
   },
@@ -779,68 +781,70 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontFamily: Fonts.sans,
     fontWeight: '600',
-    color: '#6B7B8F',
+    color: Colors.dark.textSecondary,
     textAlign: 'center',
   },
   unlockHint: {
-    fontSize: 13,
-    fontFamily: Fonts.sans,
+    fontSize: 12,
+    fontFamily: Fonts.display,
     fontWeight: '700',
-    color: '#00FF88',
+    color: Colors.dark.success,
     textAlign: 'center',
+    letterSpacing: 0.5,
   },
   completeBtnWrapper: {
     width: '100%',
-    shadowColor: '#00A8FF',
+    shadowColor: Colors.dark.accent,
     shadowOffset: { width: 0, height: 0 },
     shadowRadius: 20,
     elevation: 8,
   },
   completeBtn: {
-    backgroundColor: '#0066BB',
-    borderWidth: 1,
-    borderColor: '#00A8FF',
+    backgroundColor: Colors.dark.accent,
+    borderWidth: 1.5,
+    borderColor: Colors.dark.accentBright,
     borderRadius: 14,
     paddingVertical: 16,
     alignItems: 'center',
     width: '100%',
   },
   completeBtnLocked: {
-    backgroundColor: '#1A2332',
-    borderColor: '#2A3A5C',
+    backgroundColor: Colors.dark.backgroundElement,
+    borderColor: Colors.dark.border,
     opacity: 0.6,
   },
   completeBtnText: {
-    fontFamily: Fonts.sans,
+    fontFamily: Fonts.display,
     fontSize: 15,
     fontWeight: '700',
     color: '#FFFFFF',
+    letterSpacing: 0.5,
   },
   completeBtnTextLocked: {
-    color: '#6B7B8F',
+    color: Colors.dark.textMuted,
   },
   monitoringBadge: {
     alignItems: 'center',
     justifyContent: 'center',
     paddingVertical: Spacing.three,
     paddingHorizontal: Spacing.four,
-    backgroundColor: 'rgba(0, 168, 255, 0.05)',
+    backgroundColor: 'rgba(139, 92, 246, 0.06)',
     borderRadius: 14,
     borderWidth: 1,
-    borderColor: 'rgba(0, 168, 255, 0.2)',
+    borderColor: 'rgba(139, 92, 246, 0.25)',
     gap: 4,
   },
   monitoringTag: {
-    fontFamily: Fonts.mono,
+    fontFamily: Fonts.display,
     fontSize: 10,
     letterSpacing: 2,
-    color: '#00A8FF',
-    textTransform: 'uppercase',
+    color: Colors.dark.accent,
+    fontWeight: '700',
   },
   monitoringText: {
-    fontFamily: Fonts.mono,
+    fontFamily: Fonts.sans,
     fontSize: 12,
-    color: '#94A3B8',
+    color: Colors.dark.textSecondary,
     textAlign: 'center',
   },
   cancelActionBtn: {
@@ -848,15 +852,17 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     borderRadius: 10,
-    backgroundColor: 'rgba(255, 255, 255, 0.04)',
+    backgroundColor: 'rgba(239, 68, 68, 0.06)',
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.08)',
+    borderColor: 'rgba(239, 68, 68, 0.2)',
     marginTop: 4,
+    width: '100%',
   },
   cancelActionText: {
-    fontFamily: Fonts.sans,
-    fontSize: 13,
-    fontWeight: '600',
-    color: '#94A3B8',
+    fontFamily: Fonts.display,
+    fontSize: 12,
+    fontWeight: '700',
+    color: '#EF4444',
+    letterSpacing: 1,
   },
 });

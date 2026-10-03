@@ -32,14 +32,14 @@ import { DailySummary } from '@/components/status/daily-summary';
 import { DailyStreakCard } from '@/components/status/daily-streak-card';
 import { StepTrackerCard } from '@/components/status/step-tracker-card';
 import { GOAL_CONFIG } from '@/lib/calculations/bmr';
-import { Fonts, Spacing } from '@/constants/theme';
+import { Colors, Fonts, Spacing } from '@/constants/theme';
 import { useAudio } from '@/contexts/AudioContext';
 
 export default function StatusScreen() {
   const router = useRouter();
   const pathname = usePathname();
   const db = useSQLiteContext();
-  const { bgmEnabled, toggleBGM } = useAudio();
+  const { bgmEnabled, toggleBGM, playTouchSound } = useAudio();
 
   const [profile, setProfile] = useState<Profile | null>(null);
   const [calorieSummary, setCalorieSummary] = useState<DailyCalorieSummary>({
@@ -107,18 +107,21 @@ export default function StatusScreen() {
       <ScrollView
         contentContainerStyle={styles.container}
         refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#00A8FF" />
+          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={Colors.dark.accent} />
         }
       >
         {/* TOP SYSTEM HEADER & QUICK BGM TOGGLE */}
         <Animated.View entering={FadeInDown.duration(350)} style={styles.topHeaderBar}>
           <View style={styles.systemTagContainer}>
             <View style={styles.onlineDot} />
-            <Text style={styles.systemTagText}>SYSTEM // ONLINE</Text>
+            <Text style={styles.systemTagText}>⟨ SYSTEM // ONLINE ⟩</Text>
           </View>
           <TouchableOpacity
             style={[styles.audioPillBtn, bgmEnabled && styles.audioPillBtnActive]}
-            onPress={toggleBGM}
+            onPress={() => {
+              playTouchSound();
+              toggleBGM();
+            }}
             activeOpacity={0.7}
           >
             <Text style={styles.audioPillIcon}>{bgmEnabled ? '🎵' : '🔇'}</Text>
@@ -150,31 +153,38 @@ export default function StatusScreen() {
         {profile && (
           <Animated.View entering={FadeInDown.duration(450).delay(80)}>
             <View style={styles.activeDirectiveBanner}>
-              <View style={styles.directiveTop}>
-                <Text style={styles.directiveSystemTag}>Your Goal</Text>
-                <TouchableOpacity
-                  style={styles.recalibrateBtn}
-                  onPress={() => router.push('/onboarding')}
-                  activeOpacity={0.7}
-                >
-                  <Text style={styles.recalibrateBtnText}>Edit ⚙️</Text>
-                </TouchableOpacity>
-              </View>
+              {/* Left accent stripe */}
+              <View style={styles.directiveStripe} />
 
-              <View style={styles.directiveBody}>
-                <Text style={styles.directiveEmoji}>
-                  {GOAL_CONFIG[profile.goal_type]?.emoji || '⚖️'}
-                </Text>
-                <View style={{ flex: 1, gap: 3 }}>
-                  <Text style={styles.directiveTitle}>
-                    {GOAL_CONFIG[profile.goal_type]?.label || 'Maintain Weight'}
-                  </Text>
-                  <Text style={styles.directiveSub}>
-                    {GOAL_CONFIG[profile.goal_type]?.calorieOffset === 0
-                      ? 'Energy balance (TDEE match)'
-                      : `${GOAL_CONFIG[profile.goal_type]?.calorieOffset > 0 ? '+' : ''}${GOAL_CONFIG[profile.goal_type]?.calorieOffset} kcal/day`}
-                    {' • '}Target: {Math.round(profile.daily_calories ?? 2000)} kcal
-                  </Text>
+              <View style={styles.directiveInner}>
+                <View style={styles.directiveTop}>
+                  <Text style={styles.directiveSystemTag}>YOUR OBJECTIVE</Text>
+                  <TouchableOpacity
+                    style={styles.recalibrateBtn}
+                    onPress={() => router.push('/onboarding')}
+                    activeOpacity={0.7}
+                  >
+                    <Text style={styles.recalibrateBtnText}>Edit ⚙️</Text>
+                  </TouchableOpacity>
+                </View>
+
+                <View style={styles.directiveBody}>
+                  <View style={styles.directiveEmojiBox}>
+                    <Text style={styles.directiveEmoji}>
+                      {GOAL_CONFIG[profile.goal_type]?.emoji || '⚖️'}
+                    </Text>
+                  </View>
+                  <View style={{ flex: 1, gap: 4 }}>
+                    <Text style={styles.directiveTitle}>
+                      {GOAL_CONFIG[profile.goal_type]?.label || 'Maintain Weight'}
+                    </Text>
+                    <Text style={styles.directiveSub}>
+                      {GOAL_CONFIG[profile.goal_type]?.calorieOffset === 0
+                        ? 'Energy balance (TDEE match)'
+                        : `${GOAL_CONFIG[profile.goal_type]?.calorieOffset > 0 ? '+' : ''}${GOAL_CONFIG[profile.goal_type]?.calorieOffset} kcal/day`}
+                      {' • '}Target: {Math.round(profile.daily_calories ?? 2000)} kcal
+                    </Text>
+                  </View>
                 </View>
               </View>
             </View>
@@ -205,7 +215,7 @@ export default function StatusScreen() {
           </Animated.View>
         ) : (
           <View style={styles.loadingContainer}>
-            <Text style={styles.loadingText}>Loading your status...</Text>
+            <Text style={styles.loadingText}>Initializing system...</Text>
           </View>
         )}
 
@@ -218,29 +228,41 @@ export default function StatusScreen() {
         <Animated.View entering={FadeInUp.duration(450).delay(320)} style={styles.actionsRow}>
           <TouchableOpacity
             style={styles.actionButton}
-            onPress={() => router.push('/(tabs)/quests')}
+            onPress={() => {
+              playTouchSound();
+              router.push('/(tabs)/quests');
+            }}
             activeOpacity={0.7}
           >
+            <View style={[styles.actionIconGlow, { shadowColor: Colors.dark.gold }]} />
             <Text style={styles.actionEmoji}>📜</Text>
-            <Text style={styles.actionLabel}>Quests</Text>
+            <Text style={styles.actionLabel}>QUESTS</Text>
           </TouchableOpacity>
 
           <TouchableOpacity
             style={styles.actionButton}
-            onPress={() => router.push('/(tabs)/log')}
+            onPress={() => {
+              playTouchSound();
+              router.push('/(tabs)/log');
+            }}
             activeOpacity={0.7}
           >
+            <View style={[styles.actionIconGlow, { shadowColor: Colors.dark.mana }]} />
             <Text style={styles.actionEmoji}>🍽️</Text>
-            <Text style={styles.actionLabel}>Log Meal</Text>
+            <Text style={styles.actionLabel}>MANA</Text>
           </TouchableOpacity>
 
           <TouchableOpacity
             style={styles.actionButton}
-            onPress={() => router.push('/(tabs)/activity')}
+            onPress={() => {
+              playTouchSound();
+              router.push('/(tabs)/activity');
+            }}
             activeOpacity={0.7}
           >
+            <View style={[styles.actionIconGlow, { shadowColor: Colors.dark.cyan }]} />
             <Text style={styles.actionEmoji}>⚡</Text>
-            <Text style={styles.actionLabel}>Train</Text>
+            <Text style={styles.actionLabel}>TRAIN</Text>
           </TouchableOpacity>
         </Animated.View>
       </ScrollView>
@@ -251,19 +273,19 @@ export default function StatusScreen() {
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: '#0B1120',
+    backgroundColor: Colors.dark.background,
   },
   container: {
     padding: Spacing.threeHalf,
     gap: Spacing.threeHalf,
-    paddingBottom: Spacing.six,
+    paddingBottom: Spacing.six + 20,
   },
   onboardingBanner: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: 'rgba(255, 170, 0, 0.08)',
+    backgroundColor: 'rgba(245, 158, 11, 0.06)',
     borderWidth: 1,
-    borderColor: 'rgba(255, 170, 0, 0.35)',
+    borderColor: 'rgba(245, 158, 11, 0.3)',
     borderRadius: 14,
     padding: Spacing.three,
     gap: Spacing.two,
@@ -274,18 +296,19 @@ const styles = StyleSheet.create({
   bannerTitle: {
     fontSize: 14,
     fontWeight: '700',
-    fontFamily: Fonts.sans,
-    color: '#FFAA00',
+    fontFamily: Fonts.display,
+    color: Colors.dark.gold,
+    letterSpacing: 0.5,
   },
   bannerSub: {
     fontSize: 12,
     fontFamily: Fonts.sans,
-    color: '#C4A870',
+    color: Colors.dark.textSecondary,
     marginTop: 2,
   },
   bannerArrow: {
     fontSize: 18,
-    color: '#FFAA00',
+    color: Colors.dark.gold,
     fontWeight: '700',
   },
   loadingContainer: {
@@ -294,9 +317,10 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   loadingText: {
-    fontFamily: Fonts.sans,
-    color: '#8896AB',
+    fontFamily: Fonts.display,
+    color: Colors.dark.textMuted,
     fontSize: 14,
+    letterSpacing: 1,
   },
   actionsRow: {
     flexDirection: 'row',
@@ -304,33 +328,60 @@ const styles = StyleSheet.create({
   },
   actionButton: {
     flex: 1,
-    backgroundColor: '#111827',
+    backgroundColor: Colors.dark.backgroundCard,
     borderWidth: 1,
-    borderColor: '#1E293B',
-    borderRadius: 14,
-    paddingVertical: 14,
+    borderColor: Colors.dark.borderBright,
+    borderRadius: 16,
+    paddingVertical: 18,
     alignItems: 'center',
-    gap: 6,
+    gap: 8,
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.15,
-    shadowRadius: 6,
-    elevation: 3,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.25,
+    shadowRadius: 10,
+    elevation: 5,
+    position: 'relative',
+    overflow: 'hidden',
+  },
+  actionIconGlow: {
+    position: 'absolute',
+    top: -10,
+    width: 50,
+    height: 50,
+    borderRadius: 25,
+    opacity: 0.1,
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.4,
+    shadowRadius: 10,
+    elevation: 2,
   },
   actionEmoji: {
-    fontSize: 22,
+    fontSize: 24,
   },
   actionLabel: {
-    fontSize: 12,
-    fontFamily: Fonts.sans,
-    fontWeight: '600',
-    color: '#8896AB',
+    fontSize: 10,
+    fontFamily: Fonts.display,
+    fontWeight: '700',
+    color: Colors.dark.textSecondary,
+    letterSpacing: 1.5,
   },
   activeDirectiveBanner: {
-    backgroundColor: '#111827',
+    backgroundColor: Colors.dark.backgroundCard,
     borderWidth: 1,
-    borderColor: '#1E293B',
-    borderRadius: 14,
+    borderColor: Colors.dark.borderBright,
+    borderRadius: 16,
+    overflow: 'hidden',
+    flexDirection: 'row',
+    position: 'relative',
+  },
+  directiveStripe: {
+    width: 4,
+    backgroundColor: Colors.dark.accent,
+    borderTopLeftRadius: 16,
+    borderBottomLeftRadius: 16,
+  },
+  directiveInner: {
+    flex: 1,
     padding: Spacing.threeHalf,
     gap: 12,
   },
@@ -340,15 +391,16 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   directiveSystemTag: {
-    fontSize: 12,
-    fontFamily: Fonts.sans,
-    color: '#00A8FF',
-    fontWeight: '600',
+    fontSize: 11,
+    fontFamily: Fonts.display,
+    color: Colors.dark.accent,
+    fontWeight: '700',
+    letterSpacing: 1.5,
   },
   recalibrateBtn: {
-    backgroundColor: 'rgba(0, 168, 255, 0.08)',
+    backgroundColor: 'rgba(139, 92, 246, 0.08)',
     borderWidth: 1,
-    borderColor: 'rgba(0, 168, 255, 0.25)',
+    borderColor: 'rgba(139, 92, 246, 0.25)',
     borderRadius: 8,
     paddingHorizontal: 10,
     paddingVertical: 5,
@@ -356,7 +408,7 @@ const styles = StyleSheet.create({
   recalibrateBtnText: {
     fontSize: 11,
     fontFamily: Fonts.sans,
-    color: '#00A8FF',
+    color: Colors.dark.accent,
     fontWeight: '600',
   },
   directiveBody: {
@@ -364,25 +416,36 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 14,
   },
+  directiveEmojiBox: {
+    width: 44,
+    height: 44,
+    borderRadius: 12,
+    backgroundColor: 'rgba(139, 92, 246, 0.08)',
+    borderWidth: 1,
+    borderColor: 'rgba(139, 92, 246, 0.2)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
   directiveEmoji: {
-    fontSize: 28,
+    fontSize: 24,
   },
   directiveTitle: {
-    fontSize: 16,
+    fontSize: 17,
     fontWeight: '700',
-    fontFamily: Fonts.sans,
-    color: '#E8ECF4',
+    fontFamily: Fonts.display,
+    color: Colors.dark.textBright,
+    letterSpacing: 0.3,
   },
   directiveSub: {
     fontSize: 12,
     fontFamily: Fonts.sans,
-    color: '#8896AB',
+    color: Colors.dark.textSecondary,
   },
   topHeaderBar: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingVertical: 2,
+    paddingVertical: 4,
     marginBottom: 4,
   },
   systemTagContainer: {
@@ -391,49 +454,49 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   onlineDot: {
-    width: 6,
-    height: 6,
-    borderRadius: 3,
-    backgroundColor: '#00F0FF',
-    shadowColor: '#00F0FF',
+    width: 7,
+    height: 7,
+    borderRadius: 3.5,
+    backgroundColor: Colors.dark.success,
+    shadowColor: Colors.dark.success,
     shadowOffset: { width: 0, height: 0 },
     shadowOpacity: 0.9,
-    shadowRadius: 5,
+    shadowRadius: 6,
     elevation: 4,
   },
   systemTagText: {
-    fontFamily: Fonts.sans,
-    fontSize: 11,
+    fontFamily: Fonts.display,
+    fontSize: 12,
     fontWeight: '700',
-    letterSpacing: 1.5,
-    color: '#6B7B8F',
+    letterSpacing: 2,
+    color: Colors.dark.textMuted,
   },
   audioPillBtn: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
-    paddingHorizontal: 10,
-    paddingVertical: 5,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
     borderRadius: 20,
-    backgroundColor: '#111827',
+    backgroundColor: Colors.dark.backgroundCard,
     borderWidth: 1,
-    borderColor: '#1E293B',
+    borderColor: Colors.dark.border,
   },
   audioPillBtnActive: {
-    backgroundColor: 'rgba(0, 168, 255, 0.1)',
-    borderColor: 'rgba(0, 168, 255, 0.4)',
+    backgroundColor: 'rgba(139, 92, 246, 0.08)',
+    borderColor: 'rgba(139, 92, 246, 0.35)',
   },
   audioPillIcon: {
     fontSize: 12,
   },
   audioPillText: {
-    fontFamily: Fonts.sans,
-    fontSize: 11,
+    fontFamily: Fonts.display,
+    fontSize: 10,
     fontWeight: '700',
-    letterSpacing: 0.5,
-    color: '#6B7B8F',
+    letterSpacing: 1,
+    color: Colors.dark.textMuted,
   },
   audioPillTextActive: {
-    color: '#00A8FF',
+    color: Colors.dark.accent,
   },
 });

@@ -2,7 +2,6 @@
 // Solo Leveling Opening Animation — The System Awakening
 // Inspired by the Solo Leveling Anime / Manhwa System Awakening
 // ============================================================
-/* eslint-disable react-hooks/immutability */
 
 import React, { useEffect, useState, useCallback, useRef } from 'react';
 import {
@@ -46,13 +45,13 @@ interface ManaEmber {
 }
 
 const MANA_EMBERS: ManaEmber[] = [
-  { id: 1, initialX: 0.15, size: 4, duration: 2400, delay: 100, color: '#00F0FF' },
-  { id: 2, initialX: 0.30, size: 6, duration: 2800, delay: 300, color: '#8A3FFC' },
-  { id: 3, initialX: 0.48, size: 3, duration: 2200, delay: 200, color: '#00A8FF' },
-  { id: 4, initialX: 0.65, size: 5, duration: 2600, delay: 50, color: '#00F0FF' },
-  { id: 5, initialX: 0.82, size: 4, duration: 3000, delay: 400, color: '#A855F7' },
-  { id: 6, initialX: 0.22, size: 5, duration: 2500, delay: 500, color: '#38BDF8' },
-  { id: 7, initialX: 0.74, size: 3, duration: 2700, delay: 350, color: '#00F0FF' },
+  { id: 1, initialX: 0.15, size: 4, duration: 2400, delay: 100, color: '#F97316' },
+  { id: 2, initialX: 0.30, size: 6, duration: 2800, delay: 300, color: '#A855F7' },
+  { id: 3, initialX: 0.48, size: 3, duration: 2200, delay: 200, color: '#EF4444' },
+  { id: 4, initialX: 0.65, size: 5, duration: 2600, delay: 50, color: '#FB923C' },
+  { id: 5, initialX: 0.82, size: 4, duration: 3000, delay: 400, color: '#F59E0B' },
+  { id: 6, initialX: 0.22, size: 5, duration: 2500, delay: 500, color: '#A855F7' },
+  { id: 7, initialX: 0.74, size: 3, duration: 2700, delay: 350, color: '#F97316' },
 ];
 
 function ManaEmberParticle({ ember }: { ember: ManaEmber }) {
@@ -192,13 +191,15 @@ export function SplashOverlay({ onFinish }: SplashOverlayProps) {
   }, [dismiss]);
 
   useEffect(() => {
-    // 0. Trigger Opening Animation Soundtrack (Animation.mp3)
-    try {
-      animationPlayer.loop = false;
-      animationPlayer.volume = 0.95;
-      animationPlayer.seekTo(0);
-      animationPlayer.play();
-    } catch {}
+    // 0. Trigger Opening Animation Soundtrack on native devices (Animation.mp3)
+    if (Platform.OS !== 'web') {
+      try {
+        animationPlayer.loop = false;
+        animationPlayer.volume = 0.95;
+        animationPlayer.seekTo(0);
+        animationPlayer.play();
+      } catch {}
+    }
 
     // --- PHASE 1: JIN-WOO'S EYE FLARE & LASER SCAN (0ms - 650ms) ---
     laserOpacity.value = withSequence(
@@ -277,11 +278,13 @@ export function SplashOverlay({ onFinish }: SplashOverlayProps) {
       withTiming(360, { duration: 1800, easing: Easing.linear })
     );
 
-    // Arise sound effect (arise.mp3)
+    // Arise sound effect on native devices (arise.mp3)
     const ariseTimer = setTimeout(() => {
-      try {
-        playAriseSound();
-      } catch {}
+      if (Platform.OS !== 'web') {
+        try {
+          playAriseSound();
+        } catch {}
+      }
     }, 1800);
 
     // Crest mana pulse

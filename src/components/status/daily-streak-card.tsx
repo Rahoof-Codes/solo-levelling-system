@@ -19,7 +19,7 @@ import Animated, {
 } from 'react-native-reanimated';
 import { type Streak } from '@/types';
 import { type DayActivityStatus } from '@/db/operations';
-import { Fonts, Spacing } from '@/constants/theme';
+import { Colors, Fonts, Spacing } from '@/constants/theme';
 
 interface DailyStreakCardProps {
   streaks: Streak[];
@@ -46,7 +46,7 @@ export function DailyStreakCard({ streaks, weekHistory = [] }: DailyStreakCardPr
   const loginStreak = streaks.find((s) => s.type === 'login')?.current_count ?? 0;
   const longestLogin = streaks.find((s) => s.type === 'login')?.longest_count ?? loginStreak;
 
-  // Primary streak reflects actual daily activity (quests or workouts completed consecutively)
+  // Primary streak reflects actual daily activity
   const primaryStreak = Math.max(questStreak, workoutStreak);
   const bestRecord = Math.max(longestQuest, longestWorkout, primaryStreak);
 
@@ -107,6 +107,12 @@ export function DailyStreakCard({ streaks, weekHistory = [] }: DailyStreakCardPr
       {/* BACKGROUND GLOW */}
       <Animated.View style={[styles.bgGlow, animatedGlowStyle]} />
 
+      {/* Corner ornaments */}
+      <View style={[styles.corner, styles.cornerTL]} />
+      <View style={[styles.corner, styles.cornerTR]} />
+      <View style={[styles.corner, styles.cornerBL]} />
+      <View style={[styles.corner, styles.cornerBR]} />
+
       {/* HEADER SECTION */}
       <View style={styles.header}>
         <View style={styles.titleRow}>
@@ -114,7 +120,7 @@ export function DailyStreakCard({ streaks, weekHistory = [] }: DailyStreakCardPr
             <Text style={styles.flameEmoji}>🔥</Text>
           </Animated.View>
           <View>
-            <Text style={styles.systemTag}>Daily Streak</Text>
+            <Text style={styles.systemTag}>DAILY STREAK</Text>
             <View style={styles.streakCountRow}>
               <Text style={styles.streakCount}>{primaryStreak}</Text>
               <Text style={styles.streakLabel}>days</Text>
@@ -146,7 +152,7 @@ export function DailyStreakCard({ streaks, weekHistory = [] }: DailyStreakCardPr
         </Text>
       </View>
 
-      {/* 7-DAY TIMELINE NODES */}
+      {/* 7-DAY TIMELINE RUNES */}
       <View style={styles.weekContainer}>
         {weekHistory.length > 0
           ? weekHistory.map((day, idx) => {
@@ -220,9 +226,15 @@ export function DailyStreakCard({ streaks, weekHistory = [] }: DailyStreakCardPr
             entering={SlideInUp.springify().damping(16)}
             style={styles.modalContent}
           >
+            {/* Corner ornaments */}
+            <View style={[styles.modalCorner, styles.modalCornerTL]} />
+            <View style={[styles.modalCorner, styles.modalCornerTR]} />
+            <View style={[styles.modalCorner, styles.modalCornerBL]} />
+            <View style={[styles.modalCorner, styles.modalCornerBR]} />
+
             <View style={styles.modalHeader}>
               <View>
-                <Text style={styles.modalTag}>Streaks</Text>
+                <Text style={styles.modalTag}>STREAKS</Text>
                 <Text style={styles.modalTitle}>Streak Details</Text>
               </View>
               <TouchableOpacity
@@ -244,7 +256,7 @@ export function DailyStreakCard({ streaks, weekHistory = [] }: DailyStreakCardPr
                   </View>
                 </View>
                 <View style={styles.streakItemRight}>
-                  <Text style={[styles.streakItemVal, { color: '#00A8FF' }]}>
+                  <Text style={[styles.streakItemVal, { color: Colors.dark.accent }]}>
                     {questStreak}d
                   </Text>
                   <Text style={styles.streakItemRecord}>Best {longestQuest}d</Text>
@@ -261,7 +273,7 @@ export function DailyStreakCard({ streaks, weekHistory = [] }: DailyStreakCardPr
                   </View>
                 </View>
                 <View style={styles.streakItemRight}>
-                  <Text style={[styles.streakItemVal, { color: '#FF3366' }]}>
+                  <Text style={[styles.streakItemVal, { color: Colors.dark.danger }]}>
                     {workoutStreak}d
                   </Text>
                   <Text style={styles.streakItemRecord}>Best {longestWorkout}d</Text>
@@ -278,7 +290,7 @@ export function DailyStreakCard({ streaks, weekHistory = [] }: DailyStreakCardPr
                   </View>
                 </View>
                 <View style={styles.streakItemRight}>
-                  <Text style={[styles.streakItemVal, { color: '#FFB800' }]}>
+                  <Text style={[styles.streakItemVal, { color: Colors.dark.gold }]}>
                     {stepStreak}d
                   </Text>
                   <Text style={styles.streakItemRecord}>Best {longestSteps}d</Text>
@@ -295,7 +307,7 @@ export function DailyStreakCard({ streaks, weekHistory = [] }: DailyStreakCardPr
                   </View>
                 </View>
                 <View style={styles.streakItemRight}>
-                  <Text style={[styles.streakItemVal, { color: '#00FF88' }]}>
+                  <Text style={[styles.streakItemVal, { color: Colors.dark.success }]}>
                     {mealStreak}d
                   </Text>
                   <Text style={styles.streakItemRecord}>Best {longestMeal}d</Text>
@@ -333,29 +345,41 @@ export function DailyStreakCard({ streaks, weekHistory = [] }: DailyStreakCardPr
 
 const styles = StyleSheet.create({
   container: {
-    backgroundColor: '#111827',
-    borderWidth: 1,
-    borderColor: '#FFAA00',
-    borderRadius: 16,
+    backgroundColor: Colors.dark.backgroundCard,
+    borderWidth: 1.5,
+    borderColor: Colors.dark.gold,
+    borderRadius: 18,
     padding: Spacing.threeHalf,
     gap: 14,
     position: 'relative',
     overflow: 'hidden',
-    shadowColor: '#FFAA00',
+    shadowColor: Colors.dark.gold,
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.15,
-    shadowRadius: 10,
-    elevation: 5,
+    shadowOpacity: 0.25,
+    shadowRadius: 14,
+    elevation: 8,
   },
   bgGlow: {
     position: 'absolute',
-    top: -40,
-    right: -40,
-    width: 140,
-    height: 140,
-    borderRadius: 70,
-    backgroundColor: 'rgba(255, 170, 0, 0.1)',
+    top: -50,
+    right: -50,
+    width: 160,
+    height: 160,
+    borderRadius: 80,
+    backgroundColor: 'rgba(245, 158, 11, 0.08)',
   },
+  // Corner ornaments
+  corner: {
+    position: 'absolute',
+    width: 12,
+    height: 12,
+    borderColor: Colors.dark.gold,
+  },
+  cornerTL: { top: -1, left: -1, borderTopWidth: 2, borderLeftWidth: 2 },
+  cornerTR: { top: -1, right: -1, borderTopWidth: 2, borderRightWidth: 2 },
+  cornerBL: { bottom: -1, left: -1, borderBottomWidth: 2, borderLeftWidth: 2 },
+  cornerBR: { bottom: -1, right: -1, borderBottomWidth: 2, borderRightWidth: 2 },
+
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -367,23 +391,29 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   flameBox: {
-    width: 46,
-    height: 46,
-    borderRadius: 23,
-    backgroundColor: 'rgba(255, 170, 0, 0.1)',
-    borderWidth: 1,
-    borderColor: 'rgba(255, 170, 0, 0.4)',
+    width: 50,
+    height: 50,
+    borderRadius: 14,
+    backgroundColor: 'rgba(245, 158, 11, 0.1)',
+    borderWidth: 1.5,
+    borderColor: 'rgba(245, 158, 11, 0.4)',
     justifyContent: 'center',
     alignItems: 'center',
+    shadowColor: Colors.dark.gold,
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 4,
   },
   flameEmoji: {
-    fontSize: 22,
+    fontSize: 24,
   },
   systemTag: {
-    fontSize: 12,
-    fontFamily: Fonts.sans,
-    color: '#FFAA00',
-    fontWeight: '600',
+    fontSize: 11,
+    fontFamily: Fonts.display,
+    color: Colors.dark.gold,
+    fontWeight: '700',
+    letterSpacing: 1.5,
   },
   streakCountRow: {
     flexDirection: 'row',
@@ -391,59 +421,59 @@ const styles = StyleSheet.create({
     gap: 6,
   },
   streakCount: {
-    fontSize: 26,
+    fontSize: 30,
     fontWeight: '900',
     fontFamily: Fonts.mono,
-    color: '#E8ECF4',
+    color: Colors.dark.textBright,
   },
   streakLabel: {
-    fontSize: 13,
+    fontSize: 14,
     fontFamily: Fonts.sans,
-    color: '#8896AB',
+    color: Colors.dark.textSecondary,
     fontWeight: '600',
   },
   detailsBtn: {
-    backgroundColor: 'rgba(255, 170, 0, 0.08)',
+    backgroundColor: 'rgba(245, 158, 11, 0.08)',
     borderWidth: 1,
-    borderColor: 'rgba(255, 170, 0, 0.35)',
-    borderRadius: 8,
-    paddingHorizontal: 10,
-    paddingVertical: 6,
+    borderColor: 'rgba(245, 158, 11, 0.35)',
+    borderRadius: 10,
+    paddingHorizontal: 12,
+    paddingVertical: 7,
   },
   detailsBtnText: {
     fontSize: 11,
     fontFamily: Fonts.sans,
     fontWeight: '600',
-    color: '#FFAA00',
+    color: Colors.dark.gold,
   },
   buffBadge: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 6,
-    backgroundColor: 'rgba(0, 168, 255, 0.06)',
+    gap: 8,
+    backgroundColor: 'rgba(139, 92, 246, 0.06)',
     borderWidth: 1,
-    borderColor: 'rgba(0, 240, 255, 0.2)',
+    borderColor: 'rgba(139, 92, 246, 0.2)',
     borderRadius: 10,
-    paddingVertical: 8,
-    paddingHorizontal: 12,
+    paddingVertical: 10,
+    paddingHorizontal: 14,
   },
   buffIcon: {
-    fontSize: 13,
+    fontSize: 14,
   },
   buffText: {
     fontSize: 12,
     fontFamily: Fonts.sans,
-    color: '#8896AB',
+    color: Colors.dark.textSecondary,
     fontWeight: '500',
   },
   buffHighlight: {
-    color: '#00A8FF',
+    color: Colors.dark.accent,
     fontWeight: '700',
   },
   weekContainer: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    paddingVertical: 4,
+    paddingVertical: 6,
   },
   dayNode: {
     alignItems: 'center',
@@ -451,128 +481,149 @@ const styles = StyleSheet.create({
   },
   dayLabel: {
     fontSize: 10,
-    fontFamily: Fonts.sans,
-    color: '#6B7B8F',
+    fontFamily: Fonts.display,
+    color: Colors.dark.textMuted,
     fontWeight: '600',
+    letterSpacing: 0.5,
   },
   dayLabelToday: {
-    color: '#00A8FF',
+    color: Colors.dark.accent,
     fontWeight: '700',
   },
   nodeCircle: {
-    width: 30,
-    height: 30,
-    borderRadius: 15,
-    backgroundColor: '#0E1726',
+    width: 32,
+    height: 32,
+    borderRadius: 10,
+    backgroundColor: Colors.dark.backgroundDeep,
     borderWidth: 1.5,
-    borderColor: '#1E293B',
+    borderColor: Colors.dark.border,
     justifyContent: 'center',
     alignItems: 'center',
   },
   nodeCircleCompleted: {
-    backgroundColor: 'rgba(255, 170, 0, 0.15)',
-    borderColor: '#FFAA00',
-    shadowColor: '#FFAA00',
-    shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 0.4,
-    shadowRadius: 4,
-  },
-  nodeCircleToday: {
-    backgroundColor: 'rgba(0, 168, 255, 0.12)',
-    borderColor: '#00A8FF',
-    shadowColor: '#00A8FF',
+    backgroundColor: 'rgba(245, 158, 11, 0.12)',
+    borderColor: Colors.dark.gold,
+    shadowColor: Colors.dark.gold,
     shadowOffset: { width: 0, height: 0 },
     shadowOpacity: 0.5,
-    shadowRadius: 4,
+    shadowRadius: 6,
+    elevation: 3,
+  },
+  nodeCircleToday: {
+    backgroundColor: 'rgba(139, 92, 246, 0.12)',
+    borderColor: Colors.dark.accent,
+    shadowColor: Colors.dark.accent,
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.5,
+    shadowRadius: 6,
+    elevation: 3,
   },
   nodeCircleFuture: {
-    borderColor: '#1A2332',
+    borderColor: Colors.dark.borderGlow,
+    opacity: 0.5,
   },
   nodeCheck: {
-    fontSize: 12,
+    fontSize: 13,
     fontWeight: '900',
-    color: '#FFAA00',
+    color: Colors.dark.gold,
   },
   nodeCurrent: {
     fontSize: 12,
-    color: '#00A8FF',
+    color: Colors.dark.accent,
   },
   nodeLocked: {
     fontSize: 10,
-    color: '#3A4A5F',
+    color: Colors.dark.textDim,
   },
   footerRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     borderTopWidth: 1,
-    borderTopColor: '#1E293B',
+    borderTopColor: Colors.dark.border,
     paddingTop: 10,
   },
   longestStreak: {
     fontSize: 11,
     fontFamily: Fonts.sans,
-    color: '#8896AB',
+    color: Colors.dark.textSecondary,
   },
   longestVal: {
-    color: '#E8ECF4',
+    color: Colors.dark.textBright,
     fontWeight: '700',
   },
   streakHint: {
     fontSize: 10,
     fontFamily: Fonts.sans,
-    color: '#6B7B8F',
+    color: Colors.dark.textMuted,
   },
+  // Modal styles
   modalOverlay: {
     flex: 1,
-    backgroundColor: 'rgba(5, 8, 16, 0.9)',
+    backgroundColor: 'rgba(3, 7, 16, 0.92)',
     justifyContent: 'center',
     padding: Spacing.threeHalf,
   },
   modalContent: {
-    backgroundColor: '#111827',
-    borderWidth: 1,
-    borderColor: '#FFAA00',
-    borderRadius: 18,
+    backgroundColor: Colors.dark.backgroundCard,
+    borderWidth: 1.5,
+    borderColor: Colors.dark.gold,
+    borderRadius: 20,
     padding: Spacing.four,
     gap: Spacing.three,
-    shadowColor: '#FFAA00',
+    shadowColor: Colors.dark.gold,
     shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.2,
-    shadowRadius: 16,
+    shadowOpacity: 0.25,
+    shadowRadius: 20,
+    elevation: 12,
+    position: 'relative',
+    overflow: 'hidden',
   },
+  modalCorner: {
+    position: 'absolute',
+    width: 14,
+    height: 14,
+    borderColor: Colors.dark.gold,
+  },
+  modalCornerTL: { top: -1, left: -1, borderTopWidth: 2, borderLeftWidth: 2 },
+  modalCornerTR: { top: -1, right: -1, borderTopWidth: 2, borderRightWidth: 2 },
+  modalCornerBL: { bottom: -1, left: -1, borderBottomWidth: 2, borderLeftWidth: 2 },
+  modalCornerBR: { bottom: -1, right: -1, borderBottomWidth: 2, borderRightWidth: 2 },
+
   modalHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
     borderBottomWidth: 1,
-    borderBottomColor: '#1E293B',
-    paddingBottom: 12,
+    borderBottomColor: Colors.dark.border,
+    paddingBottom: 14,
   },
   modalTag: {
     fontSize: 11,
-    fontFamily: Fonts.sans,
-    color: '#FFAA00',
-    fontWeight: '600',
+    fontFamily: Fonts.display,
+    color: Colors.dark.gold,
+    fontWeight: '700',
+    letterSpacing: 1.5,
   },
   modalTitle: {
-    fontSize: 18,
+    fontSize: 20,
     fontWeight: '700',
-    fontFamily: Fonts.sans,
-    color: '#E8ECF4',
+    fontFamily: Fonts.display,
+    color: Colors.dark.textBright,
+    letterSpacing: 0.5,
   },
   closeBtn: {
-    width: 34,
-    height: 34,
-    borderRadius: 17,
-    backgroundColor: '#0E1726',
+    width: 36,
+    height: 36,
+    borderRadius: 10,
+    backgroundColor: Colors.dark.backgroundElement,
     borderWidth: 1,
-    borderColor: '#1E293B',
+    borderColor: Colors.dark.border,
     justifyContent: 'center',
     alignItems: 'center',
   },
   closeBtnText: {
     fontSize: 14,
-    color: '#8896AB',
+    color: Colors.dark.textSecondary,
     fontWeight: '700',
   },
   streakGrid: {
@@ -583,10 +634,10 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    backgroundColor: '#0E1726',
+    backgroundColor: Colors.dark.backgroundElement,
     borderWidth: 1,
-    borderColor: '#1E293B',
-    borderRadius: 12,
+    borderColor: Colors.dark.borderBright,
+    borderRadius: 14,
     padding: 14,
   },
   streakItemLeft: {
@@ -596,44 +647,50 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   streakItemIcon: {
-    fontSize: 20,
+    fontSize: 22,
   },
   streakItemTitle: {
     fontSize: 14,
     fontWeight: '700',
     fontFamily: Fonts.sans,
-    color: '#E8ECF4',
+    color: Colors.dark.textBright,
   },
   streakItemSub: {
     fontSize: 11,
     fontFamily: Fonts.sans,
-    color: '#8896AB',
+    color: Colors.dark.textSecondary,
     marginTop: 2,
   },
   streakItemRight: {
     alignItems: 'flex-end',
   },
   streakItemVal: {
-    fontSize: 18,
+    fontSize: 20,
     fontWeight: '900',
     fontFamily: Fonts.mono,
-    color: '#FFAA00',
+    color: Colors.dark.gold,
   },
   streakItemRecord: {
     fontSize: 10,
     fontFamily: Fonts.sans,
-    color: '#6B7B8F',
+    color: Colors.dark.textMuted,
   },
   modalDoneBtn: {
-    backgroundColor: '#FFAA00',
-    borderRadius: 12,
+    backgroundColor: Colors.dark.gold,
+    borderRadius: 14,
     paddingVertical: 14,
     alignItems: 'center',
+    shadowColor: Colors.dark.gold,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 10,
+    elevation: 6,
   },
   modalDoneBtnText: {
-    fontSize: 14,
-    fontFamily: Fonts.sans,
+    fontSize: 15,
+    fontFamily: Fonts.display,
     fontWeight: '700',
-    color: '#0B1120',
+    color: Colors.dark.backgroundDeep,
+    letterSpacing: 1,
   },
 });

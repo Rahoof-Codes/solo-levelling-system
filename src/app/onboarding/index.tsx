@@ -10,6 +10,10 @@ import {
   Alert,
   Platform,
 } from 'react-native';
+import Animated, {
+  FadeInDown,
+  FadeInUp,
+} from 'react-native-reanimated';
 import { useRouter } from 'expo-router';
 import { useSQLiteContext } from 'expo-sqlite';
 import { type ActivityLevel, type GoalType, type Sex, type PlanType } from '@/types';
@@ -21,7 +25,8 @@ import {
   calculateMacros,
 } from '@/lib/calculations/bmr';
 import { updateProfileOnboarding, getProfile } from '@/db/operations';
-import { Fonts, Spacing } from '@/constants/theme';
+import { Colors, Fonts, Spacing, ForgeCard } from '@/constants/theme';
+import { ParticleField } from '@/components/ui/particles';
 
 const GOAL_OPTIONS: { value: GoalType; title: string; emoji: string; subtitle: string; tag: string }[] = [
   {
@@ -45,6 +50,14 @@ const GOAL_OPTIONS: { value: GoalType; title: string; emoji: string; subtitle: s
     subtitle: 'Caloric surplus (+500 kcal) paired with training stimulus to build strength & muscle.',
     tag: '+500 kcal/day',
   },
+];
+
+const STEP_TITLES = [
+  'Body Parameters',
+  'Activity Level',
+  'Fitness Goal',
+  'Training Program',
+  'Awakening Summary',
 ];
 
 export default function OnboardingScreen() {
@@ -143,54 +156,74 @@ export default function OnboardingScreen() {
 
   return (
     <SafeAreaView style={styles.safeArea}>
+      {/* Floating Ember Particles */}
+      <ParticleField count={6} color={Colors.dark.accent} />
+
       <ScrollView contentContainerStyle={styles.container}>
-        {/* TOP HEADER */}
-        <View style={styles.header}>
-          <Text style={styles.systemTitle}>Set Up Your Profile</Text>
-          <Text style={styles.systemSubtitle}>
-            {step === 1 && 'Step 1 of 5: Body Stats'}
-            {step === 2 && 'Step 2 of 5: Daily Activity Level'}
-            {step === 3 && 'Step 3 of 5: Fitness Goal'}
-            {step === 4 && 'Step 4 of 5: Training Program'}
-            {step === 5 && 'Step 5 of 5: Your Custom Plan'}
-          </Text>
-        </View>
+        {/* SYSTEM STATUS TAG */}
+        <Animated.View entering={FadeInDown.duration(400)} style={styles.topHeader}>
+          <View style={styles.systemTagBadge}>
+            <View style={styles.systemTagDot} />
+            <Text style={styles.systemTagText}>SYSTEM // CALIBRATION</Text>
+          </View>
+          <Text style={styles.systemTitle}>{STEP_TITLES[step - 1]}</Text>
+          <Text style={styles.systemSubtitle}>Step {step} of 5 — Configure your hunter physical parameters</Text>
+
+          {/* Segmented Step Progress Bar */}
+          <View style={styles.stepProgressBar}>
+            {[1, 2, 3, 4, 5].map((s) => (
+              <View
+                key={s}
+                style={[
+                  styles.stepSegment,
+                  s <= step && styles.stepSegmentActive,
+                  s === step && styles.stepSegmentCurrent,
+                ]}
+              />
+            ))}
+          </View>
+        </Animated.View>
 
         {/* STEP 1: PHYSICAL CALIBRATION */}
         {step === 1 && (
-          <View style={styles.card}>
-            <Text style={styles.cardHeader}>Body Parameters</Text>
+          <Animated.View entering={FadeInDown.duration(450)} style={styles.card}>
+            <View style={styles.cardHeaderRow}>
+              <Text style={styles.cardHeaderIcon}>👤</Text>
+              <Text style={styles.cardHeader}>Hunter Profile</Text>
+            </View>
 
             {/* Hunter Name */}
             <View style={styles.inputGroup}>
-              <Text style={styles.inputLabel}>Hunter Name</Text>
+              <Text style={styles.inputLabel}>HUNTER NAME</Text>
               <TextInput
                 style={styles.textInput}
                 value={username}
                 onChangeText={setUsername}
                 placeholder="Enter Hunter Name"
-                placeholderTextColor="#6B7B8F"
+                placeholderTextColor={Colors.dark.textMuted}
               />
             </View>
 
             {/* Sex Toggle */}
             <View style={styles.inputGroup}>
-              <Text style={styles.inputLabel}>Biological Sex</Text>
+              <Text style={styles.inputLabel}>BIOLOGICAL SEX</Text>
               <View style={styles.toggleRow}>
                 <TouchableOpacity
                   style={[styles.toggleBtn, sex === 'male' && styles.toggleBtnActive]}
                   onPress={() => setSex('male')}
+                  activeOpacity={0.8}
                 >
                   <Text style={[styles.toggleText, sex === 'male' && styles.toggleTextActive]}>
-                    Male
+                    MALE
                   </Text>
                 </TouchableOpacity>
                 <TouchableOpacity
                   style={[styles.toggleBtn, sex === 'female' && styles.toggleBtnActive]}
                   onPress={() => setSex('female')}
+                  activeOpacity={0.8}
                 >
                   <Text style={[styles.toggleText, sex === 'female' && styles.toggleTextActive]}>
-                    Female
+                    FEMALE
                   </Text>
                 </TouchableOpacity>
               </View>
@@ -199,48 +232,51 @@ export default function OnboardingScreen() {
             {/* Age, Height, Weight */}
             <View style={styles.row}>
               <View style={[styles.inputGroup, { flex: 1 }]}>
-                <Text style={styles.inputLabel}>Age (yrs)</Text>
+                <Text style={styles.inputLabel}>AGE (YRS)</Text>
                 <TextInput
                   style={styles.textInput}
                   value={age}
                   onChangeText={setAge}
                   keyboardType="numeric"
                   placeholder="24"
-                  placeholderTextColor="#6B7B8F"
+                  placeholderTextColor={Colors.dark.textMuted}
                 />
               </View>
 
               <View style={[styles.inputGroup, { flex: 1 }]}>
-                <Text style={styles.inputLabel}>Height (cm)</Text>
+                <Text style={styles.inputLabel}>HEIGHT (CM)</Text>
                 <TextInput
                   style={styles.textInput}
                   value={heightCm}
                   onChangeText={setHeightCm}
                   keyboardType="numeric"
                   placeholder="180"
-                  placeholderTextColor="#6B7B8F"
+                  placeholderTextColor={Colors.dark.textMuted}
                 />
               </View>
 
               <View style={[styles.inputGroup, { flex: 1 }]}>
-                <Text style={styles.inputLabel}>Weight (kg)</Text>
+                <Text style={styles.inputLabel}>WEIGHT (KG)</Text>
                 <TextInput
                   style={styles.textInput}
                   value={weightKg}
                   onChangeText={setWeightKg}
                   keyboardType="numeric"
                   placeholder="75"
-                  placeholderTextColor="#6B7B8F"
+                  placeholderTextColor={Colors.dark.textMuted}
                 />
               </View>
             </View>
-          </View>
+          </Animated.View>
         )}
 
         {/* STEP 2: ACTIVITY LEVEL */}
         {step === 2 && (
-          <View style={styles.card}>
-            <Text style={styles.cardHeader}>Daily Activity Level</Text>
+          <Animated.View entering={FadeInDown.duration(450)} style={styles.card}>
+            <View style={styles.cardHeaderRow}>
+              <Text style={styles.cardHeaderIcon}>⚡</Text>
+              <Text style={styles.cardHeader}>Daily Activity Level</Text>
+            </View>
 
             <View style={styles.activityList}>
               {ACTIVITY_LEVEL_OPTIONS.map((opt) => {
@@ -250,6 +286,7 @@ export default function OnboardingScreen() {
                     key={opt.value}
                     style={[styles.activityOption, isSelected && styles.activityOptionActive]}
                     onPress={() => setActivityLevel(opt.value)}
+                    activeOpacity={0.8}
                   >
                     <View style={styles.activityHeader}>
                       <Text
@@ -260,20 +297,27 @@ export default function OnboardingScreen() {
                       >
                         {opt.label}
                       </Text>
-                      <Text style={styles.activityMultiplier}>×{opt.multiplier}</Text>
+                      <View style={[styles.multiplierBadge, isSelected && styles.multiplierBadgeActive]}>
+                        <Text style={[styles.activityMultiplier, isSelected && styles.activityMultiplierActive]}>
+                          ×{opt.multiplier}
+                        </Text>
+                      </View>
                     </View>
                     <Text style={styles.activityDesc}>{opt.description}</Text>
                   </TouchableOpacity>
                 );
               })}
             </View>
-          </View>
+          </Animated.View>
         )}
 
         {/* STEP 3: WEIGHT GOAL SECTION */}
         {step === 3 && (
-          <View style={styles.card}>
-            <Text style={styles.cardHeader}>Fitness Goal</Text>
+          <Animated.View entering={FadeInDown.duration(450)} style={styles.card}>
+            <View style={styles.cardHeaderRow}>
+              <Text style={styles.cardHeaderIcon}>🎯</Text>
+              <Text style={styles.cardHeader}>Fitness Goal</Text>
+            </View>
 
             <View style={styles.goalList}>
               {GOAL_OPTIONS.map((opt) => {
@@ -303,13 +347,16 @@ export default function OnboardingScreen() {
                 );
               })}
             </View>
-          </View>
+          </Animated.View>
         )}
 
         {/* STEP 4: TRAINING PLAN SELECTION */}
         {step === 4 && (
-          <View style={styles.card}>
-            <Text style={styles.cardHeader}>Choose Your Program</Text>
+          <Animated.View entering={FadeInDown.duration(450)} style={styles.card}>
+            <View style={styles.cardHeaderRow}>
+              <Text style={styles.cardHeaderIcon}>⚔️</Text>
+              <Text style={styles.cardHeader}>Choose Your Program</Text>
+            </View>
 
             <View style={styles.planList}>
               {/* 100-Day Plan */}
@@ -327,7 +374,7 @@ export default function OnboardingScreen() {
                   </View>
                   <View style={[styles.planDaysBadge, selectedPlan === '100day' && styles.planDaysBadgeActive]}>
                     <Text style={[styles.planDaysText, selectedPlan === '100day' && styles.planDaysTextActive]}>
-                      100 Days
+                      100 DAYS
                     </Text>
                   </View>
                 </View>
@@ -355,7 +402,7 @@ export default function OnboardingScreen() {
                   </View>
                   <View style={[styles.planDaysBadge, selectedPlan === '365day' && styles.planDaysBadgeActive]}>
                     <Text style={[styles.planDaysText, selectedPlan === '365day' && styles.planDaysTextActive]}>
-                      365 Days
+                      365 DAYS
                     </Text>
                   </View>
                 </View>
@@ -368,13 +415,16 @@ export default function OnboardingScreen() {
                 </View>
               </TouchableOpacity>
             </View>
-          </View>
+          </Animated.View>
         )}
 
         {/* STEP 5: RESULTS / SUMMARY */}
         {step === 5 && (
-          <View style={styles.card}>
-            <Text style={styles.cardHeader}>Profile Summary</Text>
+          <Animated.View entering={FadeInDown.duration(450)} style={styles.card}>
+            <View style={styles.cardHeaderRow}>
+              <Text style={styles.cardHeaderIcon}>📊</Text>
+              <Text style={styles.cardHeader}>Calibration Summary</Text>
+            </View>
 
             {/* Selected Goal Banner */}
             <View style={styles.selectedGoalBanner}>
@@ -382,7 +432,7 @@ export default function OnboardingScreen() {
                 {GOAL_CONFIG[goalType].emoji}
               </Text>
               <View style={{ flex: 1 }}>
-                <Text style={styles.selectedGoalTag}>Fitness Goal</Text>
+                <Text style={styles.selectedGoalTag}>FITNESS GOAL</Text>
                 <Text style={styles.selectedGoalName}>
                   {GOAL_CONFIG[goalType].label}
                 </Text>
@@ -398,79 +448,87 @@ export default function OnboardingScreen() {
                 {selectedPlan === '100day' ? '⚡' : '👑'}
               </Text>
               <View style={{ flex: 1 }}>
-                <Text style={styles.selectedGoalTag}>Training Program</Text>
+                <Text style={styles.selectedGoalTag}>TRAINING PROGRAM</Text>
                 <Text style={styles.selectedGoalName}>
                   {selectedPlan === '100day' ? 'Shadow Awakening' : "Monarch's Ascension"}
                 </Text>
               </View>
-              <Text style={styles.selectedPlanDays}>
-                {selectedPlan === '100day' ? '100' : '365'} Days
-              </Text>
+              <View style={styles.planDaysPill}>
+                <Text style={styles.selectedPlanDays}>
+                  {selectedPlan === '100day' ? '100' : '365'} DAYS
+                </Text>
+              </View>
             </View>
 
             <View style={styles.resultsGrid}>
               <View style={styles.resultBox}>
-                <Text style={styles.resultLabel}>BMR (Base Burn)</Text>
-                <Text style={styles.resultValue}>{bmr} kcal</Text>
+                <Text style={styles.resultLabel}>BMR (BASE BURN)</Text>
+                <Text style={styles.resultValue}>{bmr} <Text style={styles.resultUnit}>kcal</Text></Text>
               </View>
 
-              <View style={styles.resultBox}>
-                <Text style={styles.resultLabel}>Daily Target</Text>
-                <Text style={[styles.resultValue, { color: '#00A8FF' }]}>{macros.daily_calories} kcal</Text>
+              <View style={[styles.resultBox, styles.resultBoxHighlight]}>
+                <Text style={[styles.resultLabel, { color: Colors.dark.accent }]}>DAILY TARGET</Text>
+                <Text style={[styles.resultValue, { color: Colors.dark.accent }]}>
+                  {macros.daily_calories} <Text style={[styles.resultUnit, { color: Colors.dark.accentBright }]}>kcal</Text>
+                </Text>
               </View>
             </View>
 
             <View style={styles.macrosCard}>
-              <Text style={styles.macroCardTitle}>Recommended Daily Macros</Text>
+              <Text style={styles.macroCardTitle}>RECOMMENDED DAILY MACROS</Text>
               <View style={styles.macroRow}>
                 <View style={styles.macroItem}>
-                  <Text style={[styles.macroVal, { color: '#FF4444' }]}>{macros.protein_g}g</Text>
+                  <Text style={[styles.macroVal, { color: Colors.dark.danger }]}>{macros.protein_g}g</Text>
                   <Text style={styles.macroLbl}>Protein ({Math.round(GOAL_CONFIG[goalType].proteinPct * 100)}%)</Text>
                 </View>
                 <View style={styles.macroItem}>
-                  <Text style={[styles.macroVal, { color: '#FFAA00' }]}>{macros.carbs_g}g</Text>
+                  <Text style={[styles.macroVal, { color: Colors.dark.gold }]}>{macros.carbs_g}g</Text>
                   <Text style={styles.macroLbl}>Carbs ({Math.round(GOAL_CONFIG[goalType].carbsPct * 100)}%)</Text>
                 </View>
                 <View style={styles.macroItem}>
-                  <Text style={[styles.macroVal, { color: '#00FF88' }]}>{macros.fat_g}g</Text>
+                  <Text style={[styles.macroVal, { color: Colors.dark.success }]}>{macros.fat_g}g</Text>
                   <Text style={styles.macroLbl}>Fat ({Math.round(GOAL_CONFIG[goalType].fatPct * 100)}%)</Text>
                 </View>
               </View>
             </View>
 
-            <Text style={styles.awakenPrompt}>
-              "You have been chosen by the System. Complete daily quests and workouts to level up."
-            </Text>
-          </View>
+            <View style={styles.quoteBox}>
+              <Text style={styles.awakenPrompt}>
+                "You have been chosen by the System. Complete daily quests and workouts to level up."
+              </Text>
+            </View>
+          </Animated.View>
         )}
 
         {/* NAVIGATION BUTTONS */}
-        <View style={styles.buttonRow}>
+        <Animated.View entering={FadeInUp.duration(450).delay(100)} style={styles.buttonRow}>
           {step > 1 && (
             <TouchableOpacity
               style={styles.backBtn}
               onPress={() => setStep((s) => (s - 1) as any)}
+              activeOpacity={0.8}
             >
-              <Text style={styles.backBtnText}>Back</Text>
+              <Text style={styles.backBtnText}>← BACK</Text>
             </TouchableOpacity>
           )}
 
           {step < 5 ? (
-            <TouchableOpacity style={styles.nextBtn} onPress={handleNext}>
-              <Text style={styles.nextBtnText}>Next Step →</Text>
+            <TouchableOpacity style={styles.nextBtn} onPress={handleNext} activeOpacity={0.8}>
+              <Text style={styles.nextBtnText}>NEXT STEP →</Text>
             </TouchableOpacity>
           ) : (
             <TouchableOpacity
               style={[styles.awakenBtn, saving && { opacity: 0.6 }]}
               onPress={handleFinish}
               disabled={saving}
+              activeOpacity={0.8}
             >
               <Text style={styles.awakenBtnText}>
-                {saving ? 'Saving Profile...' : 'Awaken & Begin Journey →'}
+                {saving ? 'SAVING PROFILE...' : '⚔️ AWAKEN & BEGIN JOURNEY →'}
               </Text>
             </TouchableOpacity>
           )}
-        </View>
+        </Animated.View>
       </ScrollView>
     </SafeAreaView>
   );
@@ -479,67 +537,121 @@ export default function OnboardingScreen() {
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: '#0B1120',
+    backgroundColor: Colors.dark.background,
   },
   container: {
     padding: Spacing.four,
     gap: Spacing.three,
+    paddingBottom: Spacing.six,
   },
-  header: {
+  topHeader: {
     alignItems: 'center',
-    gap: 6,
+    gap: 8,
     marginVertical: Spacing.two,
   },
-  systemTitle: {
-    fontSize: 22,
+  systemTagBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingHorizontal: 12,
+    paddingVertical: 4,
+    borderRadius: 20,
+    backgroundColor: 'rgba(249, 115, 22, 0.12)',
+    borderWidth: 1,
+    borderColor: 'rgba(249, 115, 22, 0.35)',
+  },
+  systemTagDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: Colors.dark.accent,
+  },
+  systemTagText: {
+    fontSize: 11,
+    fontFamily: Fonts.mono,
     fontWeight: '700',
-    fontFamily: Fonts.sans,
-    color: '#E8ECF4',
+    color: Colors.dark.accentBright,
+    letterSpacing: 1.5,
+  },
+  systemTitle: {
+    fontSize: 24,
+    fontWeight: '800',
+    fontFamily: Fonts.display,
+    color: Colors.dark.textBright,
+    letterSpacing: 1,
   },
   systemSubtitle: {
     fontSize: 13,
     fontFamily: Fonts.sans,
-    color: '#8896AB',
+    color: Colors.dark.textSecondary,
+    textAlign: 'center',
+  },
+  stepProgressBar: {
+    flexDirection: 'row',
+    gap: 6,
+    width: '100%',
+    marginTop: 8,
+  },
+  stepSegment: {
+    flex: 1,
+    height: 4,
+    borderRadius: 2,
+    backgroundColor: Colors.dark.backgroundElement,
+  },
+  stepSegmentActive: {
+    backgroundColor: Colors.dark.accentDim,
+  },
+  stepSegmentCurrent: {
+    backgroundColor: Colors.dark.accent,
+    boxShadow: `0px 0px 8px 0px ${Colors.dark.accent}`,
   },
   card: {
-    backgroundColor: '#111827',
-    borderRadius: 16,
-    borderWidth: 1,
-    borderColor: '#1E293B',
+    backgroundColor: Colors.dark.backgroundCard,
+    borderRadius: ForgeCard.borderRadius,
+    borderWidth: ForgeCard.borderWidth,
+    borderColor: ForgeCard.borderColor,
     padding: Spacing.four,
     gap: Spacing.threeHalf,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.15,
-    shadowRadius: 10,
-    elevation: 4,
+    boxShadow: '0px 4px 16px 0px rgba(0, 0, 0, 0.4)',
+    elevation: 8,
+  },
+  cardHeaderRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    borderBottomWidth: 1,
+    borderBottomColor: Colors.dark.border,
+    paddingBottom: 10,
+  },
+  cardHeaderIcon: {
+    fontSize: 16,
   },
   cardHeader: {
     fontSize: 15,
     fontWeight: '700',
-    fontFamily: Fonts.sans,
-    color: '#00A8FF',
-    borderBottomWidth: 1,
-    borderBottomColor: '#1E293B',
-    paddingBottom: 8,
+    fontFamily: Fonts.display,
+    color: Colors.dark.accentBright,
+    letterSpacing: 1,
+    textTransform: 'uppercase',
   },
   inputGroup: {
     gap: 6,
   },
   inputLabel: {
-    fontSize: 12,
-    fontFamily: Fonts.sans,
-    color: '#8896AB',
-    fontWeight: '500',
+    fontSize: 11,
+    fontFamily: Fonts.display,
+    color: Colors.dark.textSecondary,
+    fontWeight: '700',
+    letterSpacing: 1,
   },
   textInput: {
-    backgroundColor: '#0E1726',
+    backgroundColor: Colors.dark.backgroundElement,
     borderWidth: 1,
-    borderColor: '#1E293B',
-    borderRadius: 10,
+    borderColor: Colors.dark.border,
+    borderRadius: 12,
     paddingHorizontal: 14,
     paddingVertical: 12,
-    color: '#E8ECF4',
+    color: Colors.dark.textBright,
     fontSize: 15,
     fontFamily: Fonts.sans,
   },
@@ -549,25 +661,27 @@ const styles = StyleSheet.create({
   },
   toggleBtn: {
     flex: 1,
-    backgroundColor: '#0E1726',
+    backgroundColor: Colors.dark.backgroundElement,
     borderWidth: 1,
-    borderColor: '#1E293B',
-    borderRadius: 10,
+    borderColor: Colors.dark.border,
+    borderRadius: 12,
     paddingVertical: 12,
     alignItems: 'center',
   },
   toggleBtnActive: {
-    borderColor: '#00A8FF',
-    backgroundColor: 'rgba(0, 168, 255, 0.12)',
+    borderColor: Colors.dark.accent,
+    backgroundColor: 'rgba(249, 115, 22, 0.12)',
+    boxShadow: `0px 0px 10px 0px ${Colors.dark.accentGlow}`,
   },
   toggleText: {
-    fontFamily: Fonts.sans,
-    fontSize: 14,
-    color: '#6B7B8F',
-    fontWeight: '600',
+    fontFamily: Fonts.display,
+    fontSize: 13,
+    color: Colors.dark.textMuted,
+    fontWeight: '700',
+    letterSpacing: 1,
   },
   toggleTextActive: {
-    color: '#00A8FF',
+    color: Colors.dark.accentBright,
   },
   row: {
     flexDirection: 'row',
@@ -577,16 +691,17 @@ const styles = StyleSheet.create({
     gap: Spacing.two,
   },
   activityOption: {
-    backgroundColor: '#0E1726',
+    backgroundColor: Colors.dark.backgroundElement,
     borderWidth: 1,
-    borderColor: '#1E293B',
-    borderRadius: 10,
-    padding: 12,
+    borderColor: Colors.dark.border,
+    borderRadius: 14,
+    padding: 14,
     gap: 4,
   },
   activityOptionActive: {
-    borderColor: '#00A8FF',
-    backgroundColor: 'rgba(0, 168, 255, 0.08)',
+    borderColor: Colors.dark.accent,
+    backgroundColor: 'rgba(249, 115, 22, 0.1)',
+    boxShadow: `0px 0px 12px 0px ${Colors.dark.accentGlow}`,
   },
   activityHeader: {
     flexDirection: 'row',
@@ -595,38 +710,56 @@ const styles = StyleSheet.create({
   },
   activityTitle: {
     fontSize: 14,
-    fontWeight: '600',
-    fontFamily: Fonts.sans,
-    color: '#E8ECF4',
+    fontWeight: '700',
+    fontFamily: Fonts.display,
+    color: Colors.dark.textBright,
+    letterSpacing: 0.5,
   },
   activityTitleActive: {
-    color: '#00A8FF',
+    color: Colors.dark.accentBright,
+  },
+  multiplierBadge: {
+    backgroundColor: Colors.dark.backgroundDeep,
+    borderRadius: 8,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderWidth: 1,
+    borderColor: Colors.dark.border,
+  },
+  multiplierBadgeActive: {
+    borderColor: Colors.dark.accent,
+    backgroundColor: 'rgba(249, 115, 22, 0.15)',
   },
   activityMultiplier: {
     fontSize: 12,
     fontFamily: Fonts.mono,
-    color: '#00A8FF',
+    color: Colors.dark.textSecondary,
     fontWeight: '700',
+  },
+  activityMultiplierActive: {
+    color: Colors.dark.accentBright,
   },
   activityDesc: {
     fontSize: 12,
     fontFamily: Fonts.sans,
-    color: '#8896AB',
+    color: Colors.dark.textSecondary,
+    lineHeight: 16,
   },
   goalList: {
     gap: Spacing.two,
   },
   goalOption: {
-    backgroundColor: '#0E1726',
+    backgroundColor: Colors.dark.backgroundElement,
     borderWidth: 1,
-    borderColor: '#1E293B',
-    borderRadius: 12,
+    borderColor: Colors.dark.border,
+    borderRadius: 14,
     padding: 14,
     gap: 6,
   },
   goalOptionActive: {
-    borderColor: '#00A8FF',
-    backgroundColor: 'rgba(0, 168, 255, 0.08)',
+    borderColor: Colors.dark.accent,
+    backgroundColor: 'rgba(249, 115, 22, 0.1)',
+    boxShadow: `0px 0px 12px 0px ${Colors.dark.accentGlow}`,
   },
   goalTopRow: {
     flexDirection: 'row',
@@ -645,46 +778,47 @@ const styles = StyleSheet.create({
   goalTitle: {
     fontSize: 14,
     fontWeight: '700',
-    fontFamily: Fonts.sans,
-    color: '#E8ECF4',
+    fontFamily: Fonts.display,
+    color: Colors.dark.textBright,
+    letterSpacing: 0.5,
   },
   goalTitleActive: {
-    color: '#00A8FF',
+    color: Colors.dark.accentBright,
   },
   goalTagBadge: {
-    backgroundColor: '#111827',
+    backgroundColor: Colors.dark.backgroundDeep,
     borderWidth: 1,
-    borderColor: '#1E293B',
+    borderColor: Colors.dark.border,
     borderRadius: 8,
     paddingHorizontal: 10,
     paddingVertical: 3,
   },
   goalTagBadgeActive: {
-    borderColor: 'rgba(0, 168, 255, 0.4)',
-    backgroundColor: 'rgba(0, 168, 255, 0.12)',
+    borderColor: Colors.dark.accent,
+    backgroundColor: 'rgba(249, 115, 22, 0.15)',
   },
   goalTagText: {
     fontSize: 11,
-    fontFamily: Fonts.sans,
-    color: '#8896AB',
-    fontWeight: '600',
+    fontFamily: Fonts.mono,
+    color: Colors.dark.textSecondary,
+    fontWeight: '700',
   },
   goalTagTextActive: {
-    color: '#00A8FF',
+    color: Colors.dark.accentBright,
   },
   goalSubtitle: {
     fontSize: 12,
     fontFamily: Fonts.sans,
-    color: '#8896AB',
-    lineHeight: 16,
+    color: Colors.dark.textSecondary,
+    lineHeight: 17,
   },
   selectedGoalBanner: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: 'rgba(0, 168, 255, 0.08)',
+    backgroundColor: 'rgba(249, 115, 22, 0.08)',
     borderWidth: 1,
-    borderColor: 'rgba(0, 168, 255, 0.3)',
-    borderRadius: 12,
+    borderColor: 'rgba(249, 115, 22, 0.3)',
+    borderRadius: 14,
     padding: 12,
     gap: 12,
   },
@@ -692,22 +826,24 @@ const styles = StyleSheet.create({
     fontSize: 24,
   },
   selectedGoalTag: {
-    fontSize: 11,
-    fontFamily: Fonts.sans,
-    color: '#00A8FF',
-    fontWeight: '600',
+    fontSize: 10,
+    fontFamily: Fonts.display,
+    color: Colors.dark.accentBright,
+    fontWeight: '700',
+    letterSpacing: 1,
   },
   selectedGoalName: {
     fontSize: 14,
     fontWeight: '700',
-    fontFamily: Fonts.sans,
-    color: '#E8ECF4',
+    fontFamily: Fonts.display,
+    color: Colors.dark.textBright,
+    letterSpacing: 0.5,
   },
   selectedGoalOffset: {
     fontSize: 13,
     fontFamily: Fonts.mono,
-    fontWeight: '700',
-    color: '#00FF88',
+    fontWeight: '800',
+    color: Colors.dark.success,
   },
   resultsGrid: {
     flexDirection: 'row',
@@ -715,40 +851,52 @@ const styles = StyleSheet.create({
   },
   resultBox: {
     flex: 1,
-    backgroundColor: '#0E1726',
+    backgroundColor: Colors.dark.backgroundElement,
     borderWidth: 1,
-    borderColor: '#1E293B',
-    borderRadius: 12,
+    borderColor: Colors.dark.border,
+    borderRadius: 14,
     padding: 12,
     alignItems: 'center',
     gap: 4,
   },
+  resultBoxHighlight: {
+    borderColor: 'rgba(249, 115, 22, 0.4)',
+    backgroundColor: 'rgba(249, 115, 22, 0.06)',
+  },
   resultLabel: {
-    fontSize: 11,
-    fontFamily: Fonts.sans,
-    color: '#8896AB',
+    fontSize: 10,
+    fontFamily: Fonts.display,
+    color: Colors.dark.textSecondary,
+    letterSpacing: 1,
     textAlign: 'center',
   },
   resultValue: {
-    fontSize: 18,
-    fontWeight: '800',
+    fontSize: 20,
+    fontWeight: '900',
     fontFamily: Fonts.mono,
-    color: '#E8ECF4',
+    color: Colors.dark.textBright,
   },
-  macrosCard: {
-    backgroundColor: '#0E1726',
-    borderWidth: 1,
-    borderColor: '#1E293B',
-    borderRadius: 12,
-    padding: 12,
-    gap: 8,
-  },
-  macroCardTitle: {
+  resultUnit: {
     fontSize: 12,
     fontFamily: Fonts.sans,
-    fontWeight: '600',
-    color: '#00A8FF',
+    color: Colors.dark.textMuted,
+    fontWeight: '400',
+  },
+  macrosCard: {
+    backgroundColor: Colors.dark.backgroundElement,
+    borderWidth: 1,
+    borderColor: Colors.dark.border,
+    borderRadius: 14,
+    padding: 14,
+    gap: 10,
+  },
+  macroCardTitle: {
+    fontSize: 11,
+    fontFamily: Fonts.display,
+    fontWeight: '700',
+    color: Colors.dark.accentBright,
     textAlign: 'center',
+    letterSpacing: 1,
   },
   macroRow: {
     flexDirection: 'row',
@@ -766,15 +914,22 @@ const styles = StyleSheet.create({
   macroLbl: {
     fontSize: 10,
     fontFamily: Fonts.sans,
-    color: '#8896AB',
+    color: Colors.dark.textSecondary,
+  },
+  quoteBox: {
+    backgroundColor: 'rgba(249, 115, 22, 0.05)',
+    borderLeftWidth: 3,
+    borderLeftColor: Colors.dark.accent,
+    borderRadius: 8,
+    padding: 12,
   },
   awakenPrompt: {
-    fontSize: 13,
+    fontSize: 12,
     fontStyle: 'italic',
     fontFamily: Fonts.sans,
-    color: '#8896AB',
+    color: Colors.dark.textSecondary,
     textAlign: 'center',
-    paddingHorizontal: 8,
+    lineHeight: 18,
   },
   buttonRow: {
     flexDirection: 'row',
@@ -783,67 +938,67 @@ const styles = StyleSheet.create({
   },
   backBtn: {
     flex: 1,
-    backgroundColor: '#111827',
+    backgroundColor: Colors.dark.backgroundElement,
     borderWidth: 1,
-    borderColor: '#1E293B',
-    borderRadius: 12,
+    borderColor: Colors.dark.borderBright,
+    borderRadius: 14,
     paddingVertical: 14,
     alignItems: 'center',
   },
   backBtnText: {
-    fontFamily: Fonts.sans,
-    color: '#8896AB',
-    fontWeight: '600',
-    fontSize: 14,
+    fontFamily: Fonts.display,
+    color: Colors.dark.textSecondary,
+    fontWeight: '700',
+    fontSize: 13,
+    letterSpacing: 1,
   },
   nextBtn: {
     flex: 2,
-    backgroundColor: '#0066BB',
-    borderRadius: 12,
+    backgroundColor: Colors.dark.accent,
+    borderRadius: 14,
     paddingVertical: 14,
     alignItems: 'center',
-    borderWidth: 1,
-    borderColor: '#00A8FF',
+    boxShadow: `0px 4px 14px 0px ${Colors.dark.accentGlow}`,
+    elevation: 6,
   },
   nextBtnText: {
-    fontFamily: Fonts.sans,
-    color: '#FFFFFF',
-    fontWeight: '700',
+    fontFamily: Fonts.display,
+    color: '#080604',
+    fontWeight: '800',
     fontSize: 14,
+    letterSpacing: 1,
   },
   awakenBtn: {
     flex: 2,
-    backgroundColor: '#00A8FF',
-    borderRadius: 12,
+    backgroundColor: Colors.dark.accent,
+    borderRadius: 14,
     paddingVertical: 16,
     alignItems: 'center',
-    shadowColor: '#00A8FF',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 10,
+    boxShadow: `0px 4px 20px 0px ${Colors.dark.accentGlow}`,
     elevation: 8,
   },
   awakenBtnText: {
-    fontFamily: Fonts.sans,
-    color: '#0B1120',
-    fontWeight: '700',
-    fontSize: 15,
+    fontFamily: Fonts.display,
+    color: '#080604',
+    fontWeight: '900',
+    fontSize: 14,
+    letterSpacing: 1,
   },
-  // Plan selection styles
   planList: {
     gap: Spacing.two,
   },
   planOption: {
-    backgroundColor: '#0E1726',
+    backgroundColor: Colors.dark.backgroundElement,
     borderWidth: 1,
-    borderColor: '#1E293B',
-    borderRadius: 14,
+    borderColor: Colors.dark.border,
+    borderRadius: 16,
     padding: 14,
     gap: 8,
   },
   planOptionActive: {
-    borderColor: '#00A8FF',
-    backgroundColor: 'rgba(0, 168, 255, 0.08)',
+    borderColor: Colors.dark.accent,
+    backgroundColor: 'rgba(249, 115, 22, 0.1)',
+    boxShadow: `0px 0px 12px 0px ${Colors.dark.accentGlow}`,
   },
   planTopRow: {
     flexDirection: 'row',
@@ -862,65 +1017,76 @@ const styles = StyleSheet.create({
   planTitle: {
     fontSize: 15,
     fontWeight: '700',
-    color: '#E8ECF4',
-    fontFamily: Fonts.sans,
+    color: Colors.dark.textBright,
+    fontFamily: Fonts.display,
+    letterSpacing: 0.5,
   },
   planTitleActive: {
-    color: '#00A8FF',
+    color: Colors.dark.accentBright,
   },
   planDaysBadge: {
-    backgroundColor: '#111827',
+    backgroundColor: Colors.dark.backgroundDeep,
     borderWidth: 1,
-    borderColor: '#1E293B',
+    borderColor: Colors.dark.border,
     borderRadius: 8,
     paddingHorizontal: 10,
     paddingVertical: 4,
   },
   planDaysBadgeActive: {
-    borderColor: 'rgba(0, 168, 255, 0.4)',
-    backgroundColor: 'rgba(0, 168, 255, 0.12)',
+    borderColor: Colors.dark.accent,
+    backgroundColor: 'rgba(249, 115, 22, 0.15)',
   },
   planDaysText: {
     fontSize: 11,
-    fontFamily: Fonts.sans,
-    color: '#8896AB',
-    fontWeight: '600',
+    fontFamily: Fonts.mono,
+    color: Colors.dark.textSecondary,
+    fontWeight: '700',
   },
   planDaysTextActive: {
-    color: '#00A8FF',
+    color: Colors.dark.accentBright,
   },
   planSubtitle: {
     fontSize: 12,
     fontFamily: Fonts.sans,
-    color: '#8896AB',
+    color: Colors.dark.textSecondary,
     lineHeight: 17,
   },
   planPhases: {
-    backgroundColor: '#111827',
+    backgroundColor: Colors.dark.backgroundDeep,
     borderRadius: 8,
     paddingVertical: 6,
     paddingHorizontal: 10,
     alignSelf: 'flex-start',
+    borderWidth: 1,
+    borderColor: Colors.dark.border,
   },
   planPhaseTag: {
     fontSize: 11,
-    fontFamily: Fonts.sans,
-    color: '#00A8FF',
+    fontFamily: Fonts.mono,
+    color: Colors.dark.accentBright,
   },
   selectedPlanBanner: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: 'rgba(0, 168, 255, 0.08)',
+    backgroundColor: 'rgba(249, 115, 22, 0.08)',
     borderWidth: 1,
-    borderColor: 'rgba(0, 168, 255, 0.3)',
-    borderRadius: 12,
+    borderColor: 'rgba(249, 115, 22, 0.3)',
+    borderRadius: 14,
     padding: 12,
     gap: 12,
   },
+  planDaysPill: {
+    backgroundColor: Colors.dark.backgroundDeep,
+    borderRadius: 8,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderWidth: 1,
+    borderColor: Colors.dark.border,
+  },
   selectedPlanDays: {
-    fontSize: 12,
-    fontFamily: Fonts.sans,
-    fontWeight: '700',
-    color: '#00A8FF',
+    fontSize: 11,
+    fontFamily: Fonts.mono,
+    fontWeight: '800',
+    color: Colors.dark.accentBright,
   },
 });

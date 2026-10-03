@@ -28,7 +28,7 @@ import Animated, {
   FadeInDown,
 } from 'react-native-reanimated';
 import type { Quest } from '@/types';
-import { Fonts, Spacing, StatColors } from '@/constants/theme';
+import { Fonts, Spacing, StatColors, Colors } from '@/constants/theme';
 import {
   DEFAULT_TRAINING_SECONDS,
   MINIMUM_SESSION_SECONDS,
@@ -196,7 +196,7 @@ export function QuestSessionModal({
 
   if (!quest) return null;
 
-  const statColor = StatColors[quest.stat_affected] || '#00F0FF';
+  const statColor = StatColors[quest.stat_affected] || Colors.dark.cyan;
 
   return (
     <Modal visible={visible} animationType="slide" presentationStyle="fullScreen">
@@ -212,7 +212,7 @@ export function QuestSessionModal({
             <Text style={styles.closeBtnText}>✕</Text>
           </TouchableOpacity>
           <View style={styles.topBarCenter}>
-            <Text style={styles.topBarTag}>ACTIVE QUEST</Text>
+            <Text style={styles.topBarTag}>⟨ SYSTEM OBJECTIVE ⟩</Text>
             <Text style={styles.topBarTitle} numberOfLines={1}>
               {quest.title}
             </Text>
@@ -230,6 +230,7 @@ export function QuestSessionModal({
         >
           {/* QUEST DETAILS CARD */}
           <Animated.View entering={FadeInDown.duration(400)} style={styles.questDetailsCard}>
+            <View style={[styles.leftAccentStripe, { backgroundColor: statColor }]} />
             <View style={styles.questMetaRow}>
               <View style={[styles.categoryBadge, { borderColor: `${statColor}66` }]}>
                 <Text style={[styles.categoryText, { color: statColor }]}>
@@ -260,7 +261,7 @@ export function QuestSessionModal({
                   style={[
                     styles.timerRingFill,
                     {
-                      borderColor: isSessionTargetReached ? '#00FF88' : statColor,
+                      borderColor: isSessionTargetReached ? Colors.dark.success : statColor,
                     },
                   ]}
                 />
@@ -280,9 +281,9 @@ export function QuestSessionModal({
                           top: RING_SIZE / 2 + Math.sin(rad) * dotRadius - 4,
                           backgroundColor: isActive
                             ? isSessionTargetReached
-                              ? '#00FF88'
+                              ? Colors.dark.success
                               : statColor
-                            : '#1E293B',
+                            : Colors.dark.border,
                         },
                       ]}
                     />
@@ -300,7 +301,7 @@ export function QuestSessionModal({
                 >
                   {formatTimerDisplay(elapsedSeconds)}
                 </Text>
-                <Text style={styles.timerEstimate}>30 min session</Text>
+                <Text style={styles.timerEstimate}>30 MIN SESSION</Text>
               </View>
             </View>
 
@@ -310,13 +311,13 @@ export function QuestSessionModal({
               onPress={togglePause}
               activeOpacity={0.7}
             >
-              <Text style={styles.pauseBtnText}>
-                {isPaused ? '▶ Resume' : '⏸ Pause'}
+              <Text style={[styles.pauseBtnText, isPaused && styles.pauseBtnTextPaused]}>
+                {isPaused ? '▶ RESUME' : '⏸ PAUSE'}
               </Text>
             </TouchableOpacity>
 
             {isPaused && (
-              <Text style={styles.pausedLabel}>Timer Paused</Text>
+              <Text style={styles.pausedLabel}>TIMER PAUSED</Text>
             )}
           </Animated.View>
         </ScrollView>
@@ -325,8 +326,8 @@ export function QuestSessionModal({
         <View style={styles.bottomArea}>
           {!isMinTimeReached ? (
             <View style={styles.monitoringBadge}>
-              <Text style={styles.monitoringTag}>SYSTEM DIRECTIVE</Text>
-              <Text style={styles.monitoringText}>⚡ Quest in progress • Stay focused on your objective</Text>
+              <Text style={styles.monitoringTag}>⟨ SYSTEM DIRECTIVE ⟩</Text>
+              <Text style={styles.monitoringText}>⚡ Quest in progress • Maintain focus until completion</Text>
             </View>
           ) : (
             <Animated.View
@@ -334,12 +335,12 @@ export function QuestSessionModal({
               style={[styles.completeBtnWrapper, completeBtnAnimStyle]}
             >
               <TouchableOpacity
-                style={[styles.completeBtn, { backgroundColor: '#0066BB', borderColor: statColor }]}
+                style={[styles.completeBtn, { backgroundColor: Colors.dark.accent, borderColor: statColor }]}
                 onPress={handleComplete}
                 activeOpacity={0.8}
               >
                 <Text style={styles.completeBtnText}>
-                  ⚡ Complete Quest (+{quest.xp_reward} XP)
+                  ⚡ COMPLETE QUEST (+{quest.xp_reward} XP)
                 </Text>
               </TouchableOpacity>
             </Animated.View>
@@ -351,7 +352,7 @@ export function QuestSessionModal({
             onPress={handleCancel}
             activeOpacity={0.7}
           >
-            <Text style={styles.cancelActionText}>Cancel Quest</Text>
+            <Text style={styles.cancelActionText}>ABANDON QUEST</Text>
           </TouchableOpacity>
         </View>
       </View>
@@ -362,7 +363,7 @@ export function QuestSessionModal({
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#0B1120',
+    backgroundColor: Colors.dark.backgroundDeep,
   },
 
   // --- Top Bar ---
@@ -372,52 +373,55 @@ const styles = StyleSheet.create({
     paddingHorizontal: Spacing.threeHalf,
     paddingTop: Platform.OS === 'ios' ? 54 : Spacing.four,
     paddingBottom: Spacing.three,
-    backgroundColor: '#0F172A',
+    backgroundColor: Colors.dark.backgroundCard,
     borderBottomWidth: 1,
-    borderBottomColor: '#1E293B',
+    borderBottomColor: Colors.dark.border,
     gap: Spacing.two,
   },
   closeBtn: {
     width: 36,
     height: 36,
     borderRadius: 18,
-    backgroundColor: 'rgba(255, 255, 255, 0.06)',
+    backgroundColor: 'rgba(239, 68, 68, 0.1)',
+    borderWidth: 1,
+    borderColor: 'rgba(239, 68, 68, 0.3)',
     alignItems: 'center',
     justifyContent: 'center',
   },
   closeBtnText: {
-    color: '#94A3B8',
+    color: '#EF4444',
     fontSize: 16,
-    fontWeight: '600',
+    fontWeight: '700',
   },
   topBarCenter: {
     flex: 1,
     gap: 2,
   },
   topBarTag: {
-    fontFamily: Fonts.mono,
+    fontFamily: Fonts.display,
     fontSize: 10,
     fontWeight: '700',
-    color: '#00A8FF',
+    color: Colors.dark.accent,
     letterSpacing: 1.5,
   },
   topBarTitle: {
-    fontFamily: Fonts.sans,
-    fontSize: 16,
+    fontFamily: Fonts.display,
+    fontSize: 17,
     fontWeight: '700',
-    color: '#F8FAFC',
+    color: Colors.dark.textBright,
+    letterSpacing: 0.5,
   },
   statBadge: {
     paddingHorizontal: 10,
     paddingVertical: 5,
     borderRadius: 8,
-    backgroundColor: 'rgba(0, 168, 255, 0.1)',
+    backgroundColor: 'rgba(139, 92, 246, 0.12)',
     borderWidth: 1,
   },
   statBadgeText: {
     fontFamily: Fonts.mono,
     fontSize: 12,
-    fontWeight: '700',
+    fontWeight: '800',
   },
 
   // --- Scroll Content ---
@@ -428,12 +432,23 @@ const styles = StyleSheet.create({
 
   // --- Quest Details Card ---
   questDetailsCard: {
-    backgroundColor: '#0F172A',
+    backgroundColor: Colors.dark.backgroundCard,
     borderRadius: 16,
-    borderWidth: 1,
-    borderColor: '#1E293B',
+    borderWidth: 1.5,
+    borderColor: Colors.dark.borderBright,
     padding: Spacing.four,
     gap: Spacing.two,
+    position: 'relative',
+    overflow: 'hidden',
+  },
+  leftAccentStripe: {
+    position: 'absolute',
+    left: 0,
+    top: 0,
+    bottom: 0,
+    width: 4,
+    borderTopLeftRadius: 16,
+    borderBottomLeftRadius: 16,
   },
   questMetaRow: {
     flexDirection: 'row',
@@ -444,11 +459,11 @@ const styles = StyleSheet.create({
     paddingHorizontal: 8,
     paddingVertical: 3,
     borderRadius: 6,
-    backgroundColor: 'rgba(255, 255, 255, 0.04)',
+    backgroundColor: Colors.dark.backgroundElement,
     borderWidth: 1,
   },
   categoryText: {
-    fontFamily: Fonts.mono,
+    fontFamily: Fonts.display,
     fontSize: 10,
     fontWeight: '700',
     letterSpacing: 1,
@@ -456,19 +471,20 @@ const styles = StyleSheet.create({
   statEffectText: {
     fontFamily: Fonts.mono,
     fontSize: 12,
-    fontWeight: '700',
+    fontWeight: '800',
   },
   questTitle: {
-    fontFamily: Fonts.sans,
-    fontSize: 18,
-    fontWeight: '800',
-    color: '#F1F5F9',
+    fontFamily: Fonts.display,
+    fontSize: 20,
+    fontWeight: '700',
+    color: Colors.dark.textBright,
+    letterSpacing: 0.5,
   },
   questDescription: {
     fontFamily: Fonts.sans,
     fontSize: 13,
-    color: '#94A3B8',
-    lineHeight: 19,
+    color: Colors.dark.textSecondary,
+    lineHeight: 20,
   },
 
   // --- Timer Section ---
@@ -489,7 +505,7 @@ const styles = StyleSheet.create({
     height: RING_SIZE,
     borderRadius: RING_SIZE / 2,
     borderWidth: 3,
-    borderColor: '#1E293B',
+    borderColor: Colors.dark.border,
   },
   timerRingProgress: {
     position: 'absolute',
@@ -516,55 +532,60 @@ const styles = StyleSheet.create({
   },
   timerText: {
     fontFamily: Fonts.mono,
-    fontSize: 32,
-    fontWeight: '800',
-    color: '#F8FAFC',
+    fontSize: 34,
+    fontWeight: '900',
+    color: Colors.dark.textBright,
     letterSpacing: 2,
   },
   timerTextComplete: {
-    color: '#00FF88',
+    color: Colors.dark.success,
   },
   timerEstimate: {
-    fontFamily: Fonts.mono,
-    fontSize: 11,
-    color: '#64748B',
-    letterSpacing: 0.5,
+    fontFamily: Fonts.display,
+    fontSize: 10,
+    color: Colors.dark.textMuted,
+    letterSpacing: 1.5,
+    fontWeight: '700',
   },
 
   // --- Controls ---
   pauseBtn: {
-    paddingHorizontal: 24,
+    paddingHorizontal: 26,
     paddingVertical: 10,
     borderRadius: 20,
-    backgroundColor: 'rgba(0, 168, 255, 0.1)',
-    borderWidth: 1,
-    borderColor: '#00A8FF',
+    backgroundColor: 'rgba(139, 92, 246, 0.12)',
+    borderWidth: 1.5,
+    borderColor: Colors.dark.accent,
   },
   pauseBtnPaused: {
-    backgroundColor: 'rgba(255, 170, 0, 0.15)',
-    borderColor: '#FFAA00',
+    backgroundColor: 'rgba(245, 158, 11, 0.15)',
+    borderColor: '#F59E0B',
   },
   pauseBtnText: {
-    fontFamily: Fonts.mono,
+    fontFamily: Fonts.display,
     fontSize: 13,
     fontWeight: '700',
-    color: '#00A8FF',
+    color: Colors.dark.accentBright,
+    letterSpacing: 1,
+  },
+  pauseBtnTextPaused: {
+    color: '#F59E0B',
   },
   pausedLabel: {
-    fontFamily: Fonts.mono,
+    fontFamily: Fonts.display,
     fontSize: 11,
-    color: '#FFAA00',
-    letterSpacing: 1,
-    textTransform: 'uppercase',
+    color: '#F59E0B',
+    letterSpacing: 1.5,
+    fontWeight: '700',
   },
 
   // --- Bottom Area ---
   bottomArea: {
     padding: Spacing.four,
     paddingBottom: Platform.OS === 'ios' ? 38 : Spacing.four,
-    backgroundColor: '#0F172A',
+    backgroundColor: Colors.dark.backgroundCard,
     borderTopWidth: 1,
-    borderTopColor: '#1E293B',
+    borderTopColor: Colors.dark.border,
     gap: Spacing.two,
   },
   monitoringBadge: {
@@ -572,59 +593,61 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     paddingVertical: Spacing.three,
     paddingHorizontal: Spacing.four,
-    backgroundColor: 'rgba(0, 168, 255, 0.05)',
+    backgroundColor: 'rgba(139, 92, 246, 0.06)',
     borderRadius: 14,
     borderWidth: 1,
-    borderColor: 'rgba(0, 168, 255, 0.2)',
+    borderColor: 'rgba(139, 92, 246, 0.25)',
     gap: 4,
   },
   monitoringTag: {
-    fontFamily: Fonts.mono,
+    fontFamily: Fonts.display,
     fontSize: 10,
     letterSpacing: 2,
-    color: '#00A8FF',
-    textTransform: 'uppercase',
+    color: Colors.dark.accent,
+    fontWeight: '700',
   },
   monitoringText: {
-    fontFamily: Fonts.mono,
+    fontFamily: Fonts.sans,
     fontSize: 12,
-    color: '#94A3B8',
+    color: Colors.dark.textSecondary,
     textAlign: 'center',
   },
   completeBtnWrapper: {
     width: '100%',
-    shadowColor: '#00A8FF',
+    shadowColor: Colors.dark.accent,
     shadowOffset: { width: 0, height: 0 },
     shadowRadius: 20,
     elevation: 8,
   },
   completeBtn: {
-    borderWidth: 1,
+    borderWidth: 1.5,
     borderRadius: 14,
     paddingVertical: 16,
     alignItems: 'center',
     width: '100%',
   },
   completeBtnText: {
-    fontFamily: Fonts.sans,
+    fontFamily: Fonts.display,
     fontSize: 15,
     fontWeight: '700',
     color: '#FFFFFF',
+    letterSpacing: 0.5,
   },
   cancelActionBtn: {
     paddingVertical: 12,
     alignItems: 'center',
     justifyContent: 'center',
     borderRadius: 10,
-    backgroundColor: 'rgba(255, 255, 255, 0.04)',
+    backgroundColor: 'rgba(239, 68, 68, 0.06)',
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.08)',
+    borderColor: 'rgba(239, 68, 68, 0.2)',
     marginTop: 4,
   },
   cancelActionText: {
-    fontFamily: Fonts.sans,
-    fontSize: 13,
-    fontWeight: '600',
-    color: '#94A3B8',
+    fontFamily: Fonts.display,
+    fontSize: 12,
+    fontWeight: '700',
+    color: '#EF4444',
+    letterSpacing: 1,
   },
 });

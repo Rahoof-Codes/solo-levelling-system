@@ -5,13 +5,11 @@ import Animated, {
   useAnimatedStyle,
   withTiming,
   withDelay,
-  withSpring,
   Easing,
   FadeIn,
-  ZoomIn,
 } from 'react-native-reanimated';
 import { type Profile, Stat } from '@/types';
-import { StatColors, Fonts, Spacing } from '@/constants/theme';
+import { StatColors, StatGlows, Colors, Fonts, Spacing } from '@/constants/theme';
 import { STAT_INFO } from '@/lib/calculations/leveling';
 
 interface StatBarsProps {
@@ -32,6 +30,7 @@ function AnimatedStatBar({
   index: number;
 }) {
   const color = StatColors[statKey];
+  const glow = StatGlows[statKey];
   const info = STAT_INFO[statKey];
   const targetPct = Math.max(3, Math.min(100, (xp / maxXP) * 100));
 
@@ -39,9 +38,9 @@ function AnimatedStatBar({
 
   useEffect(() => {
     barWidth.value = withDelay(
-      200 + index * 120,
+      250 + index * 100,
       withTiming(targetPct, {
-        duration: 800,
+        duration: 900,
         easing: Easing.out(Easing.cubic),
       })
     );
@@ -49,8 +48,6 @@ function AnimatedStatBar({
 
   const barAnimStyle = useAnimatedStyle(() => ({
     width: `${barWidth.value}%`,
-    backgroundColor: color,
-    shadowColor: color,
   }));
 
   return (
@@ -58,19 +55,34 @@ function AnimatedStatBar({
       entering={FadeIn.duration(400).delay(150 + index * 80)}
       style={styles.row}
     >
+      {/* Stat badge */}
       <View style={styles.statMeta}>
-        <View style={styles.badgeWrapper}>
+        <View style={[styles.statBadge, { borderColor: color, backgroundColor: glow }]}>
           <Text style={[styles.statKey, { color }]}>{statKey}</Text>
         </View>
         <View style={styles.infoWrapper}>
           <Text style={styles.statName}>{info.label}</Text>
           <Text style={styles.statDesc}>{info.description}</Text>
         </View>
-        <Text style={[styles.statValue, { color }]}>{xp}</Text>
+        <View style={[styles.statValueBadge, { borderColor: color }]}>
+          <Text style={[styles.statValue, { color }]}>{xp}</Text>
+        </View>
       </View>
 
+      {/* Progress bar */}
       <View style={styles.barTrack}>
-        <Animated.View style={[styles.barFill, barAnimStyle]} />
+        <Animated.View
+          style={[
+            styles.barFill,
+            {
+              backgroundColor: color,
+              boxShadow: `0px 0px 6px 0px ${glow}`,
+            },
+            barAnimStyle,
+          ]}
+        />
+        {/* Shine overlay */}
+        <View style={styles.barShine} />
       </View>
     </Animated.View>
   );
@@ -85,14 +97,17 @@ export function StatBars({ profile }: StatBarsProps) {
     { key: Stat.PER, label: 'PER', xp: profile.per_xp },
   ];
 
-  // Scale bars relative to the highest stat (or 100 base)
   const maxStatXP = Math.max(100, ...statsList.map((s) => s.xp));
 
   return (
     <View style={styles.container}>
+      {/* Header */}
       <View style={styles.header}>
-        <Text style={styles.headerTitle}>Core Stats</Text>
-        <Text style={styles.headerSub}>Attributes</Text>
+        <View style={styles.headerLeft}>
+          <View style={styles.headerEmber} />
+          <Text style={styles.headerTitle}>CORE ATTRIBUTES</Text>
+        </View>
+        <Text style={styles.headerSub}>Stats</Text>
       </View>
 
       <View style={styles.list}>
@@ -113,89 +128,121 @@ export function StatBars({ profile }: StatBarsProps) {
 
 const styles = StyleSheet.create({
   container: {
-    backgroundColor: 'rgba(17, 24, 39, 0.75)',
-    borderRadius: 14,
+    backgroundColor: Colors.dark.backgroundElement,
+    borderRadius: 18,
     borderWidth: 1,
-    borderColor: '#1E293B',
+    borderColor: Colors.dark.borderBright,
     padding: Spacing.threeHalf,
-    gap: Spacing.three,
+    gap: Spacing.threeHalf,
+    boxShadow: '0px 4px 14px 0px rgba(0, 0, 0, 0.35)',
+    elevation: 6,
   },
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    alignItems: 'baseline',
+    alignItems: 'center',
     borderBottomWidth: 1,
-    borderBottomColor: '#1E293B',
-    paddingBottom: 8,
+    borderBottomColor: Colors.dark.border,
+    paddingBottom: 10,
+  },
+  headerLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+  },
+  headerEmber: {
+    width: 8,
+    height: 8,
+    backgroundColor: Colors.dark.accent,
+    borderRadius: 4,
+    boxShadow: `0px 0px 6px 0px ${Colors.dark.accentGlow}`,
   },
   headerTitle: {
     fontSize: 15,
     fontWeight: '700',
-    fontFamily: Fonts.sans,
-    color: '#E8ECF4',
-    letterSpacing: 0.3,
+    fontFamily: Fonts.display,
+    color: Colors.dark.textBright,
+    letterSpacing: 1.5,
   },
   headerSub: {
     fontSize: 11,
     fontFamily: Fonts.sans,
-    color: '#6B7B8F',
+    color: Colors.dark.textMuted,
     fontWeight: '500',
   },
   list: {
     gap: Spacing.three,
-    marginTop: 4,
   },
   row: {
-    gap: 6,
+    gap: 8,
   },
   statMeta: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
   },
-  badgeWrapper: {
-    width: 44,
+  statBadge: {
+    width: 42,
+    height: 28,
+    borderRadius: 8,
+    borderWidth: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   statKey: {
-    fontSize: 15,
+    fontSize: 13,
     fontWeight: '900',
     fontFamily: Fonts.mono,
     letterSpacing: 1,
   },
   infoWrapper: {
     flex: 1,
-    paddingHorizontal: 8,
+    paddingHorizontal: 10,
   },
   statName: {
     fontSize: 13,
     fontWeight: '600',
     fontFamily: Fonts.sans,
-    color: '#D2E0F5',
+    color: Colors.dark.text,
   },
   statDesc: {
     fontSize: 10,
     fontFamily: Fonts.sans,
-    color: '#6B7B8F',
+    color: Colors.dark.textMuted,
+  },
+  statValueBadge: {
+    borderWidth: 1,
+    borderRadius: 8,
+    paddingHorizontal: 10,
+    paddingVertical: 3,
+    backgroundColor: 'rgba(249, 115, 22, 0.04)',
   },
   statValue: {
-    fontSize: 14,
+    fontSize: 15,
     fontWeight: '800',
     fontFamily: Fonts.mono,
   },
   barTrack: {
-    height: 8,
-    backgroundColor: '#0B1120',
-    borderRadius: 4,
+    height: 10,
+    backgroundColor: Colors.dark.backgroundDeep,
+    borderRadius: 5,
     overflow: 'hidden',
     borderWidth: 1,
-    borderColor: '#1E293B',
+    borderColor: Colors.dark.border,
+    position: 'relative',
   },
   barFill: {
     height: '100%',
     borderRadius: 4,
-    shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 0.6,
-    shadowRadius: 4,
-    elevation: 3,
+  },
+  barShine: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    height: '45%',
+    backgroundColor: 'rgba(255, 255, 255, 0.06)',
+    borderTopLeftRadius: 5,
+    borderTopRightRadius: 5,
   },
 });

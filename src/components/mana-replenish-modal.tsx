@@ -18,7 +18,7 @@ import Animated, {
   SlideInUp,
   ZoomIn,
 } from 'react-native-reanimated';
-import { Fonts, Spacing } from '@/constants/theme';
+import { Fonts, Spacing, Colors } from '@/constants/theme';
 
 const { width } = Dimensions.get('window');
 
@@ -68,7 +68,7 @@ export function ManaReplenishModal({
       gaugeFill.value = prevPercent;
       gaugeFill.value = withDelay(400, withTiming(newPercent, { duration: 800, easing: Easing.out(Easing.cubic) }));
     }
-  }, [visible, totalCaloriesToday, calories]);
+  }, [visible, totalCaloriesToday, calories, prevPercent, newPercent]);
 
   const animatedPulseStyle = useAnimatedStyle(() => ({
     transform: [{ scale: pulseScale.value }],
@@ -93,10 +93,16 @@ export function ManaReplenishModal({
           entering={SlideInUp.springify().damping(16).stiffness(180)}
           style={styles.container}
         >
+          {/* Ornate corners */}
+          <View style={[styles.corner, styles.cornerTL]} />
+          <View style={[styles.corner, styles.cornerTR]} />
+          <View style={[styles.corner, styles.cornerBL]} />
+          <View style={[styles.corner, styles.cornerBR]} />
+
           {/* Header */}
           <View style={styles.header}>
-            <Text style={styles.systemTag}>Nutrition</Text>
-            <Text style={styles.title}>Energy Replenished!</Text>
+            <Text style={styles.systemTag}>⟨ SYSTEM // RECOVERY ⟩</Text>
+            <Text style={styles.title}>MANA REPLENISHED</Text>
             <Text style={styles.mealNameText}>"{mealName}"</Text>
           </View>
 
@@ -106,14 +112,14 @@ export function ManaReplenishModal({
             <Animated.View style={[styles.manaOrb, animatedPulseStyle]}>
               <Text style={styles.orbEmoji}>⚡</Text>
               <Text style={styles.orbText}>+{Math.round(calories)}</Text>
-              <Text style={styles.orbUnit}>kcal</Text>
+              <Text style={styles.orbUnit}>KCAL / MP</Text>
             </Animated.View>
           </View>
 
           {/* GAUGE PROGRESS BAR */}
           <View style={styles.gaugeContainer}>
             <View style={styles.gaugeHeader}>
-              <Text style={styles.gaugeLabel}>Daily Energy</Text>
+              <Text style={styles.gaugeLabel}>DAILY MANA CAPACITY</Text>
               <Text style={styles.gaugeNumbers}>
                 {Math.round(totalCaloriesToday)} / {Math.round(targetCalories)} kcal
               </Text>
@@ -127,30 +133,30 @@ export function ManaReplenishModal({
           <View style={styles.macrosRow}>
             {/* Protein */}
             <Animated.View entering={ZoomIn.delay(200)} style={styles.macroTile}>
-              <Text style={[styles.macroTileKey, { color: '#FF4444' }]}>Protein</Text>
+              <Text style={[styles.macroTileKey, { color: '#EF4444' }]}>PROTEIN</Text>
               <Text style={styles.macroTileVal}>+{Math.round(protein)}g</Text>
-              <Text style={styles.macroTileSub}>Recovery</Text>
+              <Text style={styles.macroTileSub}>Muscle Restore</Text>
             </Animated.View>
 
             {/* Carbs */}
             <Animated.View entering={ZoomIn.delay(300)} style={styles.macroTile}>
-              <Text style={[styles.macroTileKey, { color: '#FFAA00' }]}>Carbs</Text>
+              <Text style={[styles.macroTileKey, { color: '#F59E0B' }]}>CARBS</Text>
               <Text style={styles.macroTileVal}>+{Math.round(carbs)}g</Text>
-              <Text style={styles.macroTileSub}>Fuel</Text>
+              <Text style={styles.macroTileSub}>Active Mana</Text>
             </Animated.View>
 
             {/* Fat */}
             <Animated.View entering={ZoomIn.delay(400)} style={styles.macroTile}>
-              <Text style={[styles.macroTileKey, { color: '#00FF88' }]}>Fat</Text>
+              <Text style={[styles.macroTileKey, { color: '#10B981' }]}>FAT</Text>
               <Text style={styles.macroTileVal}>+{Math.round(fat)}g</Text>
-              <Text style={styles.macroTileSub}>Vitals</Text>
+              <Text style={styles.macroTileSub}>Vital Shield</Text>
             </Animated.View>
           </View>
 
           {/* STATUS NOTIFICATION FOOTER */}
           <View style={styles.systemStatusBox}>
             <Text style={styles.systemStatusText}>
-              ✓ Meal logged. Daily nutrition updated.
+              ✓ Nutrition intake recorded. System energy updated.
             </Text>
           </View>
 
@@ -160,7 +166,7 @@ export function ManaReplenishModal({
             onPress={onDismiss}
             activeOpacity={0.8}
           >
-            <Text style={styles.confirmButtonText}>Continue</Text>
+            <Text style={styles.confirmButtonText}>CONFIRM & CLOSE</Text>
           </TouchableOpacity>
         </Animated.View>
       </View>
@@ -171,7 +177,7 @@ export function ManaReplenishModal({
 const styles = StyleSheet.create({
   overlay: {
     flex: 1,
-    backgroundColor: 'rgba(4, 7, 15, 0.92)',
+    backgroundColor: 'rgba(3, 7, 16, 0.92)',
     justifyContent: 'center',
     alignItems: 'center',
     padding: Spacing.threeHalf,
@@ -181,43 +187,77 @@ const styles = StyleSheet.create({
     width: width * 0.8,
     height: width * 0.8,
     borderRadius: (width * 0.8) / 2,
-    backgroundColor: 'rgba(0, 168, 255, 0.08)',
+    backgroundColor: 'rgba(34, 211, 238, 0.1)',
   },
   container: {
     width: '100%',
-    backgroundColor: '#111827',
-    borderWidth: 1,
-    borderColor: '#1E293B',
+    backgroundColor: Colors.dark.backgroundCard,
+    borderWidth: 1.5,
+    borderColor: Colors.dark.cyan,
     borderRadius: 20,
     padding: Spacing.four,
     gap: Spacing.three,
     alignItems: 'center',
-    shadowColor: '#000',
+    shadowColor: Colors.dark.cyan,
     shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.3,
+    shadowOpacity: 0.35,
     shadowRadius: 24,
-    elevation: 12,
+    elevation: 16,
+    position: 'relative',
+    overflow: 'hidden',
+  },
+  corner: {
+    position: 'absolute',
+    width: 14,
+    height: 14,
+    borderColor: Colors.dark.cyan,
+  },
+  cornerTL: {
+    top: -1,
+    left: -1,
+    borderTopWidth: 2.5,
+    borderLeftWidth: 2.5,
+  },
+  cornerTR: {
+    top: -1,
+    right: -1,
+    borderTopWidth: 2.5,
+    borderRightWidth: 2.5,
+  },
+  cornerBL: {
+    bottom: -1,
+    left: -1,
+    borderBottomWidth: 2.5,
+    borderLeftWidth: 2.5,
+  },
+  cornerBR: {
+    bottom: -1,
+    right: -1,
+    borderBottomWidth: 2.5,
+    borderRightWidth: 2.5,
   },
   header: {
     alignItems: 'center',
     gap: 4,
   },
   systemTag: {
-    fontSize: 12,
-    fontFamily: Fonts.sans,
-    color: '#00A8FF',
-    fontWeight: '600',
+    fontSize: 11,
+    fontFamily: Fonts.display,
+    color: Colors.dark.cyan,
+    fontWeight: '700',
+    letterSpacing: 2,
   },
   title: {
-    fontSize: 20,
+    fontSize: 22,
     fontWeight: '700',
-    fontFamily: Fonts.sans,
-    color: '#E8ECF4',
+    fontFamily: Fonts.display,
+    color: Colors.dark.textBright,
+    letterSpacing: 1,
   },
   mealNameText: {
     fontSize: 13,
     fontFamily: Fonts.sans,
-    color: '#8896AB',
+    color: Colors.dark.textSecondary,
     fontWeight: '500',
     marginTop: 2,
   },
@@ -235,46 +275,47 @@ const styles = StyleSheet.create({
     height: 90,
     borderRadius: 45,
     borderWidth: 2,
-    borderColor: '#00A8FF',
+    borderColor: Colors.dark.cyan,
   },
   manaOrb: {
-    width: 104,
-    height: 104,
-    borderRadius: 52,
-    backgroundColor: '#0E1726',
+    width: 106,
+    height: 106,
+    borderRadius: 53,
+    backgroundColor: Colors.dark.backgroundElement,
     borderWidth: 2,
-    borderColor: '#00A8FF',
+    borderColor: Colors.dark.cyan,
     justifyContent: 'center',
     alignItems: 'center',
-    shadowColor: '#00A8FF',
+    shadowColor: Colors.dark.cyan,
     shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 0.4,
-    shadowRadius: 12,
-    elevation: 8,
+    shadowOpacity: 0.5,
+    shadowRadius: 16,
+    elevation: 10,
     gap: 1,
   },
   orbEmoji: {
     fontSize: 22,
   },
   orbText: {
-    fontSize: 20,
+    fontSize: 22,
     fontWeight: '900',
     fontFamily: Fonts.mono,
-    color: '#00A8FF',
+    color: Colors.dark.cyan,
   },
   orbUnit: {
-    fontSize: 10,
-    fontFamily: Fonts.sans,
-    fontWeight: '600',
-    color: '#8896AB',
+    fontSize: 9,
+    fontFamily: Fonts.display,
+    fontWeight: '700',
+    color: Colors.dark.textMuted,
+    letterSpacing: 1,
   },
   gaugeContainer: {
     width: '100%',
     gap: 6,
-    backgroundColor: '#0E1726',
+    backgroundColor: Colors.dark.backgroundElement,
     borderWidth: 1,
-    borderColor: '#1E293B',
-    borderRadius: 12,
+    borderColor: Colors.dark.border,
+    borderRadius: 14,
     padding: 12,
   },
   gaugeHeader: {
@@ -283,31 +324,32 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   gaugeLabel: {
-    fontSize: 12,
-    fontFamily: Fonts.sans,
-    fontWeight: '600',
-    color: '#00A8FF',
+    fontSize: 11,
+    fontFamily: Fonts.display,
+    fontWeight: '700',
+    color: Colors.dark.cyan,
+    letterSpacing: 0.5,
   },
   gaugeNumbers: {
     fontSize: 11,
     fontFamily: Fonts.mono,
-    color: '#8896AB',
+    color: Colors.dark.textSecondary,
     fontWeight: '600',
   },
   gaugeTrack: {
     height: 8,
-    backgroundColor: '#0B1120',
+    backgroundColor: Colors.dark.backgroundDeep,
     borderRadius: 4,
     overflow: 'hidden',
   },
   gaugeFill: {
     height: '100%',
-    backgroundColor: '#00A8FF',
+    backgroundColor: Colors.dark.cyan,
     borderRadius: 4,
-    shadowColor: '#00A8FF',
+    shadowColor: Colors.dark.cyan,
     shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 0.5,
-    shadowRadius: 4,
+    shadowOpacity: 0.6,
+    shadowRadius: 6,
   },
   macrosRow: {
     flexDirection: 'row',
@@ -316,62 +358,65 @@ const styles = StyleSheet.create({
   },
   macroTile: {
     flex: 1,
-    backgroundColor: '#0E1726',
+    backgroundColor: Colors.dark.backgroundElement,
     borderWidth: 1,
-    borderColor: '#1E293B',
-    borderRadius: 10,
+    borderColor: Colors.dark.border,
+    borderRadius: 12,
     padding: 10,
     alignItems: 'center',
     gap: 3,
   },
   macroTileKey: {
-    fontSize: 11,
-    fontFamily: Fonts.sans,
+    fontSize: 10,
+    fontFamily: Fonts.display,
     fontWeight: '700',
+    letterSpacing: 0.5,
   },
   macroTileVal: {
     fontSize: 15,
     fontWeight: '900',
     fontFamily: Fonts.mono,
-    color: '#E8ECF4',
+    color: Colors.dark.textBright,
   },
   macroTileSub: {
     fontSize: 9,
     fontFamily: Fonts.sans,
-    color: '#6B7B8F',
+    color: Colors.dark.textMuted,
   },
   systemStatusBox: {
-    backgroundColor: 'rgba(0, 255, 136, 0.06)',
+    backgroundColor: 'rgba(16, 185, 129, 0.08)',
     borderWidth: 1,
-    borderColor: 'rgba(0, 255, 136, 0.2)',
-    borderRadius: 10,
+    borderColor: 'rgba(16, 185, 129, 0.25)',
+    borderRadius: 12,
     paddingVertical: 10,
     paddingHorizontal: 14,
     width: '100%',
   },
   systemStatusText: {
     fontSize: 12,
-    fontFamily: Fonts.sans,
-    color: '#00FF88',
+    fontFamily: Fonts.display,
+    color: Colors.dark.success,
     textAlign: 'center',
     fontWeight: '600',
+    letterSpacing: 0.3,
   },
   confirmButton: {
     width: '100%',
-    backgroundColor: '#00A8FF',
+    backgroundColor: Colors.dark.cyan,
     borderRadius: 14,
-    paddingVertical: 16,
+    paddingVertical: 15,
     alignItems: 'center',
-    shadowColor: '#00A8FF',
+    shadowColor: Colors.dark.cyan,
     shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 10,
-    elevation: 6,
+    shadowOpacity: 0.35,
+    shadowRadius: 12,
+    elevation: 8,
   },
   confirmButtonText: {
     fontSize: 15,
     fontWeight: '700',
-    fontFamily: Fonts.sans,
-    color: '#0B1120',
+    fontFamily: Fonts.display,
+    color: Colors.dark.backgroundDeep,
+    letterSpacing: 1,
   },
 });

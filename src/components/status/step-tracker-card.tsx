@@ -11,7 +11,7 @@ import {
   Alert,
 } from 'react-native';
 import { useStepTracker } from '@/hooks/useStepTracker';
-import { Fonts, Spacing } from '@/constants/theme';
+import { Colors, Fonts, Spacing } from '@/constants/theme';
 import { XPClaimModal } from '@/components/xp-claim-modal';
 import { Stat } from '@/types';
 
@@ -29,7 +29,6 @@ export function StepTrackerCard({ onQuestClaimed }: StepTrackerCardProps) {
     isGoalReached,
     motion,
     associatedQuest,
-    simulateSteps,
     claim10kStepsQuest,
   } = useStepTracker();
 
@@ -40,7 +39,6 @@ export function StepTrackerCard({ onQuestClaimed }: StepTrackerCardProps) {
     rankChanged: boolean;
     newRank?: string;
   } | null>(null);
-  const [showSimControls, setShowSimControls] = useState(false);
 
   const percentDisplay = Math.min(100, Math.round(progress * 100));
   const isQuestCompleted = associatedQuest?.is_completed === 1;
@@ -69,10 +67,16 @@ export function StepTrackerCard({ onQuestClaimed }: StepTrackerCardProps) {
 
   return (
     <View style={styles.cardContainer}>
+      {/* Corner ornaments */}
+      <View style={[styles.corner, styles.cornerTL]} />
+      <View style={[styles.corner, styles.cornerTR]} />
+      <View style={[styles.corner, styles.cornerBL]} />
+      <View style={[styles.corner, styles.cornerBR]} />
+
       {/* CARD HEADER */}
       <View style={styles.headerRow}>
         <View style={styles.titleGroup}>
-          <Text style={styles.systemTag}>Daily Goal</Text>
+          <Text style={styles.systemTag}>DAILY GOAL</Text>
           <Text style={styles.mainTitle}>10,000 Steps</Text>
         </View>
 
@@ -107,8 +111,10 @@ export function StepTrackerCard({ onQuestClaimed }: StepTrackerCardProps) {
           <Text style={styles.targetStepLabel}>/ {targetSteps.toLocaleString()} steps</Text>
         </View>
 
-        <View style={styles.percentageBadge}>
-          <Text style={styles.percentageText}>{percentDisplay}%</Text>
+        <View style={[styles.percentageBadge, isGoalReached && styles.percentageBadgeComplete]}>
+          <Text style={[styles.percentageText, isGoalReached && styles.percentageTextComplete]}>
+            {percentDisplay}%
+          </Text>
         </View>
       </View>
 
@@ -119,11 +125,12 @@ export function StepTrackerCard({ onQuestClaimed }: StepTrackerCardProps) {
             styles.progressBarFill,
             {
               width: `${Math.max(3, percentDisplay)}%`,
-              backgroundColor: isGoalReached ? '#00FF88' : '#00A8FF',
-              shadowColor: isGoalReached ? '#00FF88' : '#00A8FF',
+              backgroundColor: isGoalReached ? Colors.dark.success : Colors.dark.cyan,
+              shadowColor: isGoalReached ? Colors.dark.success : Colors.dark.cyan,
             },
           ]}
         />
+        <View style={styles.barShine} />
       </View>
 
       {/* METRICS ROW */}
@@ -180,43 +187,6 @@ export function StepTrackerCard({ onQuestClaimed }: StepTrackerCardProps) {
         </View>
       )}
 
-      {/* DEVELOPER / SENSOR SIMULATION TOGGLE */}
-      <View style={styles.simContainer}>
-        <TouchableOpacity
-          onPress={() => setShowSimControls((p) => !p)}
-          style={styles.simToggle}
-        >
-          <Text style={styles.simToggleText}>
-            {showSimControls ? '▼ Hide test controls' : '⚙ Test motion sensor'}
-          </Text>
-        </TouchableOpacity>
-
-        {showSimControls && (
-          <View style={styles.simButtonsRow}>
-            <TouchableOpacity
-              style={styles.simBtn}
-              onPress={() => simulateSteps(50)}
-            >
-              <Text style={styles.simBtnText}>+50</Text>
-            </TouchableOpacity>
-
-            <TouchableOpacity
-              style={styles.simBtn}
-              onPress={() => simulateSteps(500)}
-            >
-              <Text style={styles.simBtnText}>+500</Text>
-            </TouchableOpacity>
-
-            <TouchableOpacity
-              style={[styles.simBtn, styles.simBtnPrimary]}
-              onPress={() => simulateSteps(2000)}
-            >
-              <Text style={styles.simBtnPrimaryText}>+2,000</Text>
-            </TouchableOpacity>
-          </View>
-        )}
-      </View>
-
       {/* XP CLAIM MODAL */}
       <XPClaimModal
         visible={claimModalVisible}
@@ -233,18 +203,32 @@ export function StepTrackerCard({ onQuestClaimed }: StepTrackerCardProps) {
 
 const styles = StyleSheet.create({
   cardContainer: {
-    backgroundColor: '#111827',
+    backgroundColor: Colors.dark.backgroundCard,
     borderWidth: 1,
-    borderColor: '#1E293B',
-    borderRadius: 16,
+    borderColor: Colors.dark.borderBright,
+    borderRadius: 18,
     padding: Spacing.threeHalf,
     gap: 14,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.15,
-    shadowRadius: 10,
-    elevation: 4,
+    shadowOpacity: 0.3,
+    shadowRadius: 12,
+    elevation: 6,
+    position: 'relative',
+    overflow: 'hidden',
   },
+  // Corner ornaments
+  corner: {
+    position: 'absolute',
+    width: 12,
+    height: 12,
+    borderColor: Colors.dark.cyan,
+  },
+  cornerTL: { top: -1, left: -1, borderTopWidth: 2, borderLeftWidth: 2 },
+  cornerTR: { top: -1, right: -1, borderTopWidth: 2, borderRightWidth: 2 },
+  cornerBL: { bottom: -1, left: -1, borderBottomWidth: 2, borderLeftWidth: 2 },
+  cornerBR: { bottom: -1, right: -1, borderBottomWidth: 2, borderRightWidth: 2 },
+
   headerRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -255,15 +239,17 @@ const styles = StyleSheet.create({
   },
   systemTag: {
     fontSize: 11,
-    fontFamily: Fonts.sans,
-    color: '#00A8FF',
-    fontWeight: '600',
+    fontFamily: Fonts.display,
+    color: Colors.dark.cyan,
+    fontWeight: '700',
+    letterSpacing: 1.5,
   },
   mainTitle: {
-    fontSize: 16,
+    fontSize: 18,
     fontWeight: '700',
-    fontFamily: Fonts.sans,
-    color: '#E8ECF4',
+    fontFamily: Fonts.display,
+    color: Colors.dark.textBright,
+    letterSpacing: 0.5,
   },
   motionBadge: {
     flexDirection: 'row',
@@ -275,12 +261,12 @@ const styles = StyleSheet.create({
     borderWidth: 1,
   },
   motionBadgeActive: {
-    backgroundColor: 'rgba(0, 168, 255, 0.08)',
-    borderColor: 'rgba(0, 168, 255, 0.3)',
+    backgroundColor: 'rgba(34, 211, 238, 0.08)',
+    borderColor: 'rgba(34, 211, 238, 0.3)',
   },
   motionBadgeIdle: {
-    backgroundColor: 'rgba(30, 41, 59, 0.5)',
-    borderColor: '#1E293B',
+    backgroundColor: Colors.dark.backgroundElement,
+    borderColor: Colors.dark.border,
   },
   motionPulseDot: {
     width: 6,
@@ -288,14 +274,15 @@ const styles = StyleSheet.create({
     borderRadius: 3,
   },
   motionDotActive: {
-    backgroundColor: '#00FF88',
-    shadowColor: '#00FF88',
+    backgroundColor: Colors.dark.success,
+    shadowColor: Colors.dark.success,
     shadowOffset: { width: 0, height: 0 },
     shadowOpacity: 0.8,
     shadowRadius: 4,
+    elevation: 2,
   },
   motionDotIdle: {
-    backgroundColor: '#6B7B8F',
+    backgroundColor: Colors.dark.textMuted,
   },
   motionText: {
     fontSize: 10,
@@ -303,16 +290,16 @@ const styles = StyleSheet.create({
     fontWeight: '700',
   },
   motionTextActive: {
-    color: '#00A8FF',
+    color: Colors.dark.cyan,
   },
   motionTextIdle: {
-    color: '#8896AB',
+    color: Colors.dark.textSecondary,
   },
   heroRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'flex-end',
-    marginTop: 2,
+    marginTop: 4,
   },
   stepsCountBlock: {
     flexDirection: 'row',
@@ -320,58 +307,76 @@ const styles = StyleSheet.create({
     gap: 6,
   },
   bigStepNumber: {
-    fontSize: 32,
+    fontSize: 36,
     fontWeight: '900',
     fontFamily: Fonts.mono,
-    color: '#00A8FF',
+    color: Colors.dark.cyan,
     letterSpacing: 1,
-    textShadowColor: 'rgba(0, 168, 255, 0.25)',
+    textShadowColor: 'rgba(34, 211, 238, 0.3)',
     textShadowOffset: { width: 0, height: 0 },
-    textShadowRadius: 8,
+    textShadowRadius: 10,
   },
   targetStepLabel: {
     fontSize: 13,
     fontFamily: Fonts.sans,
-    color: '#8896AB',
+    color: Colors.dark.textSecondary,
     fontWeight: '500',
   },
   percentageBadge: {
-    backgroundColor: '#0E1726',
+    backgroundColor: Colors.dark.backgroundElement,
     borderWidth: 1,
-    borderColor: '#1E293B',
-    borderRadius: 8,
-    paddingHorizontal: 10,
-    paddingVertical: 4,
+    borderColor: Colors.dark.border,
+    borderRadius: 10,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+  },
+  percentageBadgeComplete: {
+    borderColor: Colors.dark.success,
+    backgroundColor: 'rgba(16, 185, 129, 0.08)',
   },
   percentageText: {
-    fontSize: 13,
+    fontSize: 14,
     fontFamily: Fonts.mono,
     fontWeight: '800',
-    color: '#00FF88',
+    color: Colors.dark.cyan,
+  },
+  percentageTextComplete: {
+    color: Colors.dark.success,
   },
   progressBarTrack: {
-    height: 10,
-    backgroundColor: '#0E1726',
-    borderRadius: 5,
+    height: 12,
+    backgroundColor: Colors.dark.backgroundDeep,
+    borderRadius: 6,
     overflow: 'hidden',
     borderWidth: 1,
-    borderColor: '#1E293B',
+    borderColor: Colors.dark.border,
+    position: 'relative',
   },
   progressBarFill: {
     height: '100%',
-    borderRadius: 4,
+    borderRadius: 5,
     shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 0.6,
-    shadowRadius: 4,
-    elevation: 3,
+    shadowOpacity: 0.7,
+    shadowRadius: 6,
+    elevation: 4,
+  },
+  barShine: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    height: '40%',
+    backgroundColor: 'rgba(255, 255, 255, 0.06)',
+    borderTopLeftRadius: 6,
+    borderTopRightRadius: 6,
   },
   metricsRow: {
     flexDirection: 'row',
-    backgroundColor: '#0E1726',
-    borderRadius: 10,
+    backgroundColor: Colors.dark.backgroundElement,
+    borderRadius: 12,
     borderWidth: 1,
-    borderColor: '#1E293B',
-    paddingVertical: 10,
+    borderColor: Colors.dark.border,
+    paddingVertical: 12,
     paddingHorizontal: 14,
     justifyContent: 'space-between',
     alignItems: 'center',
@@ -383,50 +388,51 @@ const styles = StyleSheet.create({
     gap: 6,
   },
   metricIcon: {
-    fontSize: 15,
+    fontSize: 16,
   },
   metricLabel: {
     fontSize: 10,
     fontFamily: Fonts.sans,
-    color: '#6B7B8F',
+    color: Colors.dark.textMuted,
     fontWeight: '500',
   },
   metricValue: {
-    fontSize: 12,
+    fontSize: 13,
     fontFamily: Fonts.mono,
     fontWeight: '700',
-    color: '#D2E0F5',
+    color: Colors.dark.text,
   },
   metricDivider: {
     width: 1,
-    height: 20,
-    backgroundColor: '#1E293B',
+    height: 22,
+    backgroundColor: Colors.dark.border,
     marginHorizontal: 4,
   },
   claimButton: {
-    backgroundColor: '#0066BB',
+    backgroundColor: Colors.dark.accentDim,
     borderWidth: 1,
-    borderColor: '#00A8FF',
-    borderRadius: 12,
+    borderColor: Colors.dark.accent,
+    borderRadius: 14,
     paddingVertical: 14,
     alignItems: 'center',
-    shadowColor: '#00A8FF',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 5,
+    shadowColor: Colors.dark.accent,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.35,
+    shadowRadius: 10,
+    elevation: 6,
   },
   claimButtonText: {
-    fontFamily: Fonts.sans,
-    fontSize: 14,
+    fontFamily: Fonts.display,
+    fontSize: 15,
     fontWeight: '700',
     color: '#FFFFFF',
+    letterSpacing: 0.5,
   },
   completedBanner: {
-    backgroundColor: 'rgba(0, 255, 136, 0.08)',
+    backgroundColor: 'rgba(16, 185, 129, 0.08)',
     borderWidth: 1,
-    borderColor: 'rgba(0, 255, 136, 0.3)',
-    borderRadius: 10,
+    borderColor: 'rgba(16, 185, 129, 0.3)',
+    borderRadius: 12,
     paddingVertical: 12,
     alignItems: 'center',
   },
@@ -434,62 +440,19 @@ const styles = StyleSheet.create({
     fontFamily: Fonts.sans,
     fontSize: 13,
     fontWeight: '600',
-    color: '#00FF88',
+    color: Colors.dark.success,
   },
   remainingBanner: {
-    backgroundColor: 'rgba(14, 23, 38, 0.6)',
+    backgroundColor: Colors.dark.backgroundElement,
     borderWidth: 1,
-    borderColor: '#1E293B',
-    borderRadius: 10,
+    borderColor: Colors.dark.border,
+    borderRadius: 12,
     paddingVertical: 10,
     alignItems: 'center',
   },
   remainingText: {
     fontFamily: Fonts.sans,
     fontSize: 12,
-    color: '#8896AB',
-  },
-  simContainer: {
-    gap: 6,
-    paddingTop: 2,
-  },
-  simToggle: {
-    alignSelf: 'center',
-    paddingVertical: 4,
-    paddingHorizontal: 8,
-  },
-  simToggleText: {
-    fontSize: 10,
-    fontFamily: Fonts.sans,
-    color: '#6B7B8F',
-  },
-  simButtonsRow: {
-    flexDirection: 'row',
-    gap: 8,
-  },
-  simBtn: {
-    flex: 1,
-    backgroundColor: '#0E1726',
-    borderWidth: 1,
-    borderColor: '#1E293B',
-    borderRadius: 8,
-    paddingVertical: 8,
-    alignItems: 'center',
-  },
-  simBtnText: {
-    fontSize: 11,
-    fontFamily: Fonts.mono,
-    color: '#8896AB',
-    fontWeight: '700',
-  },
-  simBtnPrimary: {
-    borderColor: '#00A8FF',
-    backgroundColor: 'rgba(0, 168, 255, 0.08)',
-  },
-  simBtnPrimaryText: {
-    fontSize: 11,
-    fontFamily: Fonts.mono,
-    color: '#00A8FF',
-    fontWeight: '700',
+    color: Colors.dark.textSecondary,
   },
 });

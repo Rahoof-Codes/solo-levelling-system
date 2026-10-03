@@ -8,19 +8,17 @@ import {
   TouchableOpacity,
   Alert,
   RefreshControl,
-  Switch,
 } from 'react-native';
 import { Image } from 'expo-image';
-import { useAudio } from '@/contexts/AudioContext';
 import { useRouter, useFocusEffect, usePathname } from 'expo-router';
 import { useSQLiteContext } from 'expo-sqlite';
 import { getProfile, getLastSyncedAt, getCurrentPlanProgress } from '@/db/operations';
 import { syncPendingRecords } from '@/services/syncService';
-import { type Profile, Stat } from '@/types';
+import { type Profile } from '@/types';
 import { RankBadge } from '@/components/status/rank-badge';
 import { isFirebaseConfigured } from '@/lib/firebase';
 import { useAuth } from '@/contexts/AuthContext';
-import { Fonts, Spacing, RankColors, StatColors } from '@/constants/theme';
+import { Colors, Fonts, Spacing, RankColors, StatColors } from '@/constants/theme';
 import Animated, {
   FadeInDown,
   FadeInUp,
@@ -28,22 +26,13 @@ import Animated, {
 import { getRankImage } from '@/constants/rankImages';
 import { getXPProgress } from '@/lib/calculations/leveling';
 import { GOAL_CONFIG } from '@/lib/calculations/bmr';
+import { DungeonCard } from '@/components/ui/gradients';
 
 export default function ProfileScreen() {
   const router = useRouter();
   const pathname = usePathname();
   const db = useSQLiteContext();
   const { user, signOut, isGuest } = useAuth();
-  const {
-    bgmEnabled,
-    sfxEnabled,
-    bgmVolume,
-    setBGMEnabled,
-    setSFXEnabled,
-    setBGMVolume,
-    playClaimSound,
-    isBgmPlaying,
-  } = useAudio();
   const [profile, setProfile] = useState<Profile | null>(null);
   const [planProgress, setPlanProgress] = useState<any | null>(null);
   const [lastSynced, setLastSynced] = useState<string | null>(null);
@@ -119,7 +108,7 @@ export default function ProfileScreen() {
     );
   };
 
-  const rankColor = profile ? (RankColors[profile.rank] || RankColors.E) : '#00A8FF';
+  const rankColor = profile ? (RankColors[profile.rank] || RankColors.E) : Colors.dark.cyan;
   const rankImage = profile ? getRankImage(profile.rank) : null;
 
   const xpProgress = useMemo(() => {
@@ -145,13 +134,13 @@ export default function ProfileScreen() {
     <SafeAreaView style={styles.safeArea}>
       <ScrollView
         contentContainerStyle={styles.container}
-        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#00A8FF" />}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={Colors.dark.accent} />}
       >
         {/* TOP HEADER */}
         <Animated.View entering={FadeInDown.duration(450)} style={styles.header}>
           <View style={styles.headerLeft}>
-            <Text style={styles.systemTag}>Hunter Profile</Text>
-            <Text style={styles.title}>Your Dossier</Text>
+            <Text style={styles.systemTag}>HUNTER DOSSIER</Text>
+            <Text style={styles.title}>Identification</Text>
           </View>
           <View style={[styles.statusPill, { borderColor: rankColor }]}>
             <View style={[styles.statusDot, { backgroundColor: rankColor }]} />
@@ -163,435 +152,371 @@ export default function ProfileScreen() {
 
         {/* 1. HUNTER IDENTIFICATION LICENSE CARD */}
         {profile && (
-          <Animated.View entering={FadeInDown.duration(450).delay(80)} style={[styles.licenseCard, { borderColor: rankColor }]}>
-            {/* Card Watermark Header */}
-            <View style={styles.licenseHeaderBar}>
-              <Text style={styles.licenseHeaderTag}>Hunter License</Text>
-              <Text style={styles.licenseSerial}>
-                ID: KR-{(profile.id || '00000000').slice(0, 8).toUpperCase()}
-              </Text>
-            </View>
-
-            {/* Hunter Portrait & Credentials */}
-            <View style={styles.licenseBody}>
-              <View style={[styles.portraitWrapper, { borderColor: rankColor }]}>
-                {rankImage && (
-                  <Image source={rankImage} style={styles.portraitImage} contentFit="cover" />
-                )}
-                <View style={[styles.rankOverlayBadge, { backgroundColor: rankColor }]}>
-                  <Text style={styles.rankOverlayText}>{profile.rank}</Text>
+          <Animated.View entering={FadeInDown.duration(450).delay(80)}>
+            <DungeonCard ornate accentColor={rankColor} glowing style={styles.licenseCardWrapper}>
+              {/* Card Watermark Header */}
+              <View style={styles.licenseHeaderBar}>
+                <View style={styles.licenseTagGroup}>
+                  <Text style={styles.licenseSymbol}>◈</Text>
+                  <Text style={[styles.licenseHeaderTag, { color: rankColor }]}>HUNTER LICENSE</Text>
                 </View>
-              </View>
-
-              <View style={styles.credentialsColumn}>
-                <View style={styles.nameRow}>
-                  <Text style={styles.hunterName} numberOfLines={1}>
-                    {profile.username}
-                  </Text>
-                  <RankBadge rank={profile.rank} size="small" />
-                </View>
-
-                <Text style={[styles.hunterTitle, { color: rankColor }]}>
-                  {profile.title || `${profile.rank}-Rank Hunter`}
+                <Text style={styles.licenseSerial}>
+                  ID: KR-{(profile.id || '00000000').slice(0, 8).toUpperCase()}
                 </Text>
+              </View>
 
-                <View style={styles.levelRow}>
-                  <View style={styles.levelChip}>
-                    <Text style={styles.levelChipLabel}>LVL</Text>
-                    <Text style={styles.levelChipVal}>{profile.level}</Text>
+              {/* Hunter Portrait & Credentials */}
+              <View style={styles.licenseBody}>
+                <View style={[styles.portraitWrapper, { borderColor: rankColor }]}>
+                  {rankImage && (
+                    <Image source={rankImage} style={styles.portraitImage} contentFit="cover" />
+                  )}
+                  <View style={[styles.rankOverlayBadge, { backgroundColor: rankColor }]}>
+                    <Text style={styles.rankOverlayText}>{profile.rank}</Text>
                   </View>
-                  <Text style={styles.totalXpText}>
-                    {profile.total_xp.toLocaleString()} total XP
-                  </Text>
                 </View>
-              </View>
-            </View>
 
-            {/* Level Progress Gauge */}
-            {xpProgress && (
-              <View style={styles.levelProgressContainer}>
-                <View style={styles.levelProgressHeader}>
-                  <Text style={styles.progressLabel}>Level Progress</Text>
-                  <Text style={[styles.progressVal, { color: rankColor }]}>
-                    {xpProgress.xpInCurrentLevel} / {xpProgress.xpNeededForNextLevel} XP ({Math.round(xpProgress.percentage)}%)
+                <View style={styles.credentialsColumn}>
+                  <View style={styles.nameRow}>
+                    <Text style={styles.hunterName} numberOfLines={1}>
+                      {profile.username}
+                    </Text>
+                    <RankBadge rank={profile.rank} size="small" />
+                  </View>
+
+                  <Text style={[styles.hunterTitle, { color: rankColor }]}>
+                    {profile.title || `${profile.rank}-Rank Hunter`}
                   </Text>
-                </View>
-                <View style={styles.progressBarTrack}>
-                  <View
-                    style={[
-                      styles.progressBarFill,
-                      { width: `${Math.min(100, xpProgress.percentage)}%`, backgroundColor: rankColor },
-                    ]}
-                  />
+
+                  <View style={styles.levelRow}>
+                    <View style={styles.levelChip}>
+                      <Text style={styles.levelChipLabel}>LVL</Text>
+                      <Text style={styles.levelChipVal}>{profile.level}</Text>
+                    </View>
+                    <Text style={styles.totalXpText}>
+                      {profile.total_xp.toLocaleString()} total XP
+                    </Text>
+                  </View>
                 </View>
               </View>
-            )}
+
+              {/* Level Progress Gauge */}
+              {xpProgress && (
+                <View style={styles.levelProgressContainer}>
+                  <View style={styles.levelProgressHeader}>
+                    <Text style={styles.progressLabel}>LEVEL PROGRESS</Text>
+                    <Text style={[styles.progressVal, { color: rankColor }]}>
+                      {xpProgress.xpInCurrentLevel} / {xpProgress.xpNeededForNextLevel} XP ({Math.round(xpProgress.percentage)}%)
+                    </Text>
+                  </View>
+                  <View style={styles.progressBarTrack}>
+                    <View
+                      style={[
+                        styles.progressBarFill,
+                        { width: `${Math.min(100, xpProgress.percentage)}%`, backgroundColor: rankColor },
+                      ]}
+                    />
+                  </View>
+                </View>
+              )}
+            </DungeonCard>
           </Animated.View>
         )}
 
         {/* 2. 5 CORE RPG ATTRIBUTES */}
         {profile && (
-          <Animated.View entering={FadeInDown.duration(450).delay(150)} style={styles.matrixCard}>
-            <View style={styles.matrixHeader}>
-              <Text style={styles.matrixTitle}>Core Attributes</Text>
-              <Text style={styles.matrixSubtitle}>Growth Record</Text>
-            </View>
-
-            <View style={styles.statsRow}>
-              {/* STR */}
-              <View style={styles.statChip}>
-                <View style={styles.statChipTop}>
-                  <Text style={[styles.statKey, { color: StatColors.STR }]}>STR</Text>
-                  <Text style={styles.statAmount}>{profile.str_xp}</Text>
-                </View>
-                <Text style={styles.statName}>Strength</Text>
-                <View style={styles.statBarBg}>
-                  <View
-                    style={[
-                      styles.statBarFill,
-                      {
-                        width: `${Math.min(100, Math.round((profile.str_xp / maxStatXP) * 100))}%`,
-                        backgroundColor: StatColors.STR,
-                      },
-                    ]}
-                  />
-                </View>
+          <Animated.View entering={FadeInDown.duration(450).delay(150)}>
+            <DungeonCard style={styles.matrixCardWrapper}>
+              <View style={styles.matrixHeader}>
+                <Text style={styles.matrixTitle}>CORE ATTRIBUTES</Text>
+                <Text style={styles.matrixSubtitle}>Growth Record</Text>
               </View>
 
-              {/* VIT */}
-              <View style={styles.statChip}>
-                <View style={styles.statChipTop}>
-                  <Text style={[styles.statKey, { color: StatColors.VIT }]}>VIT</Text>
-                  <Text style={styles.statAmount}>{profile.vit_xp}</Text>
+              <View style={styles.statsRow}>
+                {/* STR */}
+                <View style={styles.statChip}>
+                  <View style={styles.statChipTop}>
+                    <Text style={[styles.statKey, { color: StatColors.STR }]}>STR</Text>
+                    <Text style={styles.statAmount}>{profile.str_xp}</Text>
+                  </View>
+                  <Text style={styles.statName}>Strength</Text>
+                  <View style={styles.statBarBg}>
+                    <View
+                      style={[
+                        styles.statBarFill,
+                        {
+                          width: `${Math.min(100, Math.round((profile.str_xp / maxStatXP) * 100))}%`,
+                          backgroundColor: StatColors.STR,
+                        },
+                      ]}
+                    />
+                  </View>
                 </View>
-                <Text style={styles.statName}>Vitality</Text>
-                <View style={styles.statBarBg}>
-                  <View
-                    style={[
-                      styles.statBarFill,
-                      {
-                        width: `${Math.min(100, Math.round((profile.vit_xp / maxStatXP) * 100))}%`,
-                        backgroundColor: StatColors.VIT,
-                      },
-                    ]}
-                  />
-                </View>
-              </View>
 
-              {/* AGI */}
-              <View style={styles.statChip}>
-                <View style={styles.statChipTop}>
-                  <Text style={[styles.statKey, { color: StatColors.AGI }]}>AGI</Text>
-                  <Text style={styles.statAmount}>{profile.agi_xp}</Text>
+                {/* VIT */}
+                <View style={styles.statChip}>
+                  <View style={styles.statChipTop}>
+                    <Text style={[styles.statKey, { color: StatColors.VIT }]}>VIT</Text>
+                    <Text style={styles.statAmount}>{profile.vit_xp}</Text>
+                  </View>
+                  <Text style={styles.statName}>Vitality</Text>
+                  <View style={styles.statBarBg}>
+                    <View
+                      style={[
+                        styles.statBarFill,
+                        {
+                          width: `${Math.min(100, Math.round((profile.vit_xp / maxStatXP) * 100))}%`,
+                          backgroundColor: StatColors.VIT,
+                        },
+                      ]}
+                    />
+                  </View>
                 </View>
-                <Text style={styles.statName}>Agility</Text>
-                <View style={styles.statBarBg}>
-                  <View
-                    style={[
-                      styles.statBarFill,
-                      {
-                        width: `${Math.min(100, Math.round((profile.agi_xp / maxStatXP) * 100))}%`,
-                        backgroundColor: StatColors.AGI,
-                      },
-                    ]}
-                  />
-                </View>
-              </View>
 
-              {/* INT */}
-              <View style={styles.statChip}>
-                <View style={styles.statChipTop}>
-                  <Text style={[styles.statKey, { color: StatColors.INT }]}>INT</Text>
-                  <Text style={styles.statAmount}>{profile.int_xp}</Text>
+                {/* AGI */}
+                <View style={styles.statChip}>
+                  <View style={styles.statChipTop}>
+                    <Text style={[styles.statKey, { color: StatColors.AGI }]}>AGI</Text>
+                    <Text style={styles.statAmount}>{profile.agi_xp}</Text>
+                  </View>
+                  <Text style={styles.statName}>Agility</Text>
+                  <View style={styles.statBarBg}>
+                    <View
+                      style={[
+                        styles.statBarFill,
+                        {
+                          width: `${Math.min(100, Math.round((profile.agi_xp / maxStatXP) * 100))}%`,
+                          backgroundColor: StatColors.AGI,
+                        },
+                      ]}
+                    />
+                  </View>
                 </View>
-                <Text style={styles.statName}>Intellect</Text>
-                <View style={styles.statBarBg}>
-                  <View
-                    style={[
-                      styles.statBarFill,
-                      {
-                        width: `${Math.min(100, Math.round((profile.int_xp / maxStatXP) * 100))}%`,
-                        backgroundColor: StatColors.INT,
-                      },
-                    ]}
-                  />
-                </View>
-              </View>
 
-              {/* PER */}
-              <View style={styles.statChip}>
-                <View style={styles.statChipTop}>
-                  <Text style={[styles.statKey, { color: StatColors.PER }]}>PER</Text>
-                  <Text style={styles.statAmount}>{profile.per_xp}</Text>
+                {/* INT */}
+                <View style={styles.statChip}>
+                  <View style={styles.statChipTop}>
+                    <Text style={[styles.statKey, { color: StatColors.INT }]}>INT</Text>
+                    <Text style={styles.statAmount}>{profile.int_xp}</Text>
+                  </View>
+                  <Text style={styles.statName}>Intellect</Text>
+                  <View style={styles.statBarBg}>
+                    <View
+                      style={[
+                        styles.statBarFill,
+                        {
+                          width: `${Math.min(100, Math.round((profile.int_xp / maxStatXP) * 100))}%`,
+                          backgroundColor: StatColors.INT,
+                        },
+                      ]}
+                    />
+                  </View>
                 </View>
-                <Text style={styles.statName}>Perception</Text>
-                <View style={styles.statBarBg}>
-                  <View
-                    style={[
-                      styles.statBarFill,
-                      {
-                        width: `${Math.min(100, Math.round((profile.per_xp / maxStatXP) * 100))}%`,
-                        backgroundColor: StatColors.PER,
-                      },
-                    ]}
-                  />
+
+                {/* PER */}
+                <View style={styles.statChip}>
+                  <View style={styles.statChipTop}>
+                    <Text style={[styles.statKey, { color: StatColors.PER }]}>PER</Text>
+                    <Text style={styles.statAmount}>{profile.per_xp}</Text>
+                  </View>
+                  <Text style={styles.statName}>Perception</Text>
+                  <View style={styles.statBarBg}>
+                    <View
+                      style={[
+                        styles.statBarFill,
+                        {
+                          width: `${Math.min(100, Math.round((profile.per_xp / maxStatXP) * 100))}%`,
+                          backgroundColor: StatColors.PER,
+                        },
+                      ]}
+                    />
+                  </View>
                 </View>
               </View>
-            </View>
+            </DungeonCard>
           </Animated.View>
         )}
 
         {/* 3. ACTIVE TRAINING PROGRAM & GOALS */}
-        <Animated.View entering={FadeInDown.duration(450).delay(220)} style={styles.protocolCard}>
-          <View style={styles.protocolHeader}>
-            <Text style={styles.protocolHeaderTag}>Programs & Goals</Text>
-            <TouchableOpacity onPress={() => router.push('/onboarding')} activeOpacity={0.7}>
-              <Text style={styles.recalibrateAction}>Edit ⚙️</Text>
-            </TouchableOpacity>
-          </View>
+        <Animated.View entering={FadeInDown.duration(450).delay(220)}>
+          <DungeonCard style={styles.protocolCardWrapper}>
+            <View style={styles.protocolHeader}>
+              <Text style={styles.protocolHeaderTag}>PROGRAMS & GOALS</Text>
+              <TouchableOpacity onPress={() => router.push('/onboarding')} activeOpacity={0.7}>
+                <Text style={styles.recalibrateAction}>Edit ⚙️</Text>
+              </TouchableOpacity>
+            </View>
 
-          {/* Training Plan Row */}
-          <View style={styles.directiveRow}>
-            <View style={styles.directiveIconBox}>
-              <Text style={styles.directiveIcon}>
-                {planProgress?.planType === '365day' ? '👑' : '⚡'}
-              </Text>
+            {/* Training Plan Row */}
+            <View style={styles.directiveRow}>
+              <View style={styles.directiveIconBox}>
+                <Text style={styles.directiveIcon}>
+                  {planProgress?.planType === '365day' ? '👑' : '⚡'}
+                </Text>
+              </View>
+              <View style={{ flex: 1, gap: 2 }}>
+                <Text style={styles.directiveLabel}>TRAINING PROGRAM</Text>
+                <Text style={styles.directiveMainText}>
+                  {planProgress?.planName ? planProgress.planName : 'Shadow Awakening'}
+                </Text>
+                <Text style={styles.directiveSubText}>
+                  {planProgress
+                    ? `Day ${planProgress.currentDay} of ${planProgress.totalDays} • Phase: ${planProgress.phase}`
+                    : '100-Day Progressive Home Training'}
+                </Text>
+              </View>
             </View>
-            <View style={{ flex: 1, gap: 2 }}>
-              <Text style={styles.directiveLabel}>Training Program</Text>
-              <Text style={styles.directiveMainText}>
-                {planProgress?.planName ? planProgress.planName : 'Shadow Awakening'}
-              </Text>
-              <Text style={styles.directiveSubText}>
-                {planProgress
-                  ? `Day ${planProgress.currentDay} of ${planProgress.totalDays} • Phase: ${planProgress.phase}`
-                  : '100-Day Progressive Home Training'}
-              </Text>
-            </View>
-          </View>
 
-          <View style={styles.cardDivider} />
+            <View style={styles.cardDivider} />
 
-          {/* Physical Weight Goal Row */}
-          <View style={styles.directiveRow}>
-            <View style={styles.directiveIconBox}>
-              <Text style={styles.directiveIcon}>{activeGoal.emoji}</Text>
+            {/* Physical Weight Goal Row */}
+            <View style={styles.directiveRow}>
+              <View style={styles.directiveIconBox}>
+                <Text style={styles.directiveIcon}>{activeGoal.emoji}</Text>
+              </View>
+              <View style={{ flex: 1, gap: 2 }}>
+                <Text style={styles.directiveLabel}>FITNESS GOAL</Text>
+                <Text style={styles.directiveMainText}>{activeGoal.label}</Text>
+                <Text style={styles.directiveSubText}>
+                  {activeGoal.calorieOffset === 0
+                    ? 'Energy Balance (TDEE Match)'
+                    : `${activeGoal.calorieOffset > 0 ? '+' : ''}${activeGoal.calorieOffset} kcal/day`}
+                  {' • '}
+                  {profile ? `${Math.round(profile.daily_calories ?? 2000)} kcal/day` : '2,000 kcal'}
+                </Text>
+              </View>
             </View>
-            <View style={{ flex: 1, gap: 2 }}>
-              <Text style={styles.directiveLabel}>Fitness Goal</Text>
-              <Text style={styles.directiveMainText}>{activeGoal.label}</Text>
-              <Text style={styles.directiveSubText}>
-                {activeGoal.calorieOffset === 0
-                  ? 'Energy Balance (TDEE Match)'
-                  : `${activeGoal.calorieOffset > 0 ? '+' : ''}${activeGoal.calorieOffset} kcal/day`}
-                {' • '}
-                {profile ? `${Math.round(profile.daily_calories ?? 2000)} kcal/day` : '2,000 kcal'}
-              </Text>
-            </View>
-          </View>
+          </DungeonCard>
         </Animated.View>
 
         {/* 4. PHYSIOLOGICAL BIO STATS */}
         {profile && (
-          <Animated.View entering={FadeInDown.duration(450).delay(290)} style={styles.bioCard}>
-            <View style={styles.bioHeader}>
-              <Text style={styles.bioTitle}>Body Stats & Targets</Text>
-              <TouchableOpacity onPress={() => router.push('/onboarding')} activeOpacity={0.7}>
-                <Text style={styles.editLink}>Edit Stats →</Text>
+          <Animated.View entering={FadeInDown.duration(450).delay(290)}>
+            <DungeonCard style={styles.bioCardWrapper}>
+              <View style={styles.bioHeader}>
+                <Text style={styles.bioTitle}>BODY STATS & TARGETS</Text>
+                <TouchableOpacity onPress={() => router.push('/onboarding')} activeOpacity={0.7}>
+                  <Text style={styles.editLink}>Edit Stats →</Text>
+                </TouchableOpacity>
+              </View>
+
+              <View style={styles.bioGrid}>
+                <View style={styles.bioCell}>
+                  <Text style={styles.bioCellLabel}>Height</Text>
+                  <Text style={styles.bioCellValue}>{profile.height_cm ?? '--'} <Text style={styles.bioCellUnit}>cm</Text></Text>
+                </View>
+                <View style={styles.bioCell}>
+                  <Text style={styles.bioCellLabel}>Weight</Text>
+                  <Text style={styles.bioCellValue}>{profile.weight_kg ?? '--'} <Text style={styles.bioCellUnit}>kg</Text></Text>
+                </View>
+                <View style={styles.bioCell}>
+                  <Text style={styles.bioCellLabel}>Age</Text>
+                  <Text style={styles.bioCellValue}>{profile.age ?? '--'} <Text style={styles.bioCellUnit}>yrs</Text></Text>
+                </View>
+                <View style={styles.bioCell}>
+                  <Text style={styles.bioCellLabel}>BMR Burn</Text>
+                  <Text style={styles.bioCellValue}>{profile.bmr ? Math.round(profile.bmr) : '--'} <Text style={styles.bioCellUnit}>kcal</Text></Text>
+                </View>
+              </View>
+
+              {/* Daily Macro Fuel Targets */}
+              <View style={styles.macroPillRow}>
+                <View style={[styles.macroPill, { borderColor: 'rgba(239, 68, 68, 0.4)' }]}>
+                  <Text style={[styles.macroPillVal, { color: '#EF4444' }]}>
+                    {profile.protein_g ? Math.round(profile.protein_g) : '--'}g
+                  </Text>
+                  <Text style={styles.macroPillLabel}>Protein</Text>
+                </View>
+
+                <View style={[styles.macroPill, { borderColor: 'rgba(245, 158, 11, 0.4)' }]}>
+                  <Text style={[styles.macroPillVal, { color: '#F59E0B' }]}>
+                    {profile.carbs_g ? Math.round(profile.carbs_g) : '--'}g
+                  </Text>
+                  <Text style={styles.macroPillLabel}>Carbs</Text>
+                </View>
+
+                <View style={[styles.macroPill, { borderColor: 'rgba(16, 185, 129, 0.4)' }]}>
+                  <Text style={[styles.macroPillVal, { color: '#10B981' }]}>
+                    {profile.fat_g ? Math.round(profile.fat_g) : '--'}g
+                  </Text>
+                  <Text style={styles.macroPillLabel}>Fat</Text>
+                </View>
+
+                <View style={[styles.macroPill, { borderColor: 'rgba(34, 211, 238, 0.4)' }]}>
+                  <Text style={[styles.macroPillVal, { color: Colors.dark.cyan }]}>
+                    {profile.daily_calories ? Math.round(profile.daily_calories) : '--'}
+                  </Text>
+                  <Text style={styles.macroPillLabel}>Daily Target</Text>
+                </View>
+              </View>
+
+              {/* Recalibrate Callout Button */}
+              <TouchableOpacity
+                style={styles.recalibrateFullBtn}
+                onPress={() => router.push('/onboarding')}
+                activeOpacity={0.8}
+              >
+                <Text style={styles.recalibrateFullBtnText}>Update Body Stats & Goals ⚙️</Text>
               </TouchableOpacity>
-            </View>
-
-            <View style={styles.bioGrid}>
-              <View style={styles.bioCell}>
-                <Text style={styles.bioCellLabel}>Height</Text>
-                <Text style={styles.bioCellValue}>{profile.height_cm ?? '--'} <Text style={styles.bioCellUnit}>cm</Text></Text>
-              </View>
-              <View style={styles.bioCell}>
-                <Text style={styles.bioCellLabel}>Weight</Text>
-                <Text style={styles.bioCellValue}>{profile.weight_kg ?? '--'} <Text style={styles.bioCellUnit}>kg</Text></Text>
-              </View>
-              <View style={styles.bioCell}>
-                <Text style={styles.bioCellLabel}>Age</Text>
-                <Text style={styles.bioCellValue}>{profile.age ?? '--'} <Text style={styles.bioCellUnit}>yrs</Text></Text>
-              </View>
-              <View style={styles.bioCell}>
-                <Text style={styles.bioCellLabel}>BMR Burn</Text>
-                <Text style={styles.bioCellValue}>{profile.bmr ? Math.round(profile.bmr) : '--'} <Text style={styles.bioCellUnit}>kcal</Text></Text>
-              </View>
-            </View>
-
-            {/* Daily Macro Fuel Targets */}
-            <View style={styles.macroPillRow}>
-              <View style={[styles.macroPill, { borderColor: 'rgba(255, 68, 68, 0.4)' }]}>
-                <Text style={[styles.macroPillVal, { color: '#FF4444' }]}>
-                  {profile.protein_g ? Math.round(profile.protein_g) : '--'}g
-                </Text>
-                <Text style={styles.macroPillLabel}>Protein</Text>
-              </View>
-
-              <View style={[styles.macroPill, { borderColor: 'rgba(255, 170, 0, 0.4)' }]}>
-                <Text style={[styles.macroPillVal, { color: '#FFAA00' }]}>
-                  {profile.carbs_g ? Math.round(profile.carbs_g) : '--'}g
-                </Text>
-                <Text style={styles.macroPillLabel}>Carbs</Text>
-              </View>
-
-              <View style={[styles.macroPill, { borderColor: 'rgba(0, 255, 136, 0.4)' }]}>
-                <Text style={[styles.macroPillVal, { color: '#00FF88' }]}>
-                  {profile.fat_g ? Math.round(profile.fat_g) : '--'}g
-                </Text>
-                <Text style={styles.macroPillLabel}>Fat</Text>
-              </View>
-
-              <View style={[styles.macroPill, { borderColor: 'rgba(0, 168, 255, 0.4)' }]}>
-                <Text style={[styles.macroPillVal, { color: '#00A8FF' }]}>
-                  {profile.daily_calories ? Math.round(profile.daily_calories) : '--'}
-                </Text>
-                <Text style={styles.macroPillLabel}>Daily Target</Text>
-              </View>
-            </View>
-
-            {/* Recalibrate Callout Button */}
-            <TouchableOpacity
-              style={styles.recalibrateFullBtn}
-              onPress={() => router.push('/onboarding')}
-              activeOpacity={0.8}
-            >
-              <Text style={styles.recalibrateFullBtnText}>Update Body Stats & Goals ⚙️</Text>
-            </TouchableOpacity>
+            </DungeonCard>
           </Animated.View>
         )}
 
         {/* 5. CLOUD SYNC & ACCOUNT */}
-        <Animated.View entering={FadeInDown.duration(450).delay(360)} style={styles.syncCard}>
-          <View style={styles.syncHeader}>
-            <Text style={styles.syncTitle}>Cloud Sync</Text>
-            <View style={styles.liveIndicatorRow}>
-              <View
-                style={[
-                  styles.syncDot,
-                  { backgroundColor: user && isFirebaseConfigured() ? '#00FF88' : '#FFAA00' },
-                ]}
-              />
-              <Text style={styles.liveStatusText}>
-                {user && isFirebaseConfigured() ? 'Online' : isGuest ? 'Guest' : 'Offline'}
-              </Text>
+        <Animated.View entering={FadeInDown.duration(450).delay(360)}>
+          <DungeonCard style={styles.syncCardWrapper}>
+            <View style={styles.syncHeader}>
+              <Text style={styles.syncTitle}>CLOUD SYNC</Text>
+              <View style={styles.liveIndicatorRow}>
+                <View
+                  style={[
+                    styles.syncDot,
+                    { backgroundColor: user && isFirebaseConfigured() ? Colors.dark.success : '#F59E0B' },
+                  ]}
+                />
+                <Text style={styles.liveStatusText}>
+                  {user && isFirebaseConfigured() ? 'Online' : isGuest ? 'Guest' : 'Offline'}
+                </Text>
+              </View>
             </View>
-          </View>
 
-          {user && (
-            <View style={styles.userBanner}>
-              {user.photoURL ? (
-                <Image source={{ uri: user.photoURL }} style={styles.userAvatar} contentFit="cover" />
-              ) : (
-                <View style={[styles.userAvatar, styles.userAvatarPlaceholder]}>
-                  <Text style={styles.userAvatarText}>
-                    {(user.displayName?.[0] || user.email?.[0] || 'H').toUpperCase()}
-                  </Text>
+            {user && (
+              <View style={styles.userBanner}>
+                {user.photoURL ? (
+                  <Image source={{ uri: user.photoURL }} style={styles.userAvatar} contentFit="cover" />
+                ) : (
+                  <View style={[styles.userAvatar, styles.userAvatarPlaceholder]}>
+                    <Text style={styles.userAvatarText}>
+                      {(user.displayName?.[0] || user.email?.[0] || 'H').toUpperCase()}
+                    </Text>
+                  </View>
+                )}
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.userName}>{user.displayName || 'Hunter'}</Text>
+                  <Text style={styles.userEmail}>{user.email}</Text>
                 </View>
-              )}
-              <View style={{ flex: 1 }}>
-                <Text style={styles.userName}>{user.displayName || 'Hunter'}</Text>
-                <Text style={styles.userEmail}>{user.email}</Text>
+                <View style={styles.cloudVerifiedBadge}>
+                  <Text style={styles.cloudVerifiedText}>✓ Synced</Text>
+                </View>
               </View>
-              <View style={styles.cloudVerifiedBadge}>
-                <Text style={styles.cloudVerifiedText}>✓ Synced</Text>
-              </View>
-            </View>
-          )}
+            )}
 
-          <Text style={styles.syncTimeText}>
-            Last synchronized:{' '}
-            {lastSynced ? new Date(lastSynced).toLocaleString() : 'Local Database Active (Offline Mode)'}
-          </Text>
-
-          <TouchableOpacity
-            style={[styles.syncActionButton, syncing && styles.syncActionDisabled]}
-            disabled={syncing}
-            onPress={handleManualSync}
-            activeOpacity={0.8}
-          >
-            <Text style={styles.syncActionText}>
-              {syncing ? 'Syncing...' : '⚡ Sync Data with Cloud'}
+            <Text style={styles.syncTimeText}>
+              Last synchronized:{' '}
+              {lastSynced ? new Date(lastSynced).toLocaleString() : 'Local Database Active (Offline Mode)'}
             </Text>
-          </TouchableOpacity>
-        </Animated.View>
 
-        {/* 5.5 AUDIO & BGM CONFIGURATION */}
-        <Animated.View entering={FadeInUp.duration(450).delay(380)} style={styles.syncCard}>
-          <View style={styles.audioCardHeader}>
-            <View>
-              <Text style={styles.audioCardTag}>SYSTEM AUDIO // BGM & SFX</Text>
-              <Text style={styles.audioCardTitle}>Sound & Music</Text>
-            </View>
-            <View style={[styles.audioStatusBadge, bgmEnabled && styles.audioStatusBadgeActive]}>
-              <Text style={styles.audioStatusBadgeText}>
-                {bgmEnabled ? (isBgmPlaying ? '🎵 PLAYING' : '🎵 ACTIVE') : '🔇 MUTED'}
+            <TouchableOpacity
+              style={[styles.syncActionButton, syncing && styles.syncActionDisabled]}
+              disabled={syncing}
+              onPress={handleManualSync}
+              activeOpacity={0.8}
+            >
+              <Text style={styles.syncActionText}>
+                {syncing ? 'Syncing...' : '⚡ Sync Data with Cloud'}
               </Text>
-            </View>
-          </View>
-
-          {/* BGM Toggle Row */}
-          <View style={styles.audioSettingRow}>
-            <View style={styles.audioSettingInfo}>
-              <Text style={styles.audioSettingTitle}>Background Music (BGM)</Text>
-              <Text style={styles.audioSettingSub}>Loop atmospheric dungeon theme</Text>
-            </View>
-            <Switch
-              value={bgmEnabled}
-              onValueChange={setBGMEnabled}
-              trackColor={{ false: '#1E293B', true: '#0066BB' }}
-              thumbColor={bgmEnabled ? '#00F0FF' : '#6B7B8F'}
-            />
-          </View>
-
-          {/* BGM Volume Selector */}
-          {bgmEnabled && (
-            <View style={styles.volumeRow}>
-              <Text style={styles.volumeLabel}>BGM Volume</Text>
-              <View style={styles.volumePillsContainer}>
-                {[0.2, 0.35, 0.6, 1.0].map((vol) => {
-                  const isSelected = Math.abs(bgmVolume - vol) < 0.08;
-                  const label = `${Math.round(vol * 100)}%`;
-                  return (
-                    <TouchableOpacity
-                      key={vol}
-                      style={[styles.volumePill, isSelected && styles.volumePillActive]}
-                      onPress={() => setBGMVolume(vol)}
-                      activeOpacity={0.7}
-                    >
-                      <Text style={[styles.volumePillText, isSelected && styles.volumePillTextActive]}>
-                        {label}
-                      </Text>
-                    </TouchableOpacity>
-                  );
-                })}
-              </View>
-            </View>
-          )}
-
-          {/* SFX Toggle Row */}
-          <View style={styles.audioSettingRow}>
-            <View style={styles.audioSettingInfo}>
-              <Text style={styles.audioSettingTitle}>Sound Effects (SFX)</Text>
-              <Text style={styles.audioSettingSub}>Play reward claim & achievement sounds</Text>
-            </View>
-            <Switch
-              value={sfxEnabled}
-              onValueChange={setSFXEnabled}
-              trackColor={{ false: '#1E293B', true: '#0066BB' }}
-              thumbColor={sfxEnabled ? '#00F0FF' : '#6B7B8F'}
-            />
-          </View>
-
-          {/* Test Sound Button */}
-          <TouchableOpacity
-            style={styles.testSfxBtn}
-            onPress={playClaimSound}
-            activeOpacity={0.75}
-          >
-            <Text style={styles.testSfxBtnText}>⚡ Test Reward Claim Sound</Text>
-          </TouchableOpacity>
+            </TouchableOpacity>
+          </DungeonCard>
         </Animated.View>
 
         {/* 6. SIGN OUT BUTTON */}
@@ -607,7 +532,7 @@ export default function ProfileScreen() {
 
         {/* FOOTER */}
         <View style={styles.footerNote}>
-          <Text style={styles.footerText}>Solo Leveling Fitness</Text>
+          <Text style={styles.footerText}>SOLO LEVELING SYSTEM</Text>
           <Text style={styles.footerSubText}>Offline-first • Progress saved locally</Text>
         </View>
       </ScrollView>
@@ -618,7 +543,7 @@ export default function ProfileScreen() {
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: '#0B1120',
+    backgroundColor: Colors.dark.backgroundDeep,
   },
   container: {
     padding: Spacing.threeHalf,
@@ -635,26 +560,28 @@ const styles = StyleSheet.create({
     gap: 2,
   },
   systemTag: {
-    fontSize: 12,
-    fontFamily: Fonts.sans,
-    color: '#00A8FF',
-    fontWeight: '600',
+    fontSize: 11,
+    fontFamily: Fonts.display,
+    color: Colors.dark.accent,
+    fontWeight: '700',
+    letterSpacing: 2,
   },
   title: {
-    fontSize: 24,
+    fontSize: 28,
     fontWeight: '700',
-    fontFamily: Fonts.sans,
-    color: '#E8ECF4',
+    fontFamily: Fonts.display,
+    color: Colors.dark.textBright,
+    letterSpacing: 1,
   },
   statusPill: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
-    borderWidth: 1,
+    borderWidth: 1.5,
     borderRadius: 20,
     paddingHorizontal: 12,
     paddingVertical: 5,
-    backgroundColor: '#0E1726',
+    backgroundColor: Colors.dark.backgroundCard,
   },
   statusDot: {
     width: 6,
@@ -663,41 +590,43 @@ const styles = StyleSheet.create({
   },
   statusPillText: {
     fontSize: 11,
-    fontFamily: Fonts.sans,
+    fontFamily: Fonts.display,
     fontWeight: '700',
+    letterSpacing: 0.5,
   },
 
   // --- License Card ---
-  licenseCard: {
-    backgroundColor: '#111827',
-    borderWidth: 1.5,
-    borderRadius: 16,
-    padding: Spacing.threeHalf,
+  licenseCardWrapper: {
     gap: 12,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.2,
-    shadowRadius: 10,
-    elevation: 6,
   },
   licenseHeaderBar: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
     borderBottomWidth: 1,
-    borderBottomColor: '#1E293B',
+    borderBottomColor: Colors.dark.border,
     paddingBottom: 8,
+    marginBottom: 4,
+  },
+  licenseTagGroup: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  licenseSymbol: {
+    fontSize: 10,
+    color: Colors.dark.accent,
   },
   licenseHeaderTag: {
     fontSize: 11,
-    fontFamily: Fonts.sans,
-    color: '#00A8FF',
-    fontWeight: '600',
+    fontFamily: Fonts.display,
+    fontWeight: '700',
+    letterSpacing: 1.5,
   },
   licenseSerial: {
-    fontSize: 10,
+    fontSize: 11,
     fontFamily: Fonts.mono,
-    color: '#6B7B8F',
+    color: Colors.dark.textMuted,
     fontWeight: '600',
   },
   licenseBody: {
@@ -706,13 +635,13 @@ const styles = StyleSheet.create({
     gap: 14,
   },
   portraitWrapper: {
-    width: 76,
-    height: 76,
+    width: 78,
+    height: 78,
     borderRadius: 14,
     borderWidth: 2,
     overflow: 'hidden',
     position: 'relative',
-    backgroundColor: '#0E1726',
+    backgroundColor: Colors.dark.backgroundElement,
   },
   portraitImage: {
     width: '100%',
@@ -730,7 +659,7 @@ const styles = StyleSheet.create({
     fontSize: 11,
     fontFamily: Fonts.mono,
     fontWeight: '900',
-    color: '#070B14',
+    color: Colors.dark.backgroundDeep,
   },
   credentialsColumn: {
     flex: 1,
@@ -743,16 +672,18 @@ const styles = StyleSheet.create({
     gap: 6,
   },
   hunterName: {
-    fontSize: 18,
+    fontSize: 20,
     fontWeight: '700',
-    fontFamily: Fonts.sans,
-    color: '#E8ECF4',
+    fontFamily: Fonts.display,
+    color: Colors.dark.textBright,
+    letterSpacing: 0.5,
     flex: 1,
   },
   hunterTitle: {
     fontSize: 12,
-    fontFamily: Fonts.sans,
+    fontFamily: Fonts.display,
     fontWeight: '600',
+    letterSpacing: 0.5,
   },
   levelRow: {
     flexDirection: 'row',
@@ -763,9 +694,9 @@ const styles = StyleSheet.create({
   levelChip: {
     flexDirection: 'row',
     alignItems: 'baseline',
-    backgroundColor: 'rgba(0, 168, 255, 0.1)',
+    backgroundColor: 'rgba(139, 92, 246, 0.12)',
     borderWidth: 1,
-    borderColor: 'rgba(0, 168, 255, 0.3)',
+    borderColor: 'rgba(139, 92, 246, 0.3)',
     borderRadius: 8,
     paddingHorizontal: 8,
     paddingVertical: 2,
@@ -773,28 +704,29 @@ const styles = StyleSheet.create({
   },
   levelChipLabel: {
     fontSize: 9,
-    fontFamily: Fonts.sans,
-    color: '#00A8FF',
+    fontFamily: Fonts.display,
+    color: Colors.dark.accent,
     fontWeight: '700',
   },
   levelChipVal: {
     fontSize: 13,
     fontFamily: Fonts.mono,
-    color: '#FFFFFF',
+    color: Colors.dark.textBright,
     fontWeight: '800',
   },
   totalXpText: {
     fontSize: 11,
     fontFamily: Fonts.sans,
-    color: '#8896AB',
+    color: Colors.dark.textSecondary,
   },
   levelProgressContainer: {
-    backgroundColor: '#0E1726',
+    backgroundColor: Colors.dark.backgroundElement,
     borderWidth: 1,
-    borderColor: '#1E293B',
-    borderRadius: 10,
+    borderColor: Colors.dark.border,
+    borderRadius: 12,
     padding: 10,
     gap: 6,
+    marginTop: 4,
   },
   levelProgressHeader: {
     flexDirection: 'row',
@@ -802,10 +734,11 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   progressLabel: {
-    fontSize: 11,
-    fontFamily: Fonts.sans,
-    color: '#8896AB',
+    fontSize: 10,
+    fontFamily: Fonts.display,
+    color: Colors.dark.textMuted,
     fontWeight: '600',
+    letterSpacing: 0.5,
   },
   progressVal: {
     fontSize: 11,
@@ -813,40 +746,37 @@ const styles = StyleSheet.create({
     fontWeight: '700',
   },
   progressBarTrack: {
-    height: 6,
-    backgroundColor: '#0B1120',
-    borderRadius: 3,
+    height: 7,
+    backgroundColor: Colors.dark.backgroundDeep,
+    borderRadius: 4,
     overflow: 'hidden',
   },
   progressBarFill: {
     height: '100%',
-    borderRadius: 3,
+    borderRadius: 4,
   },
 
   // --- Matrix Card ---
-  matrixCard: {
-    backgroundColor: '#111827',
-    borderWidth: 1,
-    borderColor: '#1E293B',
-    borderRadius: 16,
-    padding: Spacing.threeHalf,
+  matrixCardWrapper: {
     gap: 12,
   },
   matrixHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
+    marginBottom: 2,
   },
   matrixTitle: {
     fontSize: 13,
-    fontFamily: Fonts.sans,
+    fontFamily: Fonts.display,
     fontWeight: '700',
-    color: '#00A8FF',
+    color: Colors.dark.accent,
+    letterSpacing: 1,
   },
   matrixSubtitle: {
     fontSize: 11,
     fontFamily: Fonts.sans,
-    color: '#6B7B8F',
+    color: Colors.dark.textMuted,
   },
   statsRow: {
     flexDirection: 'row',
@@ -855,9 +785,9 @@ const styles = StyleSheet.create({
   },
   statChip: {
     flex: 1,
-    backgroundColor: '#0E1726',
+    backgroundColor: Colors.dark.backgroundElement,
     borderWidth: 1,
-    borderColor: '#1E293B',
+    borderColor: Colors.dark.border,
     borderRadius: 10,
     padding: 8,
     gap: 4,
@@ -875,17 +805,17 @@ const styles = StyleSheet.create({
   statAmount: {
     fontSize: 11,
     fontFamily: Fonts.mono,
-    color: '#E8ECF4',
+    color: Colors.dark.textBright,
     fontWeight: '700',
   },
   statName: {
     fontSize: 9,
     fontFamily: Fonts.sans,
-    color: '#6B7B8F',
+    color: Colors.dark.textMuted,
   },
   statBarBg: {
     height: 4,
-    backgroundColor: '#0B1120',
+    backgroundColor: Colors.dark.backgroundDeep,
     borderRadius: 2,
     overflow: 'hidden',
     marginTop: 2,
@@ -896,12 +826,7 @@ const styles = StyleSheet.create({
   },
 
   // --- Protocol Card ---
-  protocolCard: {
-    backgroundColor: '#111827',
-    borderWidth: 1,
-    borderColor: '#1E293B',
-    borderRadius: 16,
-    padding: Spacing.threeHalf,
+  protocolCardWrapper: {
     gap: 12,
   },
   protocolHeader: {
@@ -911,15 +836,16 @@ const styles = StyleSheet.create({
   },
   protocolHeaderTag: {
     fontSize: 12,
-    fontFamily: Fonts.sans,
+    fontFamily: Fonts.display,
     fontWeight: '700',
-    color: '#00A8FF',
+    color: Colors.dark.accent,
+    letterSpacing: 1,
   },
   recalibrateAction: {
     fontSize: 11,
     fontFamily: Fonts.sans,
     fontWeight: '600',
-    color: '#00A8FF',
+    color: Colors.dark.accent,
   },
   directiveRow: {
     flexDirection: 'row',
@@ -930,9 +856,9 @@ const styles = StyleSheet.create({
     width: 42,
     height: 42,
     borderRadius: 10,
-    backgroundColor: '#0E1726',
+    backgroundColor: Colors.dark.backgroundElement,
     borderWidth: 1,
-    borderColor: '#1E293B',
+    borderColor: Colors.dark.border,
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -941,33 +867,30 @@ const styles = StyleSheet.create({
   },
   directiveLabel: {
     fontSize: 10,
-    fontFamily: Fonts.sans,
-    color: '#6B7B8F',
+    fontFamily: Fonts.display,
+    color: Colors.dark.textMuted,
     fontWeight: '600',
+    letterSpacing: 0.5,
   },
   directiveMainText: {
-    fontSize: 14,
+    fontSize: 15,
     fontWeight: '700',
-    fontFamily: Fonts.sans,
-    color: '#E8ECF4',
+    fontFamily: Fonts.display,
+    color: Colors.dark.textBright,
+    letterSpacing: 0.3,
   },
   directiveSubText: {
     fontSize: 11,
     fontFamily: Fonts.sans,
-    color: '#8896AB',
+    color: Colors.dark.textSecondary,
   },
   cardDivider: {
     height: 1,
-    backgroundColor: '#1E293B',
+    backgroundColor: Colors.dark.border,
   },
 
   // --- Bio Card ---
-  bioCard: {
-    backgroundColor: '#111827',
-    borderWidth: 1,
-    borderColor: '#1E293B',
-    borderRadius: 16,
-    padding: Spacing.threeHalf,
+  bioCardWrapper: {
     gap: 12,
   },
   bioHeader: {
@@ -977,14 +900,15 @@ const styles = StyleSheet.create({
   },
   bioTitle: {
     fontSize: 13,
-    fontFamily: Fonts.sans,
+    fontFamily: Fonts.display,
     fontWeight: '700',
-    color: '#00A8FF',
+    color: Colors.dark.accent,
+    letterSpacing: 1,
   },
   editLink: {
     fontSize: 11,
     fontFamily: Fonts.sans,
-    color: '#00A8FF',
+    color: Colors.dark.accent,
     fontWeight: '600',
   },
   bioGrid: {
@@ -993,9 +917,9 @@ const styles = StyleSheet.create({
   },
   bioCell: {
     flex: 1,
-    backgroundColor: '#0E1726',
+    backgroundColor: Colors.dark.backgroundElement,
     borderWidth: 1,
-    borderColor: '#1E293B',
+    borderColor: Colors.dark.border,
     borderRadius: 10,
     paddingVertical: 10,
     alignItems: 'center',
@@ -1003,19 +927,20 @@ const styles = StyleSheet.create({
   },
   bioCellLabel: {
     fontSize: 10,
-    fontFamily: Fonts.sans,
-    color: '#6B7B8F',
-    fontWeight: '500',
+    fontFamily: Fonts.display,
+    color: Colors.dark.textMuted,
+    fontWeight: '600',
+    letterSpacing: 0.5,
   },
   bioCellValue: {
     fontSize: 14,
     fontFamily: Fonts.mono,
     fontWeight: '700',
-    color: '#E8ECF4',
+    color: Colors.dark.textBright,
   },
   bioCellUnit: {
     fontSize: 9,
-    color: '#6B7B8F',
+    color: Colors.dark.textMuted,
     fontWeight: '400',
   },
   macroPillRow: {
@@ -1024,7 +949,7 @@ const styles = StyleSheet.create({
   },
   macroPill: {
     flex: 1,
-    backgroundColor: '#0E1726',
+    backgroundColor: Colors.dark.backgroundElement,
     borderWidth: 1,
     borderRadius: 10,
     paddingVertical: 8,
@@ -1038,32 +963,30 @@ const styles = StyleSheet.create({
   },
   macroPillLabel: {
     fontSize: 9,
-    fontFamily: Fonts.sans,
-    color: '#6B7B8F',
+    fontFamily: Fonts.display,
+    color: Colors.dark.textMuted,
     fontWeight: '600',
+    letterSpacing: 0.5,
   },
   recalibrateFullBtn: {
-    backgroundColor: 'rgba(0, 168, 255, 0.08)',
+    backgroundColor: 'rgba(139, 92, 246, 0.08)',
     borderWidth: 1,
-    borderColor: 'rgba(0, 168, 255, 0.25)',
+    borderColor: 'rgba(139, 92, 246, 0.25)',
     borderRadius: 12,
     paddingVertical: 12,
     alignItems: 'center',
+    marginTop: 4,
   },
   recalibrateFullBtnText: {
     fontSize: 12,
-    fontFamily: Fonts.sans,
-    fontWeight: '600',
-    color: '#00A8FF',
+    fontFamily: Fonts.display,
+    fontWeight: '700',
+    color: Colors.dark.accentBright,
+    letterSpacing: 0.5,
   },
 
   // --- Sync Card ---
-  syncCard: {
-    backgroundColor: '#111827',
-    borderWidth: 1,
-    borderColor: '#1E293B',
-    borderRadius: 16,
-    padding: Spacing.threeHalf,
+  syncCardWrapper: {
     gap: 12,
   },
   syncHeader: {
@@ -1073,9 +996,10 @@ const styles = StyleSheet.create({
   },
   syncTitle: {
     fontSize: 13,
-    fontFamily: Fonts.sans,
+    fontFamily: Fonts.display,
     fontWeight: '700',
-    color: '#00A8FF',
+    color: Colors.dark.accent,
+    letterSpacing: 1,
   },
   liveIndicatorRow: {
     flexDirection: 'row',
@@ -1091,15 +1015,15 @@ const styles = StyleSheet.create({
     fontSize: 11,
     fontFamily: Fonts.sans,
     fontWeight: '600',
-    color: '#8896AB',
+    color: Colors.dark.textSecondary,
   },
   userBanner: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#0E1726',
+    backgroundColor: Colors.dark.backgroundElement,
     borderWidth: 1,
-    borderColor: '#1E293B',
-    borderRadius: 10,
+    borderColor: Colors.dark.border,
+    borderRadius: 12,
     padding: 10,
     gap: 10,
   },
@@ -1108,80 +1032,85 @@ const styles = StyleSheet.create({
     height: 38,
     borderRadius: 19,
     borderWidth: 1.5,
-    borderColor: '#00A8FF',
+    borderColor: Colors.dark.accent,
   },
   userAvatarPlaceholder: {
-    backgroundColor: '#1E293B',
+    backgroundColor: Colors.dark.backgroundDeep,
     justifyContent: 'center',
     alignItems: 'center',
   },
   userAvatarText: {
     fontSize: 15,
     fontWeight: '700',
-    color: '#00A8FF',
+    color: Colors.dark.accent,
   },
   userName: {
     fontSize: 14,
     fontWeight: '700',
     fontFamily: Fonts.sans,
-    color: '#E8ECF4',
+    color: Colors.dark.textBright,
   },
   userEmail: {
     fontSize: 11,
     fontFamily: Fonts.sans,
-    color: '#6B7B8F',
+    color: Colors.dark.textSecondary,
   },
   cloudVerifiedBadge: {
-    backgroundColor: 'rgba(0, 255, 136, 0.08)',
+    backgroundColor: 'rgba(16, 185, 129, 0.08)',
     borderWidth: 1,
-    borderColor: 'rgba(0, 255, 136, 0.3)',
+    borderColor: 'rgba(16, 185, 129, 0.3)',
     borderRadius: 6,
     paddingHorizontal: 8,
     paddingVertical: 3,
   },
   cloudVerifiedText: {
     fontSize: 10,
-    fontFamily: Fonts.sans,
+    fontFamily: Fonts.display,
     fontWeight: '600',
-    color: '#00FF88',
+    color: Colors.dark.success,
   },
   syncTimeText: {
     fontSize: 11,
     fontFamily: Fonts.sans,
-    color: '#6B7B8F',
+    color: Colors.dark.textMuted,
   },
   syncActionButton: {
-    backgroundColor: '#0066BB',
-    borderWidth: 1,
-    borderColor: '#00A8FF',
+    backgroundColor: Colors.dark.accent,
     borderRadius: 12,
     paddingVertical: 14,
     alignItems: 'center',
+    shadowColor: Colors.dark.accent,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 10,
+    elevation: 6,
   },
   syncActionDisabled: {
     opacity: 0.5,
   },
   syncActionText: {
-    fontFamily: Fonts.sans,
-    fontSize: 13,
+    fontFamily: Fonts.display,
+    fontSize: 14,
     fontWeight: '700',
     color: '#FFFFFF',
+    letterSpacing: 0.5,
   },
 
   // --- Sign Out ---
   signOutBtn: {
     borderWidth: 1,
-    borderColor: 'rgba(255, 68, 68, 0.4)',
-    borderRadius: 12,
+    borderColor: 'rgba(239, 68, 68, 0.4)',
+    borderRadius: 14,
     paddingVertical: 14,
     alignItems: 'center',
-    backgroundColor: 'rgba(255, 68, 68, 0.05)',
+    backgroundColor: 'rgba(239, 68, 68, 0.05)',
   },
   signOutBtnText: {
-    fontFamily: Fonts.sans,
-    fontSize: 13,
-    fontWeight: '600',
-    color: '#FF4444',
+    fontFamily: Fonts.display,
+    fontSize: 14,
+    fontWeight: '700',
+    color: '#EF4444',
+    letterSpacing: 0.5,
   },
 
   // --- Footer ---
@@ -1192,134 +1121,14 @@ const styles = StyleSheet.create({
   },
   footerText: {
     fontSize: 11,
-    fontFamily: Fonts.sans,
-    fontWeight: '600',
-    color: '#3B4D66',
+    fontFamily: Fonts.display,
+    fontWeight: '700',
+    color: Colors.dark.textMuted,
+    letterSpacing: 1.5,
   },
   footerSubText: {
     fontSize: 10,
     fontFamily: Fonts.sans,
-    color: '#2A3A50',
-  },
-
-  // --- Audio Settings ---
-  audioCardHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    borderBottomWidth: 1,
-    borderBottomColor: '#1E293B',
-    paddingBottom: 10,
-  },
-  audioCardTag: {
-    fontFamily: Fonts.sans,
-    fontSize: 10,
-    fontWeight: '700',
-    letterSpacing: 1.2,
-    color: '#00F0FF',
-    marginBottom: 2,
-  },
-  audioCardTitle: {
-    fontFamily: Fonts.sans,
-    fontSize: 15,
-    fontWeight: '700',
-    color: '#E8ECF4',
-  },
-  audioStatusBadge: {
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 8,
-    backgroundColor: '#1E293B',
-    borderWidth: 1,
-    borderColor: '#334155',
-  },
-  audioStatusBadgeActive: {
-    backgroundColor: 'rgba(0, 168, 255, 0.12)',
-    borderColor: 'rgba(0, 168, 255, 0.35)',
-  },
-  audioStatusBadgeText: {
-    fontFamily: Fonts.sans,
-    fontSize: 10,
-    fontWeight: '700',
-    letterSpacing: 0.5,
-    color: '#8896AB',
-  },
-  audioSettingRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingVertical: 6,
-    borderBottomWidth: 1,
-    borderBottomColor: 'rgba(30, 41, 59, 0.6)',
-  },
-  audioSettingInfo: {
-    flex: 1,
-    gap: 2,
-    paddingRight: 12,
-  },
-  audioSettingTitle: {
-    fontFamily: Fonts.sans,
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#E8ECF4',
-  },
-  audioSettingSub: {
-    fontFamily: Fonts.sans,
-    fontSize: 11,
-    color: '#6B7B8F',
-  },
-  volumeRow: {
-    gap: 8,
-    paddingVertical: 4,
-  },
-  volumeLabel: {
-    fontFamily: Fonts.sans,
-    fontSize: 11,
-    fontWeight: '600',
-    color: '#8896AB',
-    letterSpacing: 0.5,
-  },
-  volumePillsContainer: {
-    flexDirection: 'row',
-    gap: 8,
-  },
-  volumePill: {
-    flex: 1,
-    alignItems: 'center',
-    paddingVertical: 6,
-    borderRadius: 8,
-    backgroundColor: '#0F172A',
-    borderWidth: 1,
-    borderColor: '#1E293B',
-  },
-  volumePillActive: {
-    backgroundColor: 'rgba(0, 168, 255, 0.15)',
-    borderColor: '#00A8FF',
-  },
-  volumePillText: {
-    fontFamily: Fonts.sans,
-    fontSize: 12,
-    fontWeight: '600',
-    color: '#6B7B8F',
-  },
-  volumePillTextActive: {
-    color: '#00F0FF',
-    fontWeight: '700',
-  },
-  testSfxBtn: {
-    marginTop: 6,
-    borderWidth: 1,
-    borderColor: 'rgba(0, 240, 255, 0.3)',
-    backgroundColor: 'rgba(0, 240, 255, 0.06)',
-    borderRadius: 10,
-    paddingVertical: 10,
-    alignItems: 'center',
-  },
-  testSfxBtnText: {
-    fontFamily: Fonts.sans,
-    fontSize: 12,
-    fontWeight: '700',
-    letterSpacing: 0.5,
-    color: '#00F0FF',
+    color: Colors.dark.borderBright,
   },
 });

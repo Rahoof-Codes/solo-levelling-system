@@ -37,8 +37,6 @@ export const CREATE_TABLES_SQL = `
     int_xp INTEGER NOT NULL DEFAULT 0,
     per_xp INTEGER NOT NULL DEFAULT 0,
     title TEXT,
-    selected_plan TEXT,
-    plan_start_date TEXT,
     onboarding_complete INTEGER NOT NULL DEFAULT 0,
     updated_at TEXT NOT NULL,
     synced INTEGER NOT NULL DEFAULT 0

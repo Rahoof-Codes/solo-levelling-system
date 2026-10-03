@@ -2,7 +2,6 @@
 // Audio Context — Global BGM & Sound Effects Management
 // Powered by expo-audio (Expo SDK 57)
 // ============================================================
-/* eslint-disable react-hooks/immutability */
 
 import React, {
   createContext,
@@ -22,6 +21,46 @@ import {
   DEFAULT_AUDIO_SETTINGS,
   type AudioSettings,
 } from '@/constants/audio';
+
+// Safe HTMLMediaElement.play wrapper on Web to prevent unhandled NotAllowedError rejections
+if (
+  Platform.OS === 'web' &&
+  typeof window !== 'undefined' &&
+  typeof window.HTMLMediaElement !== 'undefined'
+) {
+  const originalPlay = window.HTMLMediaElement.prototype.play;
+  if (originalPlay && !(originalPlay as any).__isSafePlayPatched) {
+    window.HTMLMediaElement.prototype.play = function (this: HTMLMediaElement) {
+      const result = originalPlay.call(this);
+      if (result && typeof (result as any).catch === 'function') {
+        return (result as any).catch((err: any) => {
+          if (
+            err?.name === 'NotAllowedError' ||
+            err?.message?.includes('interact') ||
+            err?.message?.includes('user gesture')
+          ) {
+            // Autoplay blocked by browser policy — gracefully ignored; audio will start on user interaction
+            return;
+          }
+          return Promise.reject(err);
+        });
+      }
+      return result;
+    };
+    (window.HTMLMediaElement.prototype.play as any).__isSafePlayPatched = true;
+  }
+
+  // Also suppress unhandledrejection for NotAllowedError on web
+  window.addEventListener('unhandledrejection', (event) => {
+    if (
+      event.reason?.name === 'NotAllowedError' ||
+      event.reason?.message?.includes("user didn't interact") ||
+      event.reason?.message?.includes('interact with the document first')
+    ) {
+      event.preventDefault();
+    }
+  });
+}
 
 interface AudioContextType {
   /** Whether BGM is enabled in settings */
@@ -48,10 +87,20 @@ interface AudioContextType {
   isOpeningAnimationActive: boolean;
   /** Set opening animation active state */
   setOpeningAnimationActive: (active: boolean) => void;
+  /** Whether the user is currently on the dashboard / tabs */
+  isDashboardActive: boolean;
+  /** Set dashboard active state */
+  setDashboardActive: (active: boolean) => void;
+  /** Trigger BGM play safely */
+  playBGM: () => void;
+  /** Trigger BGM pause safely */
+  pauseBGM: () => void;
   /** Play the arise sound effect */
   playAriseSound: () => void;
   /** Play the reward claiming sound effect */
   playClaimSound: () => void;
+  /** Play the touch / button click sound effect */
+  playTouchSound: () => void;
 }
 
 const AudioContext = createContext<AudioContextType | null>(null);
@@ -60,6 +109,7 @@ export function AudioProvider({ children }: { children: ReactNode }) {
   const [settings, setSettings] = useState<AudioSettings>(DEFAULT_AUDIO_SETTINGS);
   const [isLoaded, setIsLoaded] = useState(false);
   const [isOpeningAnimationActive, setIsOpeningAnimationActive] = useState(true);
+  const [isDashboardActive, setIsDashboardActive] = useState(false);
 
   // Expo-audio player instances
   const bgmPlayer = useAudioPlayer(AUDIO_ASSETS.BGM, {
@@ -68,14 +118,27 @@ export function AudioProvider({ children }: { children: ReactNode }) {
   const claimPlayer = useAudioPlayer(AUDIO_ASSETS.CLAIM, {
     updateInterval: 500,
   });
+  const touchPlayer = useAudioPlayer(AUDIO_ASSETS.TOUCH, {
+    updateInterval: 500,
+  });
 
   const bgmStatus = useAudioPlayerStatus(bgmPlayer);
 
-  // Keep ref to latest settings for event handlers
+  // Keep refs to latest states for event handlers & async operations
   const settingsRef = useRef(settings);
   useEffect(() => {
     settingsRef.current = settings;
   }, [settings]);
+
+  const isOpeningAnimationActiveRef = useRef(isOpeningAnimationActive);
+  useEffect(() => {
+    isOpeningAnimationActiveRef.current = isOpeningAnimationActive;
+  }, [isOpeningAnimationActive]);
+
+  const isDashboardActiveRef = useRef(isDashboardActive);
+  useEffect(() => {
+    isDashboardActiveRef.current = isDashboardActive;
+  }, [isDashboardActive]);
 
   // 1. Initialize audio mode & load saved settings from AsyncStorage
   useEffect(() => {
@@ -88,8 +151,8 @@ export function AudioProvider({ children }: { children: ReactNode }) {
           interruptionMode: 'mixWithOthers',
           shouldPlayInBackground: false,
         });
-      } catch (err) {
-        console.warn('[AudioContext] setAudioModeAsync warning:', err);
+      } catch {
+        // audio mode warning
       }
 
       try {
@@ -133,97 +196,125 @@ export function AudioProvider({ children }: { children: ReactNode }) {
     } catch {}
   }, [bgmPlayer, settings.bgmVolume]);
 
-  // 4. Configure Claim Sound Player loop and volume
+  // 4. Configure SFX Players loop and volume
   useEffect(() => {
     try {
       claimPlayer.loop = false;
       claimPlayer.volume = settings.sfxVolume;
+      touchPlayer.loop = false;
+      touchPlayer.volume = settings.sfxVolume;
     } catch {}
-  }, [claimPlayer, settings.sfxVolume]);
+  }, [claimPlayer, touchPlayer, settings.sfxVolume]);
 
-  // 5. Handle BGM playback based on bgmEnabled & opening animation state
+  // Safe Play and Pause BGM functions
+  const playBGM = useCallback(() => {
+    try {
+      bgmPlayer.loop = true;
+      bgmPlayer.volume = settingsRef.current.bgmVolume;
+      const res: any = bgmPlayer.play();
+      if (res && typeof res.catch === 'function') {
+        res.catch(() => {});
+      }
+    } catch {}
+  }, [bgmPlayer]);
+
+  const pauseBGM = useCallback(() => {
+    try {
+      bgmPlayer.pause();
+    } catch {}
+  }, [bgmPlayer]);
+
+  // 5. Handle BGM playback:
+  // Main BGM starts ONLY when:
+  // - bgmEnabled is true
+  // - user has arrived at the dashboard (isDashboardActive === true)
+  // - opening animation is completed (isOpeningAnimationActive === false)
   useEffect(() => {
     if (!isLoaded) return;
 
-    if (settings.bgmEnabled && !isOpeningAnimationActive) {
-      try {
-        bgmPlayer.loop = true;
-        bgmPlayer.volume = settings.bgmVolume;
-        bgmPlayer.play();
-      } catch (err) {
-        // Autoplay may be blocked on web until user interaction
-        console.log('[AudioContext] BGM play deferred (waiting for interaction):', err);
-      }
-    } else {
-      try {
-        bgmPlayer.pause();
-      } catch {}
-    }
-  }, [settings.bgmEnabled, settings.bgmVolume, isLoaded, bgmPlayer, isOpeningAnimationActive]);
+    const shouldPlay =
+      settings.bgmEnabled && isDashboardActive && !isOpeningAnimationActive;
 
-  // 6. Handle web browser autoplay policy (first click/touch triggers playback if enabled)
+    if (shouldPlay) {
+      playBGM();
+    } else {
+      pauseBGM();
+    }
+  }, [
+    settings.bgmEnabled,
+    settings.bgmVolume,
+    isLoaded,
+    isDashboardActive,
+    isOpeningAnimationActive,
+    playBGM,
+    pauseBGM,
+  ]);
+
+  // 6. Handle web browser autoplay policy:
+  // When user is on dashboard and BGM should play, listen for first user interaction (click, keydown, touch)
   useEffect(() => {
     if (Platform.OS !== 'web' || typeof window === 'undefined') return;
 
-    const startAudioOnInteraction = () => {
-      if (settingsRef.current.bgmEnabled && !bgmPlayer.playing) {
-        try {
-          bgmPlayer.loop = true;
-          bgmPlayer.volume = settingsRef.current.bgmVolume;
-          bgmPlayer.play();
-        } catch {}
+    const tryUnlockAndPlay = () => {
+      if (
+        settingsRef.current.bgmEnabled &&
+        isDashboardActiveRef.current &&
+        !isOpeningAnimationActiveRef.current
+      ) {
+        playBGM();
       }
     };
 
-    window.addEventListener('click', startAudioOnInteraction, { once: true });
-    window.addEventListener('touchstart', startAudioOnInteraction, { once: true });
-    window.addEventListener('keydown', startAudioOnInteraction, { once: true });
+    window.addEventListener('click', tryUnlockAndPlay, { passive: true });
+    window.addEventListener('pointerdown', tryUnlockAndPlay, { passive: true });
+    window.addEventListener('touchstart', tryUnlockAndPlay, { passive: true });
+    window.addEventListener('keydown', tryUnlockAndPlay, { passive: true });
 
     return () => {
-      window.removeEventListener('click', startAudioOnInteraction);
-      window.removeEventListener('touchstart', startAudioOnInteraction);
-      window.removeEventListener('keydown', startAudioOnInteraction);
+      window.removeEventListener('click', tryUnlockAndPlay);
+      window.removeEventListener('pointerdown', tryUnlockAndPlay);
+      window.removeEventListener('touchstart', tryUnlockAndPlay);
+      window.removeEventListener('keydown', tryUnlockAndPlay);
     };
-  }, [bgmPlayer]);
+  }, [playBGM]);
 
   // 7. Toggle BGM
   const toggleBGM = useCallback(() => {
+    // If BGM is enabled but paused/blocked by browser autoplay on web, tapping resumes/plays immediately
+    if (
+      settingsRef.current.bgmEnabled &&
+      !bgmPlayer.playing &&
+      isDashboardActiveRef.current &&
+      !isOpeningAnimationActiveRef.current
+    ) {
+      playBGM();
+      return;
+    }
+
     setSettings((prev) => {
       const next = !prev.bgmEnabled;
       if (!next) {
-        try {
-          bgmPlayer.pause();
-        } catch {}
-      } else {
-        try {
-          bgmPlayer.loop = true;
-          bgmPlayer.volume = prev.bgmVolume;
-          bgmPlayer.play();
-        } catch {}
+        pauseBGM();
+      } else if (isDashboardActiveRef.current && !isOpeningAnimationActiveRef.current) {
+        playBGM();
       }
       return { ...prev, bgmEnabled: next };
     });
-  }, [bgmPlayer]);
+  }, [bgmPlayer.playing, playBGM, pauseBGM]);
 
   const setBGMEnabled = useCallback(
     (enabled: boolean) => {
       setSettings((prev) => {
         if (prev.bgmEnabled === enabled) return prev;
         if (!enabled) {
-          try {
-            bgmPlayer.pause();
-          } catch {}
-        } else {
-          try {
-            bgmPlayer.loop = true;
-            bgmPlayer.volume = prev.bgmVolume;
-            bgmPlayer.play();
-          } catch {}
+          pauseBGM();
+        } else if (isDashboardActiveRef.current && !isOpeningAnimationActiveRef.current) {
+          playBGM();
         }
         return { ...prev, bgmEnabled: enabled };
       });
     },
-    [bgmPlayer]
+    [pauseBGM, playBGM]
   );
 
   const setSFXEnabled = useCallback((enabled: boolean) => {
@@ -246,10 +337,11 @@ export function AudioProvider({ children }: { children: ReactNode }) {
       const clamped = Math.max(0, Math.min(1, volume));
       try {
         claimPlayer.volume = clamped;
+        touchPlayer.volume = clamped;
       } catch {}
       setSettings((prev) => ({ ...prev, sfxVolume: clamped }));
     },
-    [claimPlayer]
+    [claimPlayer, touchPlayer]
   );
 
   // 8. Play claim sound effect
@@ -259,11 +351,53 @@ export function AudioProvider({ children }: { children: ReactNode }) {
     try {
       claimPlayer.volume = settingsRef.current.sfxVolume;
       claimPlayer.seekTo(0);
-      claimPlayer.play();
-    } catch (err) {
-      console.warn('[AudioContext] Could not play claim sound:', err);
+      const res: any = claimPlayer.play();
+      if (res && typeof res.catch === 'function') {
+        res.catch(() => {});
+      }
+    } catch {
+      // ignore web autoplay restrictions
     }
   }, [claimPlayer]);
+
+  // 9. Play touch sound effect
+  const playTouchSound = useCallback(() => {
+    if (!settingsRef.current.sfxEnabled) return;
+
+    try {
+      touchPlayer.volume = settingsRef.current.sfxVolume;
+      touchPlayer.seekTo(0);
+      const res: any = touchPlayer.play();
+      if (res && typeof res.catch === 'function') {
+        res.catch(() => {});
+      }
+    } catch {
+      // ignore web autoplay restrictions
+    }
+  }, [touchPlayer]);
+
+  // 10. Global web click sound on interactive elements
+  useEffect(() => {
+    if (Platform.OS !== 'web' || typeof window === 'undefined') return;
+
+    const handleGlobalClick = (event: MouseEvent | TouchEvent) => {
+      if (!settingsRef.current.sfxEnabled) return;
+
+      const target = event.target as HTMLElement | null;
+      if (!target) return;
+
+      const interactiveEl = target.closest('button, [role="button"], a, input, [tabindex="0"]');
+      if (interactiveEl) {
+        playTouchSound();
+      }
+    };
+
+    window.addEventListener('click', handleGlobalClick, { passive: true, capture: true });
+
+    return () => {
+      window.removeEventListener('click', handleGlobalClick, { capture: true } as any);
+    };
+  }, [playTouchSound]);
 
   const value: AudioContextType = {
     bgmEnabled: settings.bgmEnabled,
@@ -273,12 +407,17 @@ export function AudioProvider({ children }: { children: ReactNode }) {
     isBgmPlaying: bgmStatus.playing || false,
     isOpeningAnimationActive,
     setOpeningAnimationActive: setIsOpeningAnimationActive,
+    isDashboardActive,
+    setDashboardActive: setIsDashboardActive,
+    playBGM,
+    pauseBGM,
     toggleBGM,
     setBGMEnabled,
     setSFXEnabled,
     setBGMVolume,
     setSFXVolume,
     playClaimSound,
+    playTouchSound,
     playAriseSound: playClaimSound,
   };
 
@@ -292,3 +431,4 @@ export function useAudio(): AudioContextType {
   }
   return context;
 }
+

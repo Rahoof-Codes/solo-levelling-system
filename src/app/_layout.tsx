@@ -8,8 +8,8 @@ import { setVisibilityAsync } from 'expo-navigation-bar';
 import { initializeDatabase, DATABASE_NAME } from '@/db/database';
 import { useNetworkSync } from '@/services/networkMonitor';
 import { AuthProvider, useAuth } from '@/contexts/AuthContext';
-import { AudioProvider } from '@/contexts/AudioContext';
-import { Fonts } from '@/constants/theme';
+import { AudioProvider, useAudio } from '@/contexts/AudioContext';
+import { Fonts, Colors } from '@/constants/theme';
 import { SplashOverlay } from '@/components/splash-overlay';
 
 // Hide native splash immediately so app opens directly into the Solo Leveling animation
@@ -53,9 +53,18 @@ function MainNavigation() {
   const db = useSQLiteContext();
   const { user } = useAuth();
   const [showOpeningAnimation, setShowOpeningAnimation] = useState(true);
+  const segments = useSegments();
+  const { setDashboardActive, setOpeningAnimationActive } = useAudio();
 
   const userId = user?.uid ?? null;
   useNetworkSync(db, userId);
+
+  // Sync dashboard active state: BGM plays only when inside (tabs) AND opening animation has completed!
+  useEffect(() => {
+    const inDashboard = (segments[0] as string) === '(tabs)';
+    const isDashboardReady = inDashboard && !showOpeningAnimation;
+    setDashboardActive(isDashboardReady);
+  }, [segments, showOpeningAnimation, setDashboardActive]);
 
   useEffect(() => {
     if (Platform.OS === 'android') {
@@ -74,7 +83,7 @@ function MainNavigation() {
       <Stack
         screenOptions={{
           headerShown: false,
-          contentStyle: { backgroundColor: '#0B1120' },
+          contentStyle: { backgroundColor: Colors.dark.background },
           animation: 'fade',
         }}
       >
@@ -83,7 +92,12 @@ function MainNavigation() {
         <Stack.Screen name="onboarding/index" options={{ headerShown: false }} />
       </Stack>
       {showOpeningAnimation && (
-        <SplashOverlay onFinish={() => setShowOpeningAnimation(false)} />
+        <SplashOverlay
+          onFinish={() => {
+            setShowOpeningAnimation(false);
+            setOpeningAnimationActive(false);
+          }}
+        />
       )}
     </>
   );
@@ -212,7 +226,7 @@ export default function RootLayout() {
 const errorStyles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#0B1120',
+    backgroundColor: Colors.dark.background,
     alignItems: 'center',
     justifyContent: 'center',
     padding: 32,
@@ -225,27 +239,27 @@ const errorStyles = StyleSheet.create({
     fontSize: 18,
     fontWeight: '700',
     fontFamily: Fonts.sans,
-    color: '#FF4444',
+    color: Colors.dark.danger,
   },
   message: {
     fontSize: 13,
     fontFamily: Fonts.sans,
-    color: '#8896AB',
+    color: Colors.dark.textSecondary,
     textAlign: 'center',
   },
   hint: {
     fontSize: 11,
     fontFamily: Fonts.sans,
-    color: '#6B7B8F',
+    color: Colors.dark.textMuted,
     marginTop: 8,
     textAlign: 'center',
   },
   reloadBtn: {
-    backgroundColor: '#0066BB',
+    backgroundColor: Colors.dark.accentDim,
     borderWidth: 1,
-    borderColor: '#00A8FF',
-    borderRadius: 12,
-    paddingHorizontal: 20,
+    borderColor: Colors.dark.accent,
+    borderRadius: 14,
+    paddingHorizontal: 22,
     paddingVertical: 12,
     marginTop: 12,
   },
@@ -253,6 +267,6 @@ const errorStyles = StyleSheet.create({
     fontFamily: Fonts.sans,
     fontSize: 14,
     fontWeight: '700',
-    color: '#FFFFFF',
+    color: Colors.dark.textBright,
   },
 });

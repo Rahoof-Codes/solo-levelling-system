@@ -1,6 +1,7 @@
 import { Redirect } from 'expo-router';
 import { useAuth } from '@/contexts/AuthContext';
 import { View, ActivityIndicator, StyleSheet } from 'react-native';
+import { Colors } from '@/constants/theme';
 
 /**
  * Root index — waits for auth to resolve, then redirects accordingly.
@@ -13,7 +14,7 @@ export default function Index() {
   if (isLoading) {
     return (
       <View style={styles.loading}>
-        <ActivityIndicator color="#00A8FF" size="large" />
+        <ActivityIndicator color={Colors.dark.accent} size="large" />
       </View>
     );
   }
@@ -30,7 +31,7 @@ export default function Index() {
 const styles = StyleSheet.create({
   loading: {
     flex: 1,
-    backgroundColor: '#070B14',
+    backgroundColor: Colors.dark.background,
     alignItems: 'center',
     justifyContent: 'center',
   },

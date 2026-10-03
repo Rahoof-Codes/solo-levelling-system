@@ -20,7 +20,7 @@ import { useSQLiteContext } from 'expo-sqlite';
 import { useFocusEffect } from 'expo-router';
 import { getTodayMeals, logMeal, getDailyCalorieSummary, getProfile } from '@/db/operations';
 import { type Meal, type DailyCalorieSummary, type Profile } from '@/types';
-import { Fonts, Spacing } from '@/constants/theme';
+import { Colors, Fonts, Spacing } from '@/constants/theme';
 import { ManaReplenishModal } from '@/components/mana-replenish-modal';
 
 export default function MealLogScreen() {
@@ -136,13 +136,13 @@ export default function MealLogScreen() {
     <SafeAreaView style={styles.safeArea}>
       <ScrollView
         contentContainerStyle={styles.container}
-        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#00A8FF" />}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={Colors.dark.accent} />}
       >
         {/* HEADER */}
         <Animated.View entering={FadeInDown.duration(450)} style={styles.header}>
           <View>
-            <Text style={styles.systemTag}>Nutrition</Text>
-            <Text style={styles.title}>Meal Log</Text>
+            <Text style={styles.systemTag}>NUTRITION</Text>
+            <Text style={styles.title}>Mana Refinery</Text>
           </View>
           <TouchableOpacity
             style={styles.addBtn}
@@ -162,7 +162,7 @@ export default function MealLogScreen() {
             </View>
             <View style={{ alignItems: 'flex-end' }}>
               <Text style={styles.summaryLabel}>REMAINING</Text>
-              <Text style={[styles.summaryBigNum, { color: remainingCalories >= 0 ? '#00FF88' : '#FF3366' }]}>
+              <Text style={[styles.summaryBigNum, { color: remainingCalories >= 0 ? Colors.dark.success : Colors.dark.danger }]}>
                 {Math.round(remainingCalories)} kcal
               </Text>
             </View>
@@ -173,7 +173,7 @@ export default function MealLogScreen() {
             {/* Protein */}
             <View style={styles.macroRow}>
               <View style={styles.macroLabels}>
-                <Text style={[styles.macroKey, { color: '#FF4444' }]}>PROTEIN</Text>
+                <Text style={[styles.macroKey, { color: '#EF4444' }]}>PROTEIN</Text>
                 <Text style={styles.macroVal}>
                   {Math.round(summary.protein_consumed)} / {Math.round(targetProtein)}g
                 </Text>
@@ -184,7 +184,7 @@ export default function MealLogScreen() {
                     styles.macroFill,
                     {
                       width: `${Math.min(100, (summary.protein_consumed / Math.max(1, targetProtein)) * 100)}%`,
-                      backgroundColor: '#FF4444',
+                      backgroundColor: '#EF4444',
                     },
                   ]}
                 />
@@ -194,7 +194,7 @@ export default function MealLogScreen() {
             {/* Carbs */}
             <View style={styles.macroRow}>
               <View style={styles.macroLabels}>
-                <Text style={[styles.macroKey, { color: '#FFAA00' }]}>CARBS</Text>
+                <Text style={[styles.macroKey, { color: Colors.dark.gold }]}>CARBS</Text>
                 <Text style={styles.macroVal}>
                   {Math.round(summary.carbs_consumed)} / {Math.round(targetCarbs)}g
                 </Text>
@@ -205,7 +205,7 @@ export default function MealLogScreen() {
                     styles.macroFill,
                     {
                       width: `${Math.min(100, (summary.carbs_consumed / Math.max(1, targetCarbs)) * 100)}%`,
-                      backgroundColor: '#FFAA00',
+                      backgroundColor: Colors.dark.gold,
                     },
                   ]}
                 />
@@ -215,7 +215,7 @@ export default function MealLogScreen() {
             {/* Fat */}
             <View style={styles.macroRow}>
               <View style={styles.macroLabels}>
-                <Text style={[styles.macroKey, { color: '#00FF88' }]}>FAT</Text>
+                <Text style={[styles.macroKey, { color: Colors.dark.success }]}>FAT</Text>
                 <Text style={styles.macroVal}>
                   {Math.round(summary.fat_consumed)} / {Math.round(targetFat)}g
                 </Text>
@@ -226,7 +226,7 @@ export default function MealLogScreen() {
                     styles.macroFill,
                     {
                       width: `${Math.min(100, (summary.fat_consumed / Math.max(1, targetFat)) * 100)}%`,
-                      backgroundColor: '#00FF88',
+                      backgroundColor: Colors.dark.success,
                     },
                   ]}
                 />
@@ -243,7 +243,7 @@ export default function MealLogScreen() {
             <Animated.View entering={FadeIn.duration(400).delay(150)} style={styles.emptyCard}>
               <Text style={styles.emptyEmoji}>🍽️</Text>
               <Text style={styles.emptyText}>No food entries logged today.</Text>
-              <Text style={styles.emptySub}>Log meals to replenish energy & track macros.</Text>
+              <Text style={styles.emptySub}>Log meals to replenish mana & track macros.</Text>
             </Animated.View>
           ) : (
             meals.map((meal, index) => (
@@ -274,6 +274,12 @@ export default function MealLogScreen() {
       <Modal visible={modalVisible} animationType="slide" transparent>
         <View style={styles.modalOverlay}>
           <View style={styles.modalContent}>
+            {/* Corner ornaments */}
+            <View style={[styles.modalCorner, styles.modalCornerTL]} />
+            <View style={[styles.modalCorner, styles.modalCornerTR]} />
+            <View style={[styles.modalCorner, styles.modalCornerBL]} />
+            <View style={[styles.modalCorner, styles.modalCornerBR]} />
+
             <Text style={styles.modalTitle}>Log a Meal</Text>
 
             <View style={styles.modalForm}>
@@ -282,7 +288,7 @@ export default function MealLogScreen() {
                 <TextInput
                   style={styles.textInput}
                   placeholder="e.g. Grilled Chicken & Rice"
-                  placeholderTextColor="#476285"
+                  placeholderTextColor={Colors.dark.textDim}
                   value={mealName}
                   onChangeText={setMealName}
                 />
@@ -294,7 +300,7 @@ export default function MealLogScreen() {
                   style={styles.textInput}
                   keyboardType="numeric"
                   placeholder="650"
-                  placeholderTextColor="#476285"
+                  placeholderTextColor={Colors.dark.textDim}
                   value={calories}
                   onChangeText={setCalories}
                 />
@@ -307,7 +313,7 @@ export default function MealLogScreen() {
                     style={styles.textInput}
                     keyboardType="numeric"
                     placeholder="45"
-                    placeholderTextColor="#476285"
+                    placeholderTextColor={Colors.dark.textDim}
                     value={protein}
                     onChangeText={setProtein}
                   />
@@ -319,7 +325,7 @@ export default function MealLogScreen() {
                     style={styles.textInput}
                     keyboardType="numeric"
                     placeholder="60"
-                    placeholderTextColor="#476285"
+                    placeholderTextColor={Colors.dark.textDim}
                     value={carbs}
                     onChangeText={setCarbs}
                   />
@@ -331,7 +337,7 @@ export default function MealLogScreen() {
                     style={styles.textInput}
                     keyboardType="numeric"
                     placeholder="15"
-                    placeholderTextColor="#476285"
+                    placeholderTextColor={Colors.dark.textDim}
                     value={fat}
                     onChangeText={setFat}
                   />
@@ -376,12 +382,12 @@ export default function MealLogScreen() {
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: '#0B1120',
+    backgroundColor: Colors.dark.background,
   },
   container: {
     padding: Spacing.threeHalf,
     gap: Spacing.threeHalf,
-    paddingBottom: Spacing.six,
+    paddingBottom: Spacing.six + 20,
   },
   header: {
     flexDirection: 'row',
@@ -390,84 +396,96 @@ const styles = StyleSheet.create({
     marginTop: Spacing.two,
   },
   systemTag: {
-    fontSize: 12,
-    fontFamily: Fonts.sans,
-    color: '#00A8FF',
-    fontWeight: '600',
+    fontSize: 11,
+    fontFamily: Fonts.display,
+    color: Colors.dark.mana,
+    fontWeight: '700',
+    letterSpacing: 1.5,
   },
   title: {
-    fontSize: 24,
+    fontSize: 28,
     fontWeight: '700',
-    fontFamily: Fonts.sans,
-    color: '#E8ECF4',
+    fontFamily: Fonts.display,
+    color: Colors.dark.textBright,
+    letterSpacing: 1,
   },
   addBtn: {
-    backgroundColor: '#111827',
+    backgroundColor: Colors.dark.backgroundCard,
     borderWidth: 1,
-    borderColor: 'rgba(0, 168, 255, 0.3)',
-    borderRadius: 10,
+    borderColor: 'rgba(59, 130, 246, 0.3)',
+    borderRadius: 12,
     paddingHorizontal: 14,
-    paddingVertical: 9,
+    paddingVertical: 10,
   },
   addBtnText: {
     fontSize: 13,
-    fontFamily: Fonts.sans,
-    fontWeight: '600',
-    color: '#00A8FF',
+    fontFamily: Fonts.display,
+    fontWeight: '700',
+    color: Colors.dark.mana,
+    letterSpacing: 0.5,
   },
   summaryCard: {
-    backgroundColor: '#111827',
+    backgroundColor: Colors.dark.backgroundCard,
     borderWidth: 1,
-    borderColor: '#1E293B',
-    borderRadius: 14,
+    borderColor: Colors.dark.borderBright,
+    borderRadius: 16,
     padding: Spacing.threeHalf,
     gap: Spacing.three,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.25,
+    shadowRadius: 10,
+    elevation: 6,
   },
   summaryTop: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     borderBottomWidth: 1,
-    borderBottomColor: '#1E293B',
-    paddingBottom: 10,
+    borderBottomColor: Colors.dark.border,
+    paddingBottom: 12,
   },
   summaryLabel: {
-    fontSize: 11,
-    fontFamily: Fonts.sans,
-    color: '#8896AB',
-    fontWeight: '500',
+    fontSize: 10,
+    fontFamily: Fonts.display,
+    color: Colors.dark.textMuted,
+    fontWeight: '600',
+    letterSpacing: 1,
   },
   summaryBigNum: {
-    fontSize: 22,
+    fontSize: 24,
     fontWeight: '800',
     fontFamily: Fonts.mono,
-    color: '#E8ECF4',
+    color: Colors.dark.textBright,
   },
   macrosSection: {
-    gap: 10,
+    gap: 12,
     marginTop: 4,
   },
   macroRow: {
-    gap: 4,
+    gap: 6,
   },
   macroLabels: {
     flexDirection: 'row',
     justifyContent: 'space-between',
   },
   macroKey: {
-    fontSize: 12,
-    fontFamily: Fonts.sans,
-    fontWeight: '600',
+    fontSize: 11,
+    fontFamily: Fonts.display,
+    fontWeight: '700',
+    letterSpacing: 1,
   },
   macroVal: {
     fontSize: 11,
     fontFamily: Fonts.mono,
-    color: '#8896AB',
+    color: Colors.dark.textSecondary,
   },
   macroTrack: {
-    height: 6,
-    backgroundColor: '#0E1726',
-    borderRadius: 3,
+    height: 8,
+    backgroundColor: Colors.dark.backgroundDeep,
+    borderRadius: 4,
     overflow: 'hidden',
+    borderWidth: 1,
+    borderColor: Colors.dark.border,
   },
   macroFill: {
     height: '100%',
@@ -478,41 +496,48 @@ const styles = StyleSheet.create({
   },
   sectionTitle: {
     fontSize: 14,
-    fontFamily: Fonts.sans,
+    fontFamily: Fonts.display,
     fontWeight: '700',
-    color: '#00A8FF',
+    color: Colors.dark.mana,
+    letterSpacing: 1,
   },
   emptyCard: {
-    backgroundColor: '#111827',
-    borderRadius: 14,
+    backgroundColor: Colors.dark.backgroundCard,
+    borderRadius: 16,
     borderWidth: 1,
-    borderColor: '#1E293B',
+    borderColor: Colors.dark.borderBright,
     padding: Spacing.four,
     alignItems: 'center',
-    gap: 8,
+    gap: 10,
   },
   emptyEmoji: {
-    fontSize: 28,
+    fontSize: 32,
   },
   emptyText: {
     fontSize: 15,
     fontWeight: '700',
-    fontFamily: Fonts.sans,
-    color: '#D2E0F5',
+    fontFamily: Fonts.display,
+    color: Colors.dark.text,
+    letterSpacing: 0.3,
   },
   emptySub: {
     fontSize: 12,
     fontFamily: Fonts.sans,
-    color: '#8896AB',
+    color: Colors.dark.textSecondary,
     textAlign: 'center',
   },
   mealCard: {
-    backgroundColor: '#111827',
+    backgroundColor: Colors.dark.backgroundCard,
     borderWidth: 1,
-    borderColor: '#1E293B',
-    borderRadius: 12,
+    borderColor: Colors.dark.borderBright,
+    borderRadius: 14,
     padding: Spacing.threeHalf,
     gap: 8,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 8,
+    elevation: 4,
   },
   mealMain: {
     flexDirection: 'row',
@@ -523,13 +548,13 @@ const styles = StyleSheet.create({
     fontSize: 15,
     fontWeight: '700',
     fontFamily: Fonts.sans,
-    color: '#E8ECF4',
+    color: Colors.dark.textBright,
   },
   mealCalories: {
     fontSize: 14,
     fontWeight: '800',
     fontFamily: Fonts.mono,
-    color: '#00A8FF',
+    color: Colors.dark.mana,
   },
   mealMacros: {
     flexDirection: 'row',
@@ -538,34 +563,54 @@ const styles = StyleSheet.create({
   mealMacroText: {
     fontSize: 11,
     fontFamily: Fonts.mono,
-    color: '#8896AB',
+    color: Colors.dark.textSecondary,
   },
   mealTime: {
     fontSize: 11,
     fontFamily: Fonts.sans,
-    color: '#6B7B8F',
+    color: Colors.dark.textMuted,
     marginLeft: 'auto',
   },
+  // Modal styles
   modalOverlay: {
     flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.85)',
+    backgroundColor: 'rgba(3, 7, 16, 0.92)',
     justifyContent: 'center',
     padding: Spacing.threeHalf,
   },
   modalContent: {
-    backgroundColor: '#111827',
-    borderWidth: 1,
-    borderColor: '#1E293B',
-    borderRadius: 18,
+    backgroundColor: Colors.dark.backgroundCard,
+    borderWidth: 1.5,
+    borderColor: Colors.dark.mana,
+    borderRadius: 20,
     padding: Spacing.four,
     gap: Spacing.three,
+    shadowColor: Colors.dark.mana,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.2,
+    shadowRadius: 20,
+    elevation: 12,
+    position: 'relative',
+    overflow: 'hidden',
   },
+  modalCorner: {
+    position: 'absolute',
+    width: 14,
+    height: 14,
+    borderColor: Colors.dark.mana,
+  },
+  modalCornerTL: { top: -1, left: -1, borderTopWidth: 2, borderLeftWidth: 2 },
+  modalCornerTR: { top: -1, right: -1, borderTopWidth: 2, borderRightWidth: 2 },
+  modalCornerBL: { bottom: -1, left: -1, borderBottomWidth: 2, borderLeftWidth: 2 },
+  modalCornerBR: { bottom: -1, right: -1, borderBottomWidth: 2, borderRightWidth: 2 },
+
   modalTitle: {
-    fontSize: 18,
+    fontSize: 20,
     fontWeight: '700',
-    fontFamily: Fonts.sans,
-    color: '#E8ECF4',
+    fontFamily: Fonts.display,
+    color: Colors.dark.textBright,
     textAlign: 'center',
+    letterSpacing: 1,
   },
   modalForm: {
     gap: Spacing.three,
@@ -574,19 +619,21 @@ const styles = StyleSheet.create({
     gap: 6,
   },
   inputLabel: {
-    fontSize: 12,
-    fontFamily: Fonts.sans,
-    color: '#8896AB',
-    fontWeight: '500',
+    fontSize: 11,
+    fontFamily: Fonts.display,
+    color: Colors.dark.textSecondary,
+    fontWeight: '600',
+    letterSpacing: 0.5,
+    textTransform: 'uppercase',
   },
   textInput: {
-    backgroundColor: '#0E1726',
+    backgroundColor: Colors.dark.backgroundElement,
     borderWidth: 1,
-    borderColor: '#1E293B',
-    borderRadius: 10,
+    borderColor: Colors.dark.border,
+    borderRadius: 12,
     paddingHorizontal: 14,
     paddingVertical: 12,
-    color: '#E8ECF4',
+    color: Colors.dark.textBright,
     fontFamily: Fonts.sans,
     fontSize: 15,
   },
@@ -601,9 +648,9 @@ const styles = StyleSheet.create({
   },
   cancelBtn: {
     flex: 1,
-    backgroundColor: '#0E1726',
+    backgroundColor: Colors.dark.backgroundElement,
     borderWidth: 1,
-    borderColor: '#1E293B',
+    borderColor: Colors.dark.border,
     borderRadius: 12,
     paddingVertical: 14,
     alignItems: 'center',
@@ -612,19 +659,25 @@ const styles = StyleSheet.create({
     fontFamily: Fonts.sans,
     fontSize: 14,
     fontWeight: '600',
-    color: '#8896AB',
+    color: Colors.dark.textSecondary,
   },
   createBtn: {
     flex: 2,
-    backgroundColor: '#00A8FF',
+    backgroundColor: Colors.dark.mana,
     borderRadius: 12,
     paddingVertical: 14,
     alignItems: 'center',
+    shadowColor: Colors.dark.mana,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 10,
+    elevation: 6,
   },
   createBtnText: {
-    fontFamily: Fonts.sans,
-    fontSize: 14,
+    fontFamily: Fonts.display,
+    fontSize: 15,
     fontWeight: '700',
-    color: '#0B1120',
+    color: Colors.dark.backgroundDeep,
+    letterSpacing: 0.5,
   },
 });

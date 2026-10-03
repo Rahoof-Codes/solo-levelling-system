@@ -7,9 +7,10 @@ export const AUDIO_ASSETS = {
   CLAIM: require('@/components/music/arise.mp3'),
   ARISE: require('@/components/music/arise.mp3'),
   ANIMATION: require('@/components/music/Animation.mp3'),
+  TOUCH: require('@/components/music/touch.mp3'),
 } as const;
 
-export const AUDIO_STORAGE_KEY = '@solo_system_audio_settings_v1';
+export const AUDIO_STORAGE_KEY = '@solo_system_audio_settings_v2';
 
 export interface AudioSettings {
   bgmEnabled: boolean;

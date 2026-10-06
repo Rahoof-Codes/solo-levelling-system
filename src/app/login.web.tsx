@@ -395,7 +395,7 @@ export default function LoginScreen() {
    STYLES — Web-optimized with valid CSS properties
    ────────────────────────────────────────── */
 
-const styles = StyleSheet.create({
+const styles = StyleSheet.create<any>({
   outerWrapper: {
     flex: 1,
     backgroundColor: C.systemBg,

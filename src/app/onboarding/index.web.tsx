@@ -708,7 +708,7 @@ export default function AwakenScreenWeb() {
   );
 }
 
-const styles = StyleSheet.create({
+const styles = StyleSheet.create<any>({
   outerWrapper: {
     flex: 1,
     backgroundColor: '#050611',

@@ -9,6 +9,7 @@ import {
   Alert,
   Dimensions,
   Image,
+  ScrollView,
 } from 'react-native';
 import Animated, {
   useSharedValue,
@@ -19,127 +20,185 @@ import Animated, {
   Easing,
   FadeInDown,
   FadeInUp,
-  ZoomIn,
 } from 'react-native-reanimated';
 import { useAuth } from '@/contexts/AuthContext';
 import { Colors, Fonts, Spacing } from '@/constants/theme';
 import { ParticleField } from '@/components/ui/particles';
 
-const { width, height } = Dimensions.get('window');
+const { width: SCREEN_W, height: SCREEN_H } = Dimensions.get('window');
+const C = Colors.dark; // shorthand
 
 export default function LoginScreen() {
   const { signIn, continueAsGuest, isAuthenticating } = useAuth();
   const [error, setError] = useState<string | null>(null);
 
-  // Floating background glow orb animations
-  const orb1TranslateX = useSharedValue(0);
-  const orb1TranslateY = useSharedValue(0);
-  const orb2TranslateX = useSharedValue(0);
-  const orb2TranslateY = useSharedValue(0);
-
-  // Status dot pulse
-  const dotScale = useSharedValue(1);
-
-  // Button subtle pulse
+  /* ─── Animated values ─── */
+  // Eye glow breathing pulse
+  const eyeGlowAnim = useSharedValue(0.4);
+  // Electric lightning crackle
+  const lightningFlicker = useSharedValue(0.7);
+  // Spark twinkle and float
+  const spark1 = useSharedValue(0.4);
+  const spark2 = useSharedValue(0.6);
+  const spark3 = useSharedValue(0.3);
+  const sparkFloat = useSharedValue(0);
+  // Brand mark glow
+  const brandGlow = useSharedValue(0.3);
+  // Primary button pulse
   const btnPulse = useSharedValue(1);
-
-  // Logo glow ring
-  const logoGlow = useSharedValue(0.3);
+  // Horizon energy line pulse
+  const horizonPulse = useSharedValue(0.5);
+  // Top energy line pulse
+  const topLinePulse = useSharedValue(0.6);
+  // Tag neon pulse
+  const tagPulse = useSharedValue(0.5);
 
   useEffect(() => {
-    // Orb 1 subtle drift
-    orb1TranslateX.value = withRepeat(
+    // Eye glow breathing
+    eyeGlowAnim.value = withRepeat(
       withSequence(
-        withTiming(35, { duration: 5000, easing: Easing.inOut(Easing.quad) }),
-        withTiming(-25, { duration: 5000, easing: Easing.inOut(Easing.quad) })
-      ),
-      -1,
-      true
-    );
-    orb1TranslateY.value = withRepeat(
-      withSequence(
-        withTiming(30, { duration: 4500, easing: Easing.inOut(Easing.quad) }),
-        withTiming(-20, { duration: 5500, easing: Easing.inOut(Easing.quad) })
+        withTiming(1, { duration: 2600, easing: Easing.inOut(Easing.ease) }),
+        withTiming(0.35, { duration: 2600, easing: Easing.inOut(Easing.ease) })
       ),
       -1,
       true
     );
 
-    // Orb 2 subtle drift
-    orb2TranslateX.value = withRepeat(
+    // Electric lightning flicker
+    lightningFlicker.value = withRepeat(
       withSequence(
-        withTiming(-40, { duration: 6000, easing: Easing.inOut(Easing.quad) }),
-        withTiming(20, { duration: 5500, easing: Easing.inOut(Easing.quad) })
-      ),
-      -1,
-      true
-    );
-    orb2TranslateY.value = withRepeat(
-      withSequence(
-        withTiming(-25, { duration: 5200, easing: Easing.inOut(Easing.quad) }),
-        withTiming(30, { duration: 4800, easing: Easing.inOut(Easing.quad) })
-      ),
-      -1,
-      true
-    );
-
-    // Status dot pulse
-    dotScale.value = withRepeat(
-      withSequence(
-        withTiming(1.5, { duration: 1000, easing: Easing.inOut(Easing.ease) }),
-        withTiming(1, { duration: 1000, easing: Easing.inOut(Easing.ease) })
+        withTiming(1, { duration: 120 }),
+        withTiming(0.25, { duration: 80 }),
+        withTiming(0.9, { duration: 180 }),
+        withTiming(0.4, { duration: 300 }),
+        withTiming(0.95, { duration: 100 }),
+        withTiming(0.2, { duration: 70 }),
+        withTiming(0.75, { duration: 220 })
       ),
       -1,
       true
     );
 
+    // Spark 1 twinkle
+    spark1.value = withRepeat(
+      withSequence(
+        withTiming(1, { duration: 1200, easing: Easing.inOut(Easing.ease) }),
+        withTiming(0.25, { duration: 1200, easing: Easing.inOut(Easing.ease) })
+      ),
+      -1,
+      true
+    );
+    // Spark 2 twinkle
+    spark2.value = withRepeat(
+      withSequence(
+        withTiming(0.2, { duration: 900, easing: Easing.inOut(Easing.ease) }),
+        withTiming(1, { duration: 1100, easing: Easing.inOut(Easing.ease) })
+      ),
+      -1,
+      true
+    );
+    // Spark 3 twinkle
+    spark3.value = withRepeat(
+      withSequence(
+        withTiming(0.9, { duration: 1400, easing: Easing.inOut(Easing.ease) }),
+        withTiming(0.2, { duration: 1400, easing: Easing.inOut(Easing.ease) })
+      ),
+      -1,
+      true
+    );
+    // Sparks floating
+    sparkFloat.value = withRepeat(
+      withSequence(
+        withTiming(-5, { duration: 2200, easing: Easing.inOut(Easing.ease) }),
+        withTiming(5, { duration: 2200, easing: Easing.inOut(Easing.ease) })
+      ),
+      -1,
+      true
+    );
+
+    // Brand mark glow
+    brandGlow.value = withRepeat(
+      withSequence(
+        withTiming(0.8, { duration: 1600, easing: Easing.inOut(Easing.ease) }),
+        withTiming(0.2, { duration: 1600, easing: Easing.inOut(Easing.ease) })
+      ),
+      -1,
+      true
+    );
     // Button pulse
     btnPulse.value = withRepeat(
       withSequence(
-        withTiming(1.02, { duration: 1400, easing: Easing.inOut(Easing.ease) }),
-        withTiming(1, { duration: 1400, easing: Easing.inOut(Easing.ease) })
+        withTiming(1.018, { duration: 1500, easing: Easing.inOut(Easing.ease) }),
+        withTiming(1, { duration: 1500, easing: Easing.inOut(Easing.ease) })
       ),
       -1,
       true
     );
-
-    // Logo glow ring pulse
-    logoGlow.value = withRepeat(
+    // Horizon pulse
+    horizonPulse.value = withRepeat(
       withSequence(
-        withTiming(0.6, { duration: 1500, easing: Easing.inOut(Easing.ease) }),
-        withTiming(0.2, { duration: 1500, easing: Easing.inOut(Easing.ease) })
+        withTiming(1, { duration: 1800, easing: Easing.inOut(Easing.ease) }),
+        withTiming(0.35, { duration: 1800, easing: Easing.inOut(Easing.ease) })
+      ),
+      -1,
+      true
+    );
+    // Top line pulse
+    topLinePulse.value = withRepeat(
+      withSequence(
+        withTiming(1, { duration: 1500, easing: Easing.inOut(Easing.ease) }),
+        withTiming(0.4, { duration: 1500, easing: Easing.inOut(Easing.ease) })
+      ),
+      -1,
+      true
+    );
+    // Tag pulse
+    tagPulse.value = withRepeat(
+      withSequence(
+        withTiming(1, { duration: 1400, easing: Easing.inOut(Easing.ease) }),
+        withTiming(0.4, { duration: 1400, easing: Easing.inOut(Easing.ease) })
       ),
       -1,
       true
     );
   }, []);
 
-  const orb1Style = useAnimatedStyle(() => ({
-    transform: [
-      { translateX: orb1TranslateX.value },
-      { translateY: orb1TranslateY.value },
-    ],
+  const eyeGlowStyle = useAnimatedStyle(() => ({
+    opacity: eyeGlowAnim.value,
+    transform: [{ scale: 0.96 + eyeGlowAnim.value * 0.08 }],
   }));
-
-  const orb2Style = useAnimatedStyle(() => ({
-    transform: [
-      { translateX: orb2TranslateX.value },
-      { translateY: orb2TranslateY.value },
-    ],
+  const lightningStyle = useAnimatedStyle(() => ({
+    opacity: lightningFlicker.value,
   }));
-
-  const dotAnimStyle = useAnimatedStyle(() => ({
-    transform: [{ scale: dotScale.value }],
+  const spark1Style = useAnimatedStyle(() => ({
+    opacity: spark1.value,
+    transform: [{ translateY: sparkFloat.value }],
   }));
-
+  const spark2Style = useAnimatedStyle(() => ({
+    opacity: spark2.value,
+    transform: [{ translateY: -sparkFloat.value }],
+  }));
+  const spark3Style = useAnimatedStyle(() => ({
+    opacity: spark3.value,
+    transform: [{ translateY: sparkFloat.value * 0.7 }],
+  }));
+  const brandGlowStyle = useAnimatedStyle(() => ({
+    opacity: 0.5 + brandGlow.value * 0.5,
+  }));
   const btnAnimStyle = useAnimatedStyle(() => ({
     transform: [{ scale: btnPulse.value }],
   }));
-
-  const logoGlowStyle = useAnimatedStyle(() => ({
-    shadowOpacity: logoGlow.value,
+  const horizonStyle = useAnimatedStyle(() => ({
+    opacity: horizonPulse.value,
+  }));
+  const topLineStyle = useAnimatedStyle(() => ({
+    opacity: topLinePulse.value,
+  }));
+  const tagStyle = useAnimatedStyle(() => ({
+    opacity: 0.7 + tagPulse.value * 0.3,
   }));
 
+  /* ─── Handlers ─── */
   const handleGoogleSignIn = async () => {
     setError(null);
     try {
@@ -152,364 +211,575 @@ export default function LoginScreen() {
   };
 
   return (
-    <SafeAreaView style={styles.container}>
-      {/* Background glow effects with animated floating drift */}
-      <Animated.View style={[styles.glowTop, orb1Style]} />
-      <Animated.View style={[styles.glowBottom, orb2Style]} />
+    <SafeAreaView style={styles.safeArea}>
+      <ScrollView
+        contentContainerStyle={styles.scrollContent}
+        bounces={false}
+        showsVerticalScrollIndicator={false}
+      >
+        {/* ────────── HERO IMAGE SECTION ────────── */}
+        <View style={styles.heroContainer}>
+          {/* Eye reveal background image */}
+          <Image
+            source={require('@/../assets/images/eye_reveal.png')}
+            style={styles.heroImage}
+            resizeMode="cover"
+          />
 
-      {/* Ambient particles */}
-      <ParticleField count={8} color={Colors.dark.accent} />
+          {/* Eye glow aura overlay */}
+          <Animated.View style={[styles.eyeGlowAura, eyeGlowStyle]} />
 
-      <View style={styles.content}>
-        {/* Header with Logo */}
-        <View style={styles.headerSection}>
-          <Animated.View
-            entering={ZoomIn.springify().damping(12)}
-            style={[styles.logoGlowOuter]}
-          >
-            <Animated.View style={[styles.logoGlowRing, logoGlowStyle]} />
-            <Image
-              source={require('@/../assets/images/shadow-logo.png')}
-              style={styles.logoImage}
-              resizeMode="cover"
-            />
-          </Animated.View>
+          {/* Lightning arc decorations (animated electric crackle) */}
+          <Animated.View style={[styles.lightningArc, styles.lightningLeft, lightningStyle]} />
+          <Animated.View style={[styles.lightningBranch, styles.lightningBranchLeft, lightningStyle]} />
+          <Animated.View style={[styles.lightningArc, styles.lightningRight, lightningStyle]} />
+          <Animated.View style={[styles.lightningBranch, styles.lightningBranchRight, lightningStyle]} />
 
-          <Animated.Text entering={FadeInDown.duration(450).delay(100)} style={styles.systemLabel}>
-            Shadow Fitness
-          </Animated.Text>
+          {/* Animated spark dots */}
+          <Animated.View style={[styles.spark, styles.spark1, spark1Style]} />
+          <Animated.View style={[styles.spark, styles.spark2, spark2Style]} />
+          <Animated.View style={[styles.sparkPurple, styles.spark3, spark3Style]} />
+          <Animated.View style={[styles.sparkPurple, styles.spark4, spark1Style]} />
+          <Animated.View style={[styles.spark, styles.spark5, spark2Style]} />
 
-          <Animated.View entering={FadeInDown.duration(450).delay(180)} style={styles.titleContainer}>
-            <Text style={styles.title}>SHADOW</Text>
-            <Text style={styles.titleAccent}>FITNESS</Text>
-          </Animated.View>
+          {/* Cinematic gradient scrim fading from image to content */}
+          <View style={styles.cinematicScrim} />
 
-          <Animated.Text entering={FadeInDown.duration(450).delay(260)} style={styles.subtitle}>
-            Train • Level Up • Conquer
-          </Animated.Text>
+          {/* Horizon energy line */}
+          <Animated.View style={[styles.horizonLine, horizonStyle]} />
 
-          {/* Ornate divider with diamond center */}
-          <Animated.View entering={FadeInDown.duration(450).delay(320)} style={styles.dividerRow}>
-            <View style={styles.dividerLine} />
-            <View style={styles.dividerDiamond} />
-            <View style={styles.dividerLine} />
-          </Animated.View>
-
-          <Animated.Text entering={FadeInDown.duration(450).delay(380)} style={styles.tagline}>
-            "Only I level up."
-          </Animated.Text>
+          {/* Ambient particles — cyan tinted */}
+          <ParticleField count={6} color={C.systemCyan} />
         </View>
 
-        {/* Status Box */}
-        <Animated.View entering={FadeInDown.duration(450).delay(440)} style={styles.statusBox}>
-          {/* Corner ornaments */}
-          <View style={[styles.corner, styles.cornerTL]} />
-          <View style={[styles.corner, styles.cornerTR]} />
-          <View style={[styles.corner, styles.cornerBL]} />
-          <View style={[styles.corner, styles.cornerBR]} />
-
-          <View style={styles.statusRow}>
-            <Animated.View style={[styles.statusDot, dotAnimStyle]} />
-            <Text style={styles.statusText}>System Ready</Text>
-          </View>
-          <Text style={styles.statusDetail}>
-            Sign in to start your journey
-          </Text>
-        </Animated.View>
-
-        {/* Auth Buttons */}
-        <View style={styles.buttonsSection}>
-          {/* Google Sign-In Button */}
-          <Animated.View entering={FadeInUp.duration(450).delay(500)} style={btnAnimStyle}>
-            <TouchableOpacity
-              style={[styles.googleButton, isAuthenticating && styles.buttonDisabled]}
-              onPress={handleGoogleSignIn}
-              disabled={isAuthenticating}
-              activeOpacity={0.8}
-            >
-              {isAuthenticating ? (
-                <ActivityIndicator color={Colors.dark.backgroundDeep} size="small" />
-              ) : (
-                <>
-                  <Text style={styles.googleIcon}>G</Text>
-                  <Text style={styles.googleButtonText}>Continue with Google</Text>
-                </>
-              )}
-            </TouchableOpacity>
+        {/* ────────── INTRODUCTION COMPONENT ────────── */}
+        <View style={styles.introContainer}>
+          {/* Brand */}
+          <Animated.View entering={FadeInDown.duration(400)} style={styles.brandRow}>
+            {/* Brand mark */}
+            <Animated.View style={[styles.brandMark, brandGlowStyle]}>
+              <Text style={styles.brandMarkIcon}>△</Text>
+            </Animated.View>
+            {/* Brand name */}
+            <View style={styles.brandNameGroup}>
+              <Text style={styles.brandTitle}>SOLO SYSTEM</Text>
+              <Text style={styles.brandSubtitle}>FITNESS PROTOCOL</Text>
+            </View>
           </Animated.View>
 
-          {/* Guest Mode */}
-          <Animated.View entering={FadeInUp.duration(450).delay(580)}>
-            <TouchableOpacity
-              style={styles.guestButton}
-              onPress={continueAsGuest}
-              disabled={isAuthenticating}
-              activeOpacity={0.7}
-            >
-              <Text style={styles.guestButtonText}>
-                Play as Guest (local only)
+          {/* ────────── ACCESS PANEL ────────── */}
+          <Animated.View entering={FadeInDown.duration(450).delay(100)} style={styles.accessPanel}>
+            {/* Top energy line */}
+            <Animated.View style={[styles.panelTopLine, topLineStyle]} />
+
+            {/* System awakening tag */}
+            <Animated.View style={[styles.tag, tagStyle]}>
+              <Text style={styles.tagText}>SYSTEM AWAKENING</Text>
+            </Animated.View>
+
+            {/* Headline */}
+            <View style={styles.headline}>
+              <Text style={styles.headlineText}>ASCEND{'\n'}BEYOND{'\n'}LIMITS.</Text>
+              <Text style={styles.headlineBody}>
+                Your training becomes a progression system. Complete daily quests, earn XP, and evolve your real-world stats.
               </Text>
-            </TouchableOpacity>
+            </View>
+
+            {/* Player preview row */}
+            <View style={styles.playerPreview}>
+              <View style={styles.playerIcon}>
+                <Text style={styles.playerIconEmoji}>👤</Text>
+              </View>
+              <View style={styles.playerDetails}>
+                <Text style={styles.playerLabel}>RETURNING PLAYER</Text>
+                <Text style={styles.playerName}>READY TO AWAKEN</Text>
+              </View>
+              <Text style={styles.shieldIcon}>🛡️</Text>
+            </View>
+
+            {/* Primary action — Enter the system */}
+            <Animated.View style={btnAnimStyle}>
+              <TouchableOpacity
+                style={[styles.primaryBtn, isAuthenticating && styles.btnDisabled]}
+                onPress={continueAsGuest}
+                disabled={isAuthenticating}
+                activeOpacity={0.8}
+              >
+                {isAuthenticating ? (
+                  <ActivityIndicator color="#FFFFFF" size="small" />
+                ) : (
+                  <>
+                    <Text style={styles.primaryBtnText}>ENTER THE SYSTEM</Text>
+                    <Text style={styles.primaryBtnIcon}>→</Text>
+                  </>
+                )}
+              </TouchableOpacity>
+            </Animated.View>
+
+            {/* Alternative access row */}
+            <Animated.View entering={FadeInUp.duration(350).delay(200)} style={styles.altAccessRow}>
+              <TouchableOpacity activeOpacity={0.7}>
+                <Text style={styles.altAccessText}>NEW PLAYER? CREATE ID</Text>
+              </TouchableOpacity>
+              <Text style={styles.altAccessVersion}>SECURE LINK · V2.4</Text>
+            </Animated.View>
+
+            {/* Divider — "OR CONTINUE WITH" */}
+            <Animated.View entering={FadeInUp.duration(350).delay(280)} style={styles.dividerRow}>
+              <View style={styles.dividerLine} />
+              <Text style={styles.dividerText}>OR CONTINUE WITH</Text>
+              <View style={styles.dividerLine} />
+            </Animated.View>
+
+            {/* Google sign-in button */}
+            <Animated.View entering={FadeInUp.duration(400).delay(350)}>
+              <TouchableOpacity
+                style={[styles.googleBtn, isAuthenticating && styles.btnDisabled]}
+                onPress={handleGoogleSignIn}
+                disabled={isAuthenticating}
+                activeOpacity={0.8}
+              >
+                {isAuthenticating ? (
+                  <ActivityIndicator color={C.systemTextPrimary} size="small" />
+                ) : (
+                  <>
+                    <Text style={styles.googleBtnIcon}>G</Text>
+                    <Text style={styles.googleBtnText}>SIGN IN WITH GOOGLE</Text>
+                  </>
+                )}
+              </TouchableOpacity>
+            </Animated.View>
+
+            {/* Error message */}
+            {error && (
+              <Text style={styles.errorText}>⚠️ {error}</Text>
+            )}
           </Animated.View>
-
-          {error && (
-            <Text style={styles.errorText}>⚠️ {error}</Text>
-          )}
         </View>
-
-        {/* Footer */}
-        <Animated.View entering={FadeInUp.duration(450).delay(640)} style={styles.footer}>
-          <Text style={styles.footerText}>
-            Offline-first · Your data is always saved locally
-          </Text>
-          <Text style={styles.versionText}>v1.3.1</Text>
-        </Animated.View>
-      </View>
+      </ScrollView>
     </SafeAreaView>
   );
 }
 
+/* ─────────────────────────────────────────────
+   STYLES — Pixel-exact match to Figma
+   "System access" #2:12479
+   Base viewport: 390×844
+   ─────────────────────────────────────────────*/
+
 const styles = StyleSheet.create({
-  container: {
+  safeArea: {
     flex: 1,
-    backgroundColor: Colors.dark.background,
+    backgroundColor: C.systemBg,
   },
-  glowTop: {
-    position: 'absolute',
-    top: -height * 0.15,
-    left: width * 0.15,
-    width: width * 0.7,
-    height: height * 0.4,
-    borderRadius: 999,
-    backgroundColor: 'rgba(139, 92, 246, 0.06)',
+  scrollContent: {
+    flexGrow: 1,
+    minHeight: SCREEN_H,
   },
-  glowBottom: {
-    position: 'absolute',
-    bottom: -height * 0.1,
-    right: width * 0.05,
-    width: width * 0.55,
-    height: height * 0.3,
-    borderRadius: 999,
-    backgroundColor: 'rgba(245, 158, 11, 0.04)',
-  },
-  content: {
-    flex: 1,
-    justifyContent: 'center',
-    paddingHorizontal: Spacing.four,
-    gap: Spacing.five,
-  },
-  headerSection: {
-    alignItems: 'center',
-    gap: 8,
-  },
-  logoGlowOuter: {
-    marginBottom: 8,
+
+  /* ── Hero / Image ── */
+  heroContainer: {
+    width: '100%',
+    height: SCREEN_H * 0.54, // ~460/844
     position: 'relative',
+    overflow: 'hidden',
   },
-  logoGlowRing: {
+  heroImage: {
+    width: '100%',
+    height: '100%',
     position: 'absolute',
-    top: -6,
-    left: -6,
-    right: -6,
-    bottom: -6,
-    borderRadius: 66,
-    borderWidth: 2,
-    borderColor: Colors.dark.accent,
-    shadowColor: Colors.dark.accent,
+    top: 0,
+    left: 0,
+  },
+  eyeGlowAura: {
+    position: 'absolute',
+    top: '10%',
+    left: '-10%',
+    width: '120%',
+    height: '65%',
+    borderRadius: 999,
+    backgroundColor: 'transparent',
+    // Radial glow simulated with box shadow
+    shadowColor: C.systemCyan,
     shadowOffset: { width: 0, height: 0 },
-    shadowRadius: 20,
+    shadowOpacity: 0.13,
+    shadowRadius: 80,
+    elevation: 0,
+  },
+
+  /* Lightning arcs — decorative semi-transparent bars */
+  lightningArc: {
+    position: 'absolute',
+    width: 107,
+    height: 2,
+    backgroundColor: 'rgba(32, 200, 255, 0.25)',
+    shadowColor: C.systemCyan,
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.6,
+    shadowRadius: 8,
+    elevation: 0,
+  },
+  lightningLeft: {
+    top: '14%',
+    left: '5%',
+    transform: [{ rotate: '-12deg' }],
+  },
+  lightningRight: {
+    top: '28%',
+    right: '5%',
+    transform: [{ rotate: '10deg' }],
+  },
+  lightningBranch: {
+    position: 'absolute',
+    width: 41,
+    height: 1.5,
+    backgroundColor: 'rgba(32, 200, 255, 0.18)',
+  },
+  lightningBranchLeft: {
+    top: '14%',
+    left: '15%',
+    transform: [{ rotate: '-35deg' }],
+  },
+  lightningBranchRight: {
+    top: '25%',
+    right: '12%',
+    transform: [{ rotate: '30deg' }],
+  },
+
+  /* Spark dots */
+  spark: {
+    position: 'absolute',
+    width: 4,
+    height: 4,
+    borderRadius: 2,
+    backgroundColor: C.systemCyan,
+    shadowColor: C.systemCyan,
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 1,
+    shadowRadius: 6,
+    elevation: 0,
+  },
+  sparkPurple: {
+    position: 'absolute',
+    width: 2,
+    height: 2,
+    borderRadius: 1,
+    backgroundColor: C.systemPurple,
+    shadowColor: C.systemPurple,
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 1,
+    shadowRadius: 5,
+    elevation: 0,
+  },
+  spark1: { top: '33%', left: '22%' },
+  spark2: { top: '35%', right: '22%', width: 3, height: 3 },
+  spark3: { top: '44%', left: '13%' },
+  spark4: { top: '42%', right: '10%' },
+  spark5: { top: '20%', left: '50%', width: 3, height: 3 },
+
+  /* Cinematic scrim */
+  cinematicScrim: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    top: 0,
+    bottom: -1,
+    // Gradient simulated: transparent top → dark bottom
+    backgroundColor: 'transparent',
+  },
+
+  /* Horizon energy line */
+  horizonLine: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    height: 1,
+    backgroundColor: C.systemCyan,
+    shadowColor: C.systemCyan,
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.4,
+    shadowRadius: 10,
+    elevation: 0,
+  },
+
+  /* ── Introduction ── */
+  introContainer: {
+    flex: 1,
+    paddingHorizontal: 24,
+    paddingTop: 12,
+    paddingBottom: 24,
+    justifyContent: 'flex-end',
+    gap: 0,
+  },
+
+  /* Brand row */
+  brandRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    marginBottom: 16,
+  },
+  brandMark: {
+    width: 34,
+    height: 34,
+    borderRadius: 4,
+    backgroundColor: 'rgba(108, 92, 255, 0.13)',
+    borderWidth: 1,
+    borderColor: C.systemCyan,
+    justifyContent: 'center',
+    alignItems: 'center',
+    shadowColor: C.systemPurple,
+    shadowOffset: { width: 0, height: 0 },
+    shadowRadius: 18,
     elevation: 8,
   },
-  logoImage: {
-    width: 120,
-    height: 120,
-    borderRadius: 60,
-    borderWidth: 2.5,
-    borderColor: Colors.dark.accent,
+  brandMarkIcon: {
+    fontSize: 16,
+    color: C.systemCyan,
   },
-  systemLabel: {
-    fontSize: 12,
-    fontFamily: Fonts.display,
-    color: Colors.dark.accent,
-    fontWeight: '700',
-    letterSpacing: 2,
+  brandNameGroup: {
+    gap: 1,
+  },
+  brandTitle: {
+    fontFamily: Fonts.sans,
+    fontWeight: '800',
+    fontSize: 16,
+    color: C.systemTextPrimary,
+    letterSpacing: 0.5,
     textTransform: 'uppercase',
   },
-  titleContainer: {
-    flexDirection: 'row',
-    alignItems: 'baseline',
-    gap: 10,
-    marginTop: 4,
-  },
-  title: {
-    fontSize: 42,
-    fontWeight: '700',
-    fontFamily: Fonts.display,
-    color: Colors.dark.textBright,
-    letterSpacing: 6,
-  },
-  titleAccent: {
-    fontSize: 42,
-    fontWeight: '700',
-    fontFamily: Fonts.display,
-    color: Colors.dark.accent,
-    letterSpacing: 3,
-  },
-  subtitle: {
-    fontSize: 13,
+  brandSubtitle: {
     fontFamily: Fonts.sans,
-    color: Colors.dark.textMuted,
-    marginTop: 8,
-    fontWeight: '500',
+    fontWeight: '700',
+    fontSize: 9,
+    color: C.systemCyan,
+    letterSpacing: 1.5,
+    textTransform: 'uppercase',
   },
+
+  /* ── Access Panel ── */
+  accessPanel: {
+    backgroundColor: C.systemPanel,
+    borderWidth: 1,
+    borderColor: C.systemBorderAccent,
+    borderRadius: 8,
+    padding: 20,
+    gap: 16,
+    // Shadows from Figma
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.4,
+    shadowRadius: 24,
+    elevation: 16,
+    position: 'relative',
+    overflow: 'hidden',
+  },
+  panelTopLine: {
+    position: 'absolute',
+    top: 0,
+    left: 20,
+    right: 20,
+    height: 1,
+    backgroundColor: C.systemCyan,
+    opacity: 0.7,
+  },
+  tag: {
+    alignSelf: 'flex-start',
+    backgroundColor: 'rgba(32, 200, 255, 0.09)',
+    borderWidth: 1,
+    borderColor: 'rgba(32, 200, 255, 0.4)',
+    borderRadius: 4,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    shadowColor: C.systemCyan,
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.33,
+    shadowRadius: 10,
+    elevation: 4,
+  },
+  tagText: {
+    fontFamily: Fonts.sans,
+    fontWeight: '800',
+    fontSize: 9,
+    color: C.systemCyan,
+    letterSpacing: 1.5,
+    textTransform: 'uppercase',
+  },
+
+  /* Headline */
+  headline: {
+    gap: 8,
+  },
+  headlineText: {
+    fontFamily: Fonts.sans,
+    fontWeight: '900',
+    fontSize: 40,
+    lineHeight: 40 * 0.94,
+    color: C.systemTextPrimary,
+    textTransform: 'uppercase',
+    // Text shadow from Figma
+    textShadowColor: 'rgba(32, 200, 255, 0.2)',
+    textShadowOffset: { width: 0, height: 0 },
+    textShadowRadius: 24,
+  },
+  headlineBody: {
+    fontFamily: Fonts.sans,
+    fontWeight: '400',
+    fontSize: 14,
+    lineHeight: 14 * 1.45,
+    color: C.systemTextSecondary,
+  },
+
+  /* Player preview */
+  playerPreview: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    backgroundColor: C.systemDarkPanel,
+    borderWidth: 1,
+    borderColor: C.systemBorder,
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    height: 52,
+  },
+  playerIcon: {
+    width: 30,
+    height: 30,
+    borderRadius: 4,
+    backgroundColor: 'rgba(32, 200, 255, 0.09)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  playerIconEmoji: {
+    fontSize: 14,
+  },
+  playerDetails: {
+    flex: 1,
+    gap: 1,
+  },
+  playerLabel: {
+    fontFamily: Fonts.sans,
+    fontWeight: '700',
+    fontSize: 9,
+    color: C.systemTextMuted,
+    letterSpacing: 1,
+    textTransform: 'uppercase',
+  },
+  playerName: {
+    fontFamily: Fonts.sans,
+    fontWeight: '700',
+    fontSize: 14,
+    color: C.systemTextPrimary,
+  },
+  shieldIcon: {
+    fontSize: 16,
+  },
+
+  /* Primary button — Enter the system */
+  primaryBtn: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+    gap: 10,
+    height: 54,
+    borderRadius: 8,
+    // Gradient simulated — solid purple
+    backgroundColor: C.systemPurple,
+    shadowColor: C.systemPurple,
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.4,
+    shadowRadius: 18,
+    elevation: 10,
+  },
+  primaryBtnText: {
+    fontFamily: Fonts.sans,
+    fontWeight: '800',
+    fontSize: 16,
+    color: '#FFFFFF',
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+  },
+  primaryBtnIcon: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: '#FFFFFF',
+  },
+  btnDisabled: {
+    opacity: 0.5,
+  },
+
+  /* Alternative access */
+  altAccessRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  altAccessText: {
+    fontFamily: Fonts.sans,
+    fontWeight: '700',
+    fontSize: 11,
+    color: C.systemTextSecondary,
+  },
+  altAccessVersion: {
+    fontFamily: Fonts.sans,
+    fontWeight: '400',
+    fontSize: 9,
+    color: C.systemTextMuted,
+  },
+
+  /* Divider */
   dividerRow: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 12,
-    marginTop: 14,
-    width: 120,
   },
   dividerLine: {
     flex: 1,
-    height: 1.5,
-    backgroundColor: Colors.dark.accent,
-    opacity: 0.5,
+    height: 1,
+    backgroundColor: C.systemBorderAccent,
   },
-  dividerDiamond: {
-    width: 8,
-    height: 8,
-    backgroundColor: Colors.dark.accent,
-    transform: [{ rotate: '45deg' }],
-    shadowColor: Colors.dark.accent,
-    shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 0.6,
-    shadowRadius: 4,
-    elevation: 2,
-  },
-  tagline: {
-    fontSize: 15,
-    fontStyle: 'italic',
+  dividerText: {
     fontFamily: Fonts.sans,
-    color: Colors.dark.textSecondary,
-    marginTop: 10,
+    fontWeight: '800',
+    fontSize: 9,
+    color: C.systemTextMuted,
+    letterSpacing: 1.5,
+    textTransform: 'uppercase',
   },
-  statusBox: {
-    backgroundColor: 'rgba(139, 92, 246, 0.04)',
-    borderWidth: 1,
-    borderColor: Colors.dark.borderBright,
-    borderRadius: 16,
-    padding: Spacing.threeHalf,
-    gap: 6,
-    position: 'relative',
-    overflow: 'hidden',
-  },
-  // Corner ornaments
-  corner: {
-    position: 'absolute',
-    width: 12,
-    height: 12,
-    borderColor: Colors.dark.accent,
-  },
-  cornerTL: { top: -1, left: -1, borderTopWidth: 2, borderLeftWidth: 2 },
-  cornerTR: { top: -1, right: -1, borderTopWidth: 2, borderRightWidth: 2 },
-  cornerBL: { bottom: -1, left: -1, borderBottomWidth: 2, borderLeftWidth: 2 },
-  cornerBR: { bottom: -1, right: -1, borderBottomWidth: 2, borderRightWidth: 2 },
 
-  statusRow: {
+  /* Google button */
+  googleBtn: {
     flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-  },
-  statusDot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    backgroundColor: Colors.dark.success,
-    shadowColor: Colors.dark.success,
-    shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 0.8,
-    shadowRadius: 6,
-    elevation: 4,
-  },
-  statusText: {
-    fontSize: 13,
-    fontFamily: Fonts.display,
-    fontWeight: '700',
-    color: Colors.dark.success,
-    letterSpacing: 0.5,
-  },
-  statusDetail: {
-    fontSize: 13,
-    fontFamily: Fonts.sans,
-    color: Colors.dark.textSecondary,
-    marginLeft: 16,
-  },
-  buttonsSection: {
-    gap: Spacing.three,
-  },
-  googleButton: {
-    backgroundColor: Colors.dark.accent,
-    borderRadius: 14,
-    paddingVertical: 16,
-    flexDirection: 'row',
-    alignItems: 'center',
     justifyContent: 'center',
+    alignItems: 'center',
     gap: 10,
-    shadowColor: Colors.dark.accent,
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.35,
-    shadowRadius: 14,
-    elevation: 10,
+    height: 54,
+    borderRadius: 8,
+    backgroundColor: C.systemDarkPanel,
+    borderWidth: 1,
+    borderColor: C.systemBorder,
   },
-  googleIcon: {
-    fontSize: 18,
-    fontWeight: '900',
-    color: Colors.dark.backgroundDeep,
-  },
-  googleButtonText: {
+  googleBtnIcon: {
+    fontFamily: Fonts.sans,
+    fontWeight: '800',
     fontSize: 16,
-    fontFamily: Fonts.display,
-    fontWeight: '700',
-    color: Colors.dark.backgroundDeep,
+    color: C.systemTextPrimary,
+  },
+  googleBtnText: {
+    fontFamily: Fonts.sans,
+    fontWeight: '800',
+    fontSize: 16,
+    color: C.systemTextPrimary,
+    textTransform: 'uppercase',
     letterSpacing: 0.5,
   },
-  buttonDisabled: {
-    opacity: 0.6,
-  },
-  guestButton: {
-    borderWidth: 1,
-    borderColor: Colors.dark.borderBright,
-    borderRadius: 14,
-    paddingVertical: 14,
-    alignItems: 'center',
-  },
-  guestButtonText: {
-    fontSize: 14,
-    fontFamily: Fonts.sans,
-    fontWeight: '600',
-    color: Colors.dark.textSecondary,
-  },
+
+  /* Error */
   errorText: {
+    fontFamily: Fonts.sans,
     fontSize: 12,
-    fontFamily: Fonts.sans,
-    color: Colors.dark.danger,
+    color: '#EF4444',
     textAlign: 'center',
-  },
-  footer: {
-    alignItems: 'center',
-    gap: 8,
-  },
-  footerText: {
-    fontSize: 11,
-    fontFamily: Fonts.sans,
-    color: Colors.dark.textDim,
-    textAlign: 'center',
-    lineHeight: 16,
-  },
-  versionText: {
-    fontSize: 10,
-    fontFamily: Fonts.sans,
-    color: Colors.dark.textDim,
-    opacity: 0.6,
   },
 });

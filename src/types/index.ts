@@ -162,9 +162,12 @@ export interface WorkoutLog {
   synced: number;
 }
 
+export type MealCategory = 'breakfast' | 'lunch' | 'dinner' | 'snack';
+
 export interface Meal {
   id: string;
   name: string;
+  category?: MealCategory;
   calories: number;
   protein_g: number;
   carbs_g: number;

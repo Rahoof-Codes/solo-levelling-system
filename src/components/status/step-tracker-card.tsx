@@ -193,6 +193,10 @@ export function StepTrackerCard({ onQuestClaimed }: StepTrackerCardProps) {
         xpAmount={50}
         stat={Stat.AGI}
         activityName="10,000 Steps Goal"
+        subtitle="DAILY QUEST"
+        details="10,000 steps reached · AGI & VIT boosted"
+        completionTagText="STEP CLEAR"
+        completionCountText="10,000 / 10,000"
         onClaim={handleClaim}
         onDismiss={handleDismissModal}
         claimResult={claimResult}

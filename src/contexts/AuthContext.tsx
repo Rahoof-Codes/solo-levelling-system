@@ -79,11 +79,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setIsAuthenticating(true);
     try {
       await signOutUser();
-      setUser(null);
-      setIsGuest(false);
     } catch (error) {
       console.error('[AuthContext] Sign-out error:', error);
     } finally {
+      setUser(null);
+      setIsGuest(false);
       setIsAuthenticating(false);
     }
   }, []);

@@ -3,7 +3,7 @@
 // Integrates Expo Pedometer with Accelerometer Motion Step Counting
 // ============================================================
 
-import { Pedometer, Accelerometer } from 'expo-sensors';
+import { Accelerometer, Pedometer } from 'expo-sensors';
 import { Platform } from 'react-native';
 
 export interface MotionData {
@@ -204,18 +204,14 @@ class StepSensorService {
     }
   }
 
-  /**
-   * Manually simulate steps for testing
-   */
+
   public simulateSteps(count: number): void {
     this.sessionLiveSteps += count;
     this.lastMovementTimestamp = Date.now();
     this.recordStep(count, 0.85);
   }
 
-  /**
-   * Stop tracking and remove listeners
-   */
+
   public stopTracking(callback?: StepUpdateCallback): void {
     if (callback) {
       this.listeners.delete(callback);

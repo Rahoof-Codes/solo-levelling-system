@@ -1,7 +1,7 @@
-import { Redirect } from 'expo-router';
-import { useAuth } from '@/contexts/AuthContext';
-import { View, ActivityIndicator, StyleSheet } from 'react-native';
 import { Colors } from '@/constants/theme';
+import { useAuth } from '@/contexts/AuthContext';
+import { Redirect } from 'expo-router';
+import { ActivityIndicator, StyleSheet, View } from 'react-native';
 
 /**
  * Root index — waits for auth to resolve, then redirects accordingly.

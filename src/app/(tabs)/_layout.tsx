@@ -1,38 +1,35 @@
 import React, { useEffect } from 'react';
 import { Tabs } from 'expo-router';
 import { Text, StyleSheet, Platform, View } from 'react-native';
+import { Image } from 'expo-image';
 import Animated, {
   useSharedValue,
   useAnimatedStyle,
   withSpring,
-  withRepeat,
-  withSequence,
-  withTiming,
-  Easing,
 } from 'react-native-reanimated';
 import { Colors, Fonts } from '@/constants/theme';
 import { useAudio } from '@/contexts/AudioContext';
 
-function AnimatedTabBarIcon({ icon, focused, color }: { icon: string; focused: boolean; color: string }) {
+function AnimatedTabBarItem({
+  iconSource,
+  fallbackEmoji,
+  label,
+  focused,
+}: {
+  iconSource?: any;
+  fallbackEmoji?: string;
+  label: string;
+  focused: boolean;
+}) {
   const scale = useSharedValue(1);
-  const glowOpacity = useSharedValue(0);
 
   useEffect(() => {
     if (focused) {
-      scale.value = withSpring(1.3, { damping: 10, stiffness: 220 }, () => {
-        scale.value = withSpring(1.12, { damping: 12 });
+      scale.value = withSpring(1.12, { damping: 12, stiffness: 200 }, () => {
+        scale.value = withSpring(1, { damping: 14 });
       });
-      glowOpacity.value = withRepeat(
-        withSequence(
-          withTiming(0.6, { duration: 1200, easing: Easing.inOut(Easing.ease) }),
-          withTiming(0.2, { duration: 1200, easing: Easing.inOut(Easing.ease) })
-        ),
-        -1,
-        true
-      );
     } else {
       scale.value = withSpring(1, { damping: 14 });
-      glowOpacity.value = withTiming(0, { duration: 200 });
     }
   }, [focused]);
 
@@ -40,22 +37,30 @@ function AnimatedTabBarIcon({ icon, focused, color }: { icon: string; focused: b
     transform: [{ scale: scale.value }],
   }));
 
-  const glowStyle = useAnimatedStyle(() => ({
-    opacity: glowOpacity.value,
-  }));
-
   return (
-    <View style={styles.iconOuter}>
-      {/* Glow ring behind icon when active */}
-      <Animated.View style={[styles.iconGlowRing, { backgroundColor: color }, glowStyle]} />
-      <Animated.View style={[styles.iconWrapper, animStyle]}>
-        <Text style={styles.icon}>{icon}</Text>
-      </Animated.View>
-      {/* Active underline beam */}
-      {focused && (
-        <View style={[styles.activeBeam, { backgroundColor: color, shadowColor: color }]} />
-      )}
-    </View>
+    <Animated.View
+      style={[
+        styles.navItemContainer,
+        focused && styles.navItemActive,
+        animStyle,
+      ]}
+    >
+      <View style={styles.iconWrapper}>
+        {iconSource ? (
+          <Image
+            source={iconSource}
+            style={[styles.iconImage, { tintColor: focused ? '#20C8FF' : '#697292' }]}
+            contentFit="contain"
+          />
+        ) : (
+          <Text style={styles.icon}>{fallbackEmoji}</Text>
+        )}
+      </View>
+      <Text style={[styles.navLabel, focused ? styles.navLabelActive : styles.navLabelInactive]}>
+        {label}
+      </Text>
+      {focused ? <View style={styles.activeMarkerDot} /> : <View style={styles.activeMarkerPlaceholder} />}
+    </Animated.View>
   );
 }
 
@@ -73,27 +78,25 @@ export default function TabLayout() {
     <Tabs
       screenOptions={{
         headerShown: false,
+        tabBarShowLabel: false,
         tabBarStyle: {
-          backgroundColor: Colors.dark.backgroundDeep,
-          borderTopColor: Colors.dark.border,
+          backgroundColor: 'rgba(9, 11, 24, 0.95)',
+          borderTopColor: '#2A3154',
           borderTopWidth: 1,
-          height: Platform.OS === 'android' ? 72 : 92,
-          paddingBottom: Platform.OS === 'android' ? 10 : 28,
-          paddingTop: 10,
+          height: Platform.OS === 'android' ? 76 : 80,
+          paddingBottom: Platform.OS === 'android' ? 6 : 10,
+          paddingTop: 8,
+          paddingHorizontal: 12,
           elevation: 24,
-          shadowColor: Colors.dark.accent,
+          shadowColor: '#000000',
           shadowOffset: { width: 0, height: -4 },
-          shadowOpacity: 0.15,
+          shadowOpacity: 0.3,
           shadowRadius: 16,
         },
-        tabBarActiveTintColor: Colors.dark.accent,
-        tabBarInactiveTintColor: Colors.dark.textDim,
-        tabBarLabelStyle: {
-          fontFamily: Fonts.display,
-          fontSize: 10,
-          fontWeight: '700',
-          letterSpacing: 1,
-          textTransform: 'uppercase',
+        tabBarItemStyle: {
+          justifyContent: 'center',
+          alignItems: 'center',
+          padding: 0,
         },
       }}
     >
@@ -103,9 +106,14 @@ export default function TabLayout() {
           tabPress: () => playTouchSound(),
         }}
         options={{
-          title: 'Status',
+          title: 'System',
           tabBarIcon: ({ focused }) => (
-            <AnimatedTabBarIcon icon="⚔️" focused={focused} color={Colors.dark.accent} />
+            <AnimatedTabBarItem
+              iconSource={require('@/../public/layout-dashboard.svg')}
+              fallbackEmoji="⚔️"
+              label="System"
+              focused={focused}
+            />
           ),
         }}
       />
@@ -117,19 +125,12 @@ export default function TabLayout() {
         options={{
           title: 'Quests',
           tabBarIcon: ({ focused }) => (
-            <AnimatedTabBarIcon icon="📜" focused={focused} color={Colors.dark.gold} />
-          ),
-        }}
-      />
-      <Tabs.Screen
-        name="log"
-        listeners={{
-          tabPress: () => playTouchSound(),
-        }}
-        options={{
-          title: 'Mana',
-          tabBarIcon: ({ focused }) => (
-            <AnimatedTabBarIcon icon="🍽️" focused={focused} color={Colors.dark.mana} />
+            <AnimatedTabBarItem
+              iconSource={require('@/../public/scroll-text.svg')}
+              fallbackEmoji="📜"
+              label="Quests"
+              focused={focused}
+            />
           ),
         }}
       />
@@ -141,7 +142,46 @@ export default function TabLayout() {
         options={{
           title: 'Train',
           tabBarIcon: ({ focused }) => (
-            <AnimatedTabBarIcon icon="🏃" focused={focused} color={Colors.dark.cyan} />
+            <AnimatedTabBarItem
+              iconSource={require('@/../public/zap.svg')}
+              fallbackEmoji="🏃"
+              label="Train"
+              focused={focused}
+            />
+          ),
+        }}
+      />
+      <Tabs.Screen
+        name="meals"
+        listeners={{
+          tabPress: () => playTouchSound(),
+        }}
+        options={{
+          title: 'Meals',
+          tabBarIcon: ({ focused }) => (
+            <AnimatedTabBarItem
+              iconSource={require('@/../public/utensils.svg')}
+              fallbackEmoji="🍽️"
+              label="Meals"
+              focused={focused}
+            />
+          ),
+        }}
+      />
+      <Tabs.Screen
+        name="log"
+        listeners={{
+          tabPress: () => playTouchSound(),
+        }}
+        options={{
+          title: 'Stats',
+          tabBarIcon: ({ focused }) => (
+            <AnimatedTabBarItem
+              iconSource={require('@/../public/bar-chart-3.svg')}
+              fallbackEmoji="📊"
+              label="Stats"
+              focused={focused}
+            />
           ),
         }}
       />
@@ -153,7 +193,12 @@ export default function TabLayout() {
         options={{
           title: 'Profile',
           tabBarIcon: ({ focused }) => (
-            <AnimatedTabBarIcon icon="👤" focused={focused} color={Colors.dark.danger} />
+            <AnimatedTabBarItem
+              iconSource={require('@/../public/user-round.svg')}
+              fallbackEmoji="👤"
+              label="Profile"
+              focused={focused}
+            />
           ),
         }}
       />
@@ -162,38 +207,54 @@ export default function TabLayout() {
 }
 
 const styles = StyleSheet.create({
-  iconOuter: {
-    alignItems: 'center',
+  navItemContainer: {
+    flex: 1,
+    maxWidth: 60,
+    height: 58,
+    borderRadius: 12,
     justifyContent: 'center',
-    width: 40,
-    height: 36,
-    position: 'relative',
+    alignItems: 'center',
+    gap: 3,
   },
-  iconGlowRing: {
-    position: 'absolute',
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    opacity: 0,
+  navItemActive: {
+    backgroundColor: 'rgba(108, 92, 255, 0.12)',
   },
   iconWrapper: {
     alignItems: 'center',
     justifyContent: 'center',
-    width: 32,
-    height: 32,
+    width: 18,
+    height: 18,
+  },
+  iconImage: {
+    width: 18,
+    height: 18,
   },
   icon: {
-    fontSize: 20,
+    fontSize: 16,
   },
-  activeBeam: {
-    position: 'absolute',
-    bottom: -6,
-    width: 20,
-    height: 3,
-    borderRadius: 1.5,
-    shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 0.8,
-    shadowRadius: 6,
+  navLabel: {
+    fontFamily: Fonts.sans,
+    fontSize: 9,
+    textAlign: 'center',
+  },
+  navLabelActive: {
+    fontWeight: '800',
+    color: '#F5F7FF',
+  },
+  navLabelInactive: {
+    fontWeight: '600',
+    color: '#697292',
+  },
+  activeMarkerDot: {
+    width: 4,
+    height: 4,
+    borderRadius: 2,
+    backgroundColor: '#20C8FF',
+    boxShadow: '0px 0px 8px 1px rgba(32, 200, 255, 0.8)',
     elevation: 4,
+  },
+  activeMarkerPlaceholder: {
+    width: 4,
+    height: 4,
   },
 });

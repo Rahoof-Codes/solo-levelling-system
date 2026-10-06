@@ -8,6 +8,7 @@ import {
   type Profile,
   type Quest,
   type Meal,
+  type MealCategory,
   type Activity,
   type StatsHistory,
   type Streak,
@@ -547,14 +548,34 @@ export async function getTodayWorkout(
 }
 
 /**
+ * Get a workout by its ID.
+ */
+export async function getWorkoutById(
+  db: SQLiteDatabase,
+  workoutId: string
+): Promise<Workout | null> {
+  return await db.getFirstAsync<Workout>(
+    'SELECT * FROM workouts WHERE id = ? LIMIT 1;',
+    [workoutId]
+  );
+}
+
+/**
  * Get workouts for a specific week number.
  */
 export async function getWeekWorkouts(
   db: SQLiteDatabase,
-  weekNumber: number
+  weekNumber: number,
+  planId?: string
 ): Promise<Workout[]> {
+  if (planId) {
+    return await db.getAllAsync<Workout>(
+      'SELECT * FROM workouts WHERE week = ? AND plan_id = ? GROUP BY day ORDER BY day ASC;',
+      [weekNumber, planId]
+    );
+  }
   return await db.getAllAsync<Workout>(
-    'SELECT * FROM workouts WHERE week = ? ORDER BY day ASC;',
+    'SELECT * FROM workouts WHERE week = ? GROUP BY day ORDER BY day ASC;',
     [weekNumber]
   );
 }
@@ -713,44 +734,69 @@ export async function logMeal(
     protein_g?: number;
     carbs_g?: number;
     fat_g?: number;
+    category?: MealCategory;
+    logged_at?: string;
   }
 ): Promise<Meal> {
   const id = Crypto.randomUUID();
-  const now = new Date().toISOString();
+  const now = data.logged_at ?? new Date().toISOString();
 
   await db.runAsync(
-    `INSERT INTO meals (id, name, calories, protein_g, carbs_g, fat_g, logged_at, updated_at, synced)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, 0);`,
+    `INSERT INTO meals (id, name, category, calories, protein_g, carbs_g, fat_g, logged_at, updated_at, synced)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 0);`,
     [
       id,
       data.name,
+      data.category ?? 'lunch',
       data.calories,
       data.protein_g ?? 0,
       data.carbs_g ?? 0,
       data.fat_g ?? 0,
       now,
-      now,
+      new Date().toISOString(),
     ]
   );
 
-  await updateStreak(db, 'meal_log');
+  try {
+    await updateStreak(db, 'meal_log');
+  } catch (e) {
+    console.warn('[logMeal] Failed to update streak:', e);
+  }
 
   const meal = await db.getFirstAsync<Meal>('SELECT * FROM meals WHERE id = ?;', [id]);
   return meal!;
 }
 
+export async function deleteMeal(db: SQLiteDatabase, id: string): Promise<boolean> {
+  try {
+    await db.runAsync('DELETE FROM meals WHERE id = ?;', [id]);
+    return true;
+  } catch (err) {
+    console.warn('[deleteMeal] Error deleting meal:', err);
+    return false;
+  }
+}
+
 export async function getTodayMeals(db: SQLiteDatabase): Promise<Meal[]> {
-  const today = new Date().toISOString().split('T')[0];
+  const today = getLocalDateString();
   return await db.getAllAsync<Meal>(
-    "SELECT * FROM meals WHERE date(logged_at) = date(?) ORDER BY logged_at DESC;",
-    [today]
+    "SELECT * FROM meals WHERE date(logged_at, 'localtime') = date(?) OR date(logged_at) = date(?) ORDER BY logged_at DESC;",
+    [today, today]
   );
 }
 
-export async function getDailyCalorieSummary(db: SQLiteDatabase): Promise<DailyCalorieSummary> {
+export async function getMealsForDate(db: SQLiteDatabase, dateStr?: string): Promise<Meal[]> {
+  const date = dateStr ?? getLocalDateString();
+  return await db.getAllAsync<Meal>(
+    "SELECT * FROM meals WHERE date(logged_at, 'localtime') = date(?) OR date(logged_at) = date(?) ORDER BY logged_at DESC;",
+    [date, date]
+  );
+}
+
+export async function getDailyCalorieSummary(db: SQLiteDatabase, dateStr?: string): Promise<DailyCalorieSummary> {
   const profile = await getProfile(db);
   const target = profile?.daily_calories ?? 2000;
-  const today = new Date().toISOString().split('T')[0];
+  const date = dateStr ?? getLocalDateString();
 
   const mealStats = await db.getFirstAsync<{
     total_cal: number | null;
@@ -764,26 +810,27 @@ export async function getDailyCalorieSummary(db: SQLiteDatabase): Promise<DailyC
       SUM(carbs_g) as total_c,
       SUM(fat_g) as total_f
      FROM meals
-     WHERE date(logged_at) = date(?);`,
-    [today]
+     WHERE date(logged_at, 'localtime') = date(?) OR date(logged_at) = date(?);`,
+    [date, date]
   );
 
   const actStats = await db.getFirstAsync<{ total_burned: number | null }>(
-    `SELECT SUM(calories_burned) as total_burned FROM activities WHERE date(logged_at) = date(?);`,
-    [today]
+    `SELECT SUM(calories_burned) as total_burned FROM activities 
+     WHERE date(logged_at, 'localtime') = date(?) OR date(logged_at) = date(?);`,
+    [date, date]
   );
 
-  const consumed = mealStats?.total_cal ?? 0;
-  const burned = actStats?.total_burned ?? 0;
+  const consumed = Math.round(mealStats?.total_cal ?? 0);
+  const burned = Math.round(actStats?.total_burned ?? 0);
 
   return {
     consumed,
     burned,
-    target,
+    target: Math.round(target),
     net: consumed - burned,
-    protein_consumed: mealStats?.total_p ?? 0,
-    carbs_consumed: mealStats?.total_c ?? 0,
-    fat_consumed: mealStats?.total_f ?? 0,
+    protein_consumed: Math.round(mealStats?.total_p ?? 0),
+    carbs_consumed: Math.round(mealStats?.total_c ?? 0),
+    fat_consumed: Math.round(mealStats?.total_f ?? 0),
   };
 }
 
@@ -1345,3 +1392,79 @@ export async function upsertRemoteRows(
     console.warn(`[DB] Failed to upsert remote rows for ${tableName}:`, err);
   }
 }
+
+export interface StatGrowth30Days {
+  strGain: number;
+  endGain: number;
+  agiGain: number;
+  mobGain: number;
+  intGain: number;
+}
+
+export async function getStatsGrowthLast30Days(db: SQLiteDatabase): Promise<StatGrowth30Days> {
+  try {
+    const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString();
+    const rows = await db.getAllAsync<{ stat: string; total_gain: number }>(
+      `SELECT stat, SUM(xp_gained) as total_gain 
+       FROM stats_history 
+       WHERE logged_at >= ? 
+       GROUP BY stat;`,
+      [thirtyDaysAgo]
+    );
+
+    const gainMap: Record<string, number> = {};
+    for (const r of rows) {
+      gainMap[r.stat] = r.total_gain || 0;
+    }
+
+    return {
+      strGain: gainMap[Stat.STR] || 0,
+      endGain: gainMap[Stat.VIT] || 0,
+      agiGain: gainMap[Stat.AGI] || 0,
+      mobGain: gainMap[Stat.PER] || 0,
+      intGain: gainMap[Stat.INT] || 0,
+    };
+  } catch (err) {
+    console.warn('[DB] Failed to get stats growth last 30 days:', err);
+    return { strGain: 0, endGain: 0, agiGain: 0, mobGain: 0, intGain: 0 };
+  }
+}
+
+export async function getTodayFatigue(db: SQLiteDatabase): Promise<number> {
+  try {
+    const today = new Date().toISOString().split('T')[0];
+    const completedWorkouts = await db.getFirstAsync<{ count: number }>(
+      `SELECT COUNT(*) as count FROM workout_logs WHERE completed_at LIKE ?;`,
+      [`${today}%`]
+    );
+    const completedQuests = await db.getFirstAsync<{ count: number }>(
+      `SELECT COUNT(*) as count FROM quest_logs WHERE completed_at LIKE ?;`,
+      [`${today}%`]
+    );
+    const activitiesCount = await db.getFirstAsync<{ count: number }>(
+      `SELECT COUNT(*) as count FROM activities WHERE logged_at LIKE ?;`,
+      [`${today}%`]
+    );
+
+    const workoutCount = completedWorkouts?.count ?? 0;
+    const questCount = completedQuests?.count ?? 0;
+    const actCount = activitiesCount?.count ?? 0;
+
+    const fatigue = Math.min(100, workoutCount * 15 + questCount * 6 + actCount * 8);
+    return fatigue;
+  } catch (err) {
+    return 0;
+  }
+}
+
+export async function getTotalCompletedQuestsCount(db: SQLiteDatabase): Promise<number> {
+  try {
+    const res = await db.getFirstAsync<{ count: number }>(
+      'SELECT COUNT(*) as count FROM quest_logs;'
+    );
+    return res?.count ?? 0;
+  } catch (err) {
+    return 0;
+  }
+}
+

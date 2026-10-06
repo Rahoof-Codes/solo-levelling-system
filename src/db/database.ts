@@ -24,6 +24,7 @@ export async function initializeDatabase(db: SQLiteDatabase): Promise<void> {
     'ALTER TABLE profiles ADD COLUMN selected_plan TEXT;',
     'ALTER TABLE profiles ADD COLUMN plan_start_date TEXT;',
     'ALTER TABLE profiles ADD COLUMN onboarding_complete INTEGER NOT NULL DEFAULT 0;',
+    'ALTER TABLE meals ADD COLUMN category TEXT;',
   ];
   for (const sql of migrations) {
     try {
@@ -157,5 +158,51 @@ export async function initializeDatabase(db: SQLiteDatabase): Promise<void> {
        ON CONFLICT(id) DO NOTHING;`,
       [`steps-${today}`, today, now]
     );
+  }
+
+  // 7. Seed initial nutrition protocol meals if meals table is empty
+  const existingMeals = await db.getFirstAsync<{ count: number }>('SELECT COUNT(*) as count FROM meals;');
+  if (!existingMeals || existingMeals.count === 0) {
+    const starterMeals = [
+      {
+        id: `meal-starter-breakfast-${today}`,
+        name: 'Oats & Greek yogurt',
+        category: 'breakfast',
+        calories: 420,
+        protein_g: 30,
+        carbs_g: 48,
+        fat_g: 12,
+        logged_at: `${today}T08:00:00.000Z`,
+      },
+      {
+        id: `meal-starter-lunch-${today}`,
+        name: 'Chicken & rice bowl',
+        category: 'lunch',
+        calories: 600,
+        protein_g: 45,
+        carbs_g: 69,
+        fat_g: 16,
+        logged_at: `${today}T13:15:00.000Z`,
+      },
+      {
+        id: `meal-starter-snack-${today}`,
+        name: 'Yogurt & berries',
+        category: 'snack',
+        calories: 180,
+        protein_g: 15,
+        carbs_g: 21,
+        fat_g: 4,
+        logged_at: `${today}T16:00:00.000Z`,
+      },
+    ];
+
+    for (const m of starterMeals) {
+      await db.runAsync(
+        `INSERT INTO meals (id, name, category, calories, protein_g, carbs_g, fat_g, logged_at, updated_at, synced)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 1)
+         ON CONFLICT(id) DO NOTHING;`,
+        [m.id, m.name, m.category, m.calories, m.protein_g, m.carbs_g, m.fat_g, m.logged_at, now]
+      );
+    }
   }
 }

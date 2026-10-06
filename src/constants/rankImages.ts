@@ -11,5 +11,6 @@ export const RANK_IMAGES: Record<Rank, any> = {
 
 export function getRankImage(rank?: Rank | string | null) {
   if (!rank) return RANK_IMAGES[Rank.E];
-  return RANK_IMAGES[rank as Rank] || RANK_IMAGES[Rank.E];
+  const normalized = String(rank).toUpperCase().trim() as Rank;
+  return RANK_IMAGES[normalized] || RANK_IMAGES[Rank.E];
 }

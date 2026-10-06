@@ -116,6 +116,7 @@ export const CREATE_TABLES_SQL = `
   CREATE TABLE IF NOT EXISTS meals (
     id TEXT PRIMARY KEY NOT NULL,
     name TEXT NOT NULL,
+    category TEXT,
     calories REAL NOT NULL DEFAULT 0,
     protein_g REAL NOT NULL DEFAULT 0,
     carbs_g REAL NOT NULL DEFAULT 0,

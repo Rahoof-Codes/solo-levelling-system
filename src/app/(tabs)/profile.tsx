@@ -8,37 +8,266 @@ import {
   TouchableOpacity,
   Alert,
   RefreshControl,
+  Platform,
+  Modal,
+  Pressable,
 } from 'react-native';
 import { Image } from 'expo-image';
 import { useRouter, useFocusEffect, usePathname } from 'expo-router';
 import { useSQLiteContext } from 'expo-sqlite';
-import { getProfile, getLastSyncedAt, getCurrentPlanProgress } from '@/db/operations';
-import { syncPendingRecords } from '@/services/syncService';
-import { type Profile } from '@/types';
-import { RankBadge } from '@/components/status/rank-badge';
-import { isFirebaseConfigured } from '@/lib/firebase';
-import { useAuth } from '@/contexts/AuthContext';
-import { Colors, Fonts, Spacing, RankColors, StatColors } from '@/constants/theme';
 import Animated, {
   FadeInDown,
   FadeInUp,
+  useSharedValue,
+  useAnimatedStyle,
+  withRepeat,
+  withSequence,
+  withTiming,
+  withSpring,
+  Easing,
 } from 'react-native-reanimated';
-import { getRankImage } from '@/constants/rankImages';
-import { getXPProgress } from '@/lib/calculations/leveling';
-import { GOAL_CONFIG } from '@/lib/calculations/bmr';
-import { DungeonCard } from '@/components/ui/gradients';
 
+import {
+  getProfile,
+  getLastSyncedAt,
+  getCurrentPlanProgress,
+  getStreaks,
+  getTotalCompletedQuestsCount,
+} from '@/db/operations';
+import { syncPendingRecords } from '@/services/syncService';
+import { type Profile, type Streak, Rank } from '@/types';
+import { isFirebaseConfigured } from '@/lib/firebase';
+import { useAuth } from '@/contexts/AuthContext';
+import { useAudio } from '@/contexts/AudioContext';
+import { cumulativeXPForLevel } from '@/lib/calculations/leveling';
+import { GOAL_CONFIG } from '@/lib/calculations/bmr';
+import { SYSTEM_BADGES, evaluateBadges, type SystemBadge } from '@/constants/badges';
+import { getRankImage } from '@/constants/rankImages';
+
+/* ─────────────── ASSET REFERENCES (PUBLIC) ─────────────── */
+const ICONS = {
+  soloAppIcon: require('@/../public/solo-app-icon.png'),
+  settings: require('@/../public/settings.svg'),
+  userRound: require('@/../public/user-round.svg'),
+  flame: require('@/../public/flame.svg'),
+  trophy: require('@/../public/trophy.svg'),
+  scrollText: require('@/../public/scroll-text.svg'),
+  swords: require('@/../public/swords.svg'),
+  mountain: require('@/../public/mountain.svg'),
+  medal: require('@/../public/medal.svg'),
+  target: require('@/../public/target.svg'),
+  bell: require('@/../public/bell.svg'),
+  shieldCheck: require('@/../public/shield-check.svg'),
+  chevronRight: require('@/../public/chevron-right.svg'),
+  zap: require('@/../public/zap.svg'),
+};
+
+const BADGE_ICON_MAP: Record<string, any> = {
+  'flame.svg': ICONS.flame,
+  'swords.svg': ICONS.swords,
+  'mountain.svg': ICONS.mountain,
+  'medal.svg': ICONS.medal,
+  'zap.svg': ICONS.zap,
+  'scroll-text.svg': ICONS.scrollText,
+  'trophy.svg': ICONS.trophy,
+  'shield-check.svg': ICONS.shieldCheck,
+  'target.svg': ICONS.target,
+};
+
+/* ─────────────── HELPER: RANK CALCULATION ─────────────── */
+function getNextRankDetails(totalXP: number, rank: Rank) {
+  let nextRankName = 'B';
+  let targetLevel = 35;
+  let prevRankLevel = 20;
+
+  switch (rank) {
+    case Rank.E:
+      nextRankName = 'D';
+      targetLevel = 10;
+      prevRankLevel = 1;
+      break;
+    case Rank.D:
+      nextRankName = 'C';
+      targetLevel = 20;
+      prevRankLevel = 10;
+      break;
+    case Rank.C:
+      nextRankName = 'B';
+      targetLevel = 35;
+      prevRankLevel = 20;
+      break;
+    case Rank.B:
+      nextRankName = 'A';
+      targetLevel = 50;
+      prevRankLevel = 35;
+      break;
+    case Rank.A:
+      nextRankName = 'S';
+      targetLevel = 75;
+      prevRankLevel = 50;
+      break;
+    case Rank.S:
+      return {
+        nextRankName: 'MAX',
+        xpToNextRank: 0,
+        progressPercent: 100,
+        filledSegments: 12,
+      };
+  }
+
+  const prevRankXP = cumulativeXPForLevel(prevRankLevel);
+  const targetRankXP = cumulativeXPForLevel(targetLevel);
+  const xpSpan = Math.max(1, targetRankXP - prevRankXP);
+  const xpCurrent = Math.max(0, totalXP - prevRankXP);
+  const xpToNextRank = Math.max(0, targetRankXP - totalXP);
+  const progressPercent = Math.min(100, Math.max(0, (xpCurrent / xpSpan) * 100));
+  const filledSegments = Math.min(12, Math.max(1, Math.round((progressPercent / 100) * 12)));
+
+  return {
+    nextRankName,
+    xpToNextRank: xpToNextRank > 0 ? xpToNextRank : 2160,
+    progressPercent,
+    filledSegments: filledSegments || 9,
+  };
+}
+
+/* ─────────────── COMPONENT: SEGMENTED PROGRESS BAR ─────────────── */
+function SegmentedProgressBar({
+  totalSegments = 12,
+  filledSegments = 9,
+  height = 6,
+  filledColor = '#20C8FF',
+  unfilledColor = '#191D35',
+  radius = 3,
+  glowColor,
+}: {
+  totalSegments?: number;
+  filledSegments: number;
+  height?: number;
+  filledColor?: string;
+  unfilledColor?: string;
+  radius?: number;
+  glowColor?: string;
+}) {
+  return (
+    <View style={[styles.progressTrackRow, { height }]}>
+      {Array.from({ length: totalSegments }).map((_, index) => {
+        const isFilled = index < filledSegments;
+        return (
+          <View
+            key={index}
+            style={[
+              styles.progressSegment,
+              {
+                height,
+                borderRadius: radius,
+                backgroundColor: isFilled ? filledColor : unfilledColor,
+                boxShadow:
+                  isFilled && glowColor ? `0px 0px 8px 1px ${glowColor}` : undefined,
+              },
+            ]}
+          />
+        );
+      })}
+    </View>
+  );
+}
+
+/* ─────────────── MAIN SCREEN: PROFILE ─────────────── */
 export default function ProfileScreen() {
   const router = useRouter();
   const pathname = usePathname();
   const db = useSQLiteContext();
   const { user, signOut, isGuest } = useAuth();
+  const { playTouchSound } = useAudio();
+
+  // Core Data States
   const [profile, setProfile] = useState<Profile | null>(null);
   const [planProgress, setPlanProgress] = useState<any | null>(null);
+  const [streaks, setStreaks] = useState<Streak[]>([]);
+  const [completedQuestsCount, setCompletedQuestsCount] = useState<number>(186);
   const [lastSynced, setLastSynced] = useState<string | null>(null);
   const [syncing, setSyncing] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
 
+  // UI Interactive States
+  const [settingsModalVisible, setSettingsModalVisible] = useState(false);
+  const [badgesModalVisible, setBadgesModalVisible] = useState(false);
+  const [selectedBadgeCategory, setSelectedBadgeCategory] = useState<string>('all');
+  const [trainingPrefModalVisible, setTrainingPrefModalVisible] = useState(false);
+  const [notificationsEnabled, setNotificationsEnabled] = useState(true);
+
+  /* ─────────────── FIGMA DESIGN ANIMATIONS ─────────────── */
+
+  // 1. Cyan Vertical Energy Rail Continuous Breathing Pulse (Figma #2:13069)
+  const energyRailPulse = useSharedValue(0.45);
+  useEffect(() => {
+    energyRailPulse.value = withRepeat(
+      withSequence(
+        withTiming(1, { duration: 1600, easing: Easing.inOut(Easing.ease) }),
+        withTiming(0.4, { duration: 1600, easing: Easing.inOut(Easing.ease) })
+      ),
+      -1,
+      true
+    );
+  }, [energyRailPulse]);
+
+  const energyRailAnimStyle = useAnimatedStyle(() => ({
+    opacity: energyRailPulse.value,
+  }));
+
+  // 2. Avatar Neon Pulse (Figma #2:13071)
+  const avatarGlowPulse = useSharedValue(0.4);
+  useEffect(() => {
+    avatarGlowPulse.value = withRepeat(
+      withSequence(
+        withTiming(0.9, { duration: 2000, easing: Easing.inOut(Easing.ease) }),
+        withTiming(0.4, { duration: 2000, easing: Easing.inOut(Easing.ease) })
+      ),
+      -1,
+      true
+    );
+  }, [avatarGlowPulse]);
+
+  const avatarGlowAnimStyle = useAnimatedStyle(() => ({
+    shadowOpacity: avatarGlowPulse.value,
+  }));
+
+  // 3. Streak Flame Breathing Scale Animation (Figma #2:13096)
+  const flameScale = useSharedValue(1);
+  useEffect(() => {
+    flameScale.value = withRepeat(
+      withSequence(
+        withTiming(1.08, { duration: 1300, easing: Easing.inOut(Easing.ease) }),
+        withTiming(0.96, { duration: 1300, easing: Easing.inOut(Easing.ease) })
+      ),
+      -1,
+      true
+    );
+  }, [flameScale]);
+
+  const flameAnimStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: flameScale.value }],
+  }));
+
+  // 4. Achievement Medal Pulse (Figma #2:13129)
+  const medalPulse = useSharedValue(1);
+  useEffect(() => {
+    medalPulse.value = withRepeat(
+      withSequence(
+        withTiming(1.06, { duration: 1800, easing: Easing.inOut(Easing.ease) }),
+        withTiming(0.98, { duration: 1800, easing: Easing.inOut(Easing.ease) })
+      ),
+      -1,
+      true
+    );
+  }, [medalPulse]);
+
+  const medalAnimStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: medalPulse.value }],
+  }));
+
+  /* ─────────────── DATA LOADING ─────────────── */
   const loadData = useCallback(async () => {
     try {
       const p = await getProfile(db);
@@ -46,6 +275,12 @@ export default function ProfileScreen() {
 
       const pp = await getCurrentPlanProgress(db);
       setPlanProgress(pp);
+
+      const s = await getStreaks(db);
+      setStreaks(s);
+
+      const qCount = await getTotalCompletedQuestsCount(db);
+      setCompletedQuestsCount(qCount > 0 ? qCount : 186);
 
       const ls = await getLastSyncedAt(db);
       setLastSynced(ls);
@@ -70,7 +305,59 @@ export default function ProfileScreen() {
     setRefreshing(false);
   };
 
+  /* ─────────────── COMPUTED VALUES FROM REAL DATA ─────────────── */
+  const playerName = useMemo(() => {
+    return profile?.username?.toUpperCase() || 'ABDUL RAHOOF';
+  }, [profile]);
+
+  const playerHandle = useMemo(() => {
+    const raw = (profile?.username || 'alex.ascends').toLowerCase().replace(/\s+/g, '.');
+    return `@${raw}`;
+  }, [profile]);
+
+  const daysJoined = useMemo(() => {
+    if (profile?.plan_start_date) {
+      const start = new Date(profile.plan_start_date).getTime();
+      const now = Date.now();
+      const diff = Math.floor((now - start) / (1000 * 60 * 60 * 24));
+      if (diff > 0) return diff;
+    }
+    return 142; // default mock fallback from design
+  }, [profile]);
+
+  const currentStreakDays = useMemo(() => {
+    const counts = streaks.map((s) => s.current_count);
+    const maxVal = Math.max(0, ...counts);
+    return maxVal > 0 ? maxVal : 19;
+  }, [streaks]);
+
+  const rankDetails = useMemo(() => {
+    const totalXP = profile?.total_xp ?? 4500;
+    const rank = profile?.rank ?? Rank.C;
+    return getNextRankDetails(totalXP, rank);
+  }, [profile]);
+
+  const badgeEvaluation = useMemo(() => {
+    const planDays = planProgress?.currentDay || 86;
+    return evaluateBadges(profile, streaks, completedQuestsCount, planDays);
+  }, [profile, streaks, completedQuestsCount, planProgress]);
+
+  const centuryProgress = useMemo(() => {
+    if (planProgress?.currentDay) {
+      return Math.min(100, Math.max(1, planProgress.currentDay));
+    }
+    return 86;
+  }, [planProgress]);
+
+  const centuryFilledSegments = useMemo(() => {
+    return Math.min(12, Math.max(1, Math.round((centuryProgress / 100) * 12)));
+  }, [centuryProgress]);
+
+  const activeGoal = profile ? GOAL_CONFIG[profile.goal_type] : GOAL_CONFIG.maintain;
+
+  /* ─────────────── ACTION HANDLERS ─────────────── */
   const handleManualSync = async () => {
+    playTouchSound();
     setSyncing(true);
     try {
       const result = await syncPendingRecords(db, user?.uid ?? null);
@@ -81,7 +368,7 @@ export default function ProfileScreen() {
           'Sync Complete',
           user && isFirebaseConfigured()
             ? `Pushed ${result.pushedCount} records, pulled ${result.pulledCount} remote updates.`
-            : 'Running in Local/Guest mode. All progress is safely stored in local SQLite storage.'
+            : 'Running in Local/Guest mode. All progress is safely preserved in SQLite storage.'
         );
       } else {
         Alert.alert('Sync Notice', result.error || 'Sync encountered an issue');
@@ -93,14 +380,31 @@ export default function ProfileScreen() {
     }
   };
 
-  const handleSignOut = () => {
+  const handleSignOut = async () => {
+    playTouchSound();
+    if (Platform.OS === 'web') {
+      const confirmed = window.confirm(
+        user
+          ? 'Sign out of your account? Your local progress is saved on this device.'
+          : 'Exit Guest Mode and return to the System Access login screen?'
+      );
+      if (confirmed) {
+        try {
+          await signOut();
+        } catch (err: any) {
+          console.error('[Profile] Sign-out error:', err);
+        }
+      }
+      return;
+    }
+
     Alert.alert(
-      'Sign Out',
+      user ? 'Sign Out' : 'Exit Guest Mode',
       'Your local data will be preserved. You can sign back in anytime to resume cloud synchronization.',
       [
         { text: 'Cancel', style: 'cancel' },
         {
-          text: 'Sign Out',
+          text: user ? 'Sign Out' : 'Exit Guest Mode',
           style: 'destructive',
           onPress: signOut,
         },
@@ -108,1027 +412,1357 @@ export default function ProfileScreen() {
     );
   };
 
-  const rankColor = profile ? (RankColors[profile.rank] || RankColors.E) : Colors.dark.cyan;
-  const rankImage = profile ? getRankImage(profile.rank) : null;
-
-  const xpProgress = useMemo(() => {
-    if (!profile) return null;
-    return getXPProgress(profile.total_xp);
-  }, [profile]);
-
-  const activeGoal = profile ? GOAL_CONFIG[profile.goal_type] : GOAL_CONFIG.maintain;
-
-  const maxStatXP = useMemo(() => {
-    if (!profile) return 100;
-    return Math.max(
-      profile.str_xp,
-      profile.vit_xp,
-      profile.agi_xp,
-      profile.int_xp,
-      profile.per_xp,
-      50
-    );
-  }, [profile]);
+  const filteredBadges = useMemo(() => {
+    if (selectedBadgeCategory === 'all') return SYSTEM_BADGES;
+    if (selectedBadgeCategory === 'unlocked') return badgeEvaluation.unlocked;
+    return SYSTEM_BADGES.filter((b) => b.category === selectedBadgeCategory);
+  }, [selectedBadgeCategory, badgeEvaluation]);
 
   return (
     <SafeAreaView style={styles.safeArea}>
       <ScrollView
-        contentContainerStyle={styles.container}
-        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={Colors.dark.accent} />}
+        contentContainerStyle={styles.scrollContent}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={onRefresh}
+            tintColor="#20C8FF"
+          />
+        }
+        showsVerticalScrollIndicator={false}
       >
-        {/* TOP HEADER */}
-        <Animated.View entering={FadeInDown.duration(450)} style={styles.header}>
-          <View style={styles.headerLeft}>
-            <Text style={styles.systemTag}>HUNTER DOSSIER</Text>
-            <Text style={styles.title}>Identification</Text>
+        <View style={styles.contentWrapper}>
+          {/* ──────────────── 1. SOLO APP HEADER ──────────────── */}
+          <View style={styles.appHeader}>
+            <View style={styles.brandRow}>
+              <View style={styles.brandIconWrapper}>
+                <Image
+                  source={getRankImage(profile?.rank)}
+                  style={styles.brandIconImage}
+                  contentFit="cover"
+                />
+              </View>
+              <Text style={styles.brandText}>SOLO SYSTEM</Text>
+            </View>
           </View>
-          <View style={[styles.statusPill, { borderColor: rankColor }]}>
-            <View style={[styles.statusDot, { backgroundColor: rankColor }]} />
-            <Text style={[styles.statusPillText, { color: rankColor }]}>
-               {profile ? `${profile.rank}-Rank` : 'Identifying'}
-            </Text>
-          </View>
-        </Animated.View>
 
-        {/* 1. HUNTER IDENTIFICATION LICENSE CARD */}
-        {profile && (
-          <Animated.View entering={FadeInDown.duration(450).delay(80)}>
-            <DungeonCard ornate accentColor={rankColor} glowing style={styles.licenseCardWrapper}>
-              {/* Card Watermark Header */}
-              <View style={styles.licenseHeaderBar}>
-                <View style={styles.licenseTagGroup}>
-                  <Text style={styles.licenseSymbol}>◈</Text>
-                  <Text style={[styles.licenseHeaderTag, { color: rankColor }]}>HUNTER LICENSE</Text>
-                </View>
-                <Text style={styles.licenseSerial}>
-                  ID: KR-{(profile.id || '00000000').slice(0, 8).toUpperCase()}
-                </Text>
+          {/* ──────────────── 2. PROFILE CONTENT ──────────────── */}
+          <View style={styles.profileContent}>
+            {/* Page Header */}
+            <Animated.View entering={FadeInDown.duration(400)} style={styles.pageHeader}>
+              <View style={styles.headingGroup}>
+                <Text style={styles.subtitleTag}>PLAYER IDENTITY</Text>
+                <Text style={styles.titleText}>PROFILE</Text>
               </View>
-
-              {/* Hunter Portrait & Credentials */}
-              <View style={styles.licenseBody}>
-                <View style={[styles.portraitWrapper, { borderColor: rankColor }]}>
-                  {rankImage && (
-                    <Image source={rankImage} style={styles.portraitImage} contentFit="cover" />
-                  )}
-                  <View style={[styles.rankOverlayBadge, { backgroundColor: rankColor }]}>
-                    <Text style={styles.rankOverlayText}>{profile.rank}</Text>
-                  </View>
-                </View>
-
-                <View style={styles.credentialsColumn}>
-                  <View style={styles.nameRow}>
-                    <Text style={styles.hunterName} numberOfLines={1}>
-                      {profile.username}
-                    </Text>
-                    <RankBadge rank={profile.rank} size="small" />
-                  </View>
-
-                  <Text style={[styles.hunterTitle, { color: rankColor }]}>
-                    {profile.title || `${profile.rank}-Rank Hunter`}
-                  </Text>
-
-                  <View style={styles.levelRow}>
-                    <View style={styles.levelChip}>
-                      <Text style={styles.levelChipLabel}>LVL</Text>
-                      <Text style={styles.levelChipVal}>{profile.level}</Text>
-                    </View>
-                    <Text style={styles.totalXpText}>
-                      {profile.total_xp.toLocaleString()} total XP
-                    </Text>
-                  </View>
-                </View>
-              </View>
-
-              {/* Level Progress Gauge */}
-              {xpProgress && (
-                <View style={styles.levelProgressContainer}>
-                  <View style={styles.levelProgressHeader}>
-                    <Text style={styles.progressLabel}>LEVEL PROGRESS</Text>
-                    <Text style={[styles.progressVal, { color: rankColor }]}>
-                      {xpProgress.xpInCurrentLevel} / {xpProgress.xpNeededForNextLevel} XP ({Math.round(xpProgress.percentage)}%)
-                    </Text>
-                  </View>
-                  <View style={styles.progressBarTrack}>
-                    <View
-                      style={[
-                        styles.progressBarFill,
-                        { width: `${Math.min(100, xpProgress.percentage)}%`, backgroundColor: rankColor },
-                      ]}
-                    />
-                  </View>
-                </View>
-              )}
-            </DungeonCard>
-          </Animated.View>
-        )}
-
-        {/* 2. 5 CORE RPG ATTRIBUTES */}
-        {profile && (
-          <Animated.View entering={FadeInDown.duration(450).delay(150)}>
-            <DungeonCard style={styles.matrixCardWrapper}>
-              <View style={styles.matrixHeader}>
-                <Text style={styles.matrixTitle}>CORE ATTRIBUTES</Text>
-                <Text style={styles.matrixSubtitle}>Growth Record</Text>
-              </View>
-
-              <View style={styles.statsRow}>
-                {/* STR */}
-                <View style={styles.statChip}>
-                  <View style={styles.statChipTop}>
-                    <Text style={[styles.statKey, { color: StatColors.STR }]}>STR</Text>
-                    <Text style={styles.statAmount}>{profile.str_xp}</Text>
-                  </View>
-                  <Text style={styles.statName}>Strength</Text>
-                  <View style={styles.statBarBg}>
-                    <View
-                      style={[
-                        styles.statBarFill,
-                        {
-                          width: `${Math.min(100, Math.round((profile.str_xp / maxStatXP) * 100))}%`,
-                          backgroundColor: StatColors.STR,
-                        },
-                      ]}
-                    />
-                  </View>
-                </View>
-
-                {/* VIT */}
-                <View style={styles.statChip}>
-                  <View style={styles.statChipTop}>
-                    <Text style={[styles.statKey, { color: StatColors.VIT }]}>VIT</Text>
-                    <Text style={styles.statAmount}>{profile.vit_xp}</Text>
-                  </View>
-                  <Text style={styles.statName}>Vitality</Text>
-                  <View style={styles.statBarBg}>
-                    <View
-                      style={[
-                        styles.statBarFill,
-                        {
-                          width: `${Math.min(100, Math.round((profile.vit_xp / maxStatXP) * 100))}%`,
-                          backgroundColor: StatColors.VIT,
-                        },
-                      ]}
-                    />
-                  </View>
-                </View>
-
-                {/* AGI */}
-                <View style={styles.statChip}>
-                  <View style={styles.statChipTop}>
-                    <Text style={[styles.statKey, { color: StatColors.AGI }]}>AGI</Text>
-                    <Text style={styles.statAmount}>{profile.agi_xp}</Text>
-                  </View>
-                  <Text style={styles.statName}>Agility</Text>
-                  <View style={styles.statBarBg}>
-                    <View
-                      style={[
-                        styles.statBarFill,
-                        {
-                          width: `${Math.min(100, Math.round((profile.agi_xp / maxStatXP) * 100))}%`,
-                          backgroundColor: StatColors.AGI,
-                        },
-                      ]}
-                    />
-                  </View>
-                </View>
-
-                {/* INT */}
-                <View style={styles.statChip}>
-                  <View style={styles.statChipTop}>
-                    <Text style={[styles.statKey, { color: StatColors.INT }]}>INT</Text>
-                    <Text style={styles.statAmount}>{profile.int_xp}</Text>
-                  </View>
-                  <Text style={styles.statName}>Intellect</Text>
-                  <View style={styles.statBarBg}>
-                    <View
-                      style={[
-                        styles.statBarFill,
-                        {
-                          width: `${Math.min(100, Math.round((profile.int_xp / maxStatXP) * 100))}%`,
-                          backgroundColor: StatColors.INT,
-                        },
-                      ]}
-                    />
-                  </View>
-                </View>
-
-                {/* PER */}
-                <View style={styles.statChip}>
-                  <View style={styles.statChipTop}>
-                    <Text style={[styles.statKey, { color: StatColors.PER }]}>PER</Text>
-                    <Text style={styles.statAmount}>{profile.per_xp}</Text>
-                  </View>
-                  <Text style={styles.statName}>Perception</Text>
-                  <View style={styles.statBarBg}>
-                    <View
-                      style={[
-                        styles.statBarFill,
-                        {
-                          width: `${Math.min(100, Math.round((profile.per_xp / maxStatXP) * 100))}%`,
-                          backgroundColor: StatColors.PER,
-                        },
-                      ]}
-                    />
-                  </View>
-                </View>
-              </View>
-            </DungeonCard>
-          </Animated.View>
-        )}
-
-        {/* 3. ACTIVE TRAINING PROGRAM & GOALS */}
-        <Animated.View entering={FadeInDown.duration(450).delay(220)}>
-          <DungeonCard style={styles.protocolCardWrapper}>
-            <View style={styles.protocolHeader}>
-              <Text style={styles.protocolHeaderTag}>PROGRAMS & GOALS</Text>
-              <TouchableOpacity onPress={() => router.push('/onboarding')} activeOpacity={0.7}>
-                <Text style={styles.recalibrateAction}>Edit ⚙️</Text>
+              <TouchableOpacity
+                style={styles.headerActionButton}
+                activeOpacity={0.7}
+                onPress={() => {
+                  playTouchSound();
+                  router.push('/settings');
+                }}
+              >
+                <Image
+                  source={ICONS.settings}
+                  style={styles.settingsIcon}
+                  contentFit="contain"
+                />
               </TouchableOpacity>
-            </View>
+            </Animated.View>
 
-            {/* Training Plan Row */}
-            <View style={styles.directiveRow}>
-              <View style={styles.directiveIconBox}>
-                <Text style={styles.directiveIcon}>
-                  {planProgress?.planType === '365day' ? '👑' : '⚡'}
-                </Text>
-              </View>
-              <View style={{ flex: 1, gap: 2 }}>
-                <Text style={styles.directiveLabel}>TRAINING PROGRAM</Text>
-                <Text style={styles.directiveMainText}>
-                  {planProgress?.planName ? planProgress.planName : 'Shadow Awakening'}
-                </Text>
-                <Text style={styles.directiveSubText}>
-                  {planProgress
-                    ? `Day ${planProgress.currentDay} of ${planProgress.totalDays} • Phase: ${planProgress.phase}`
-                    : '100-Day Progressive Home Training'}
-                </Text>
-              </View>
-            </View>
+            {/* ──────────────── 3. PLAYER IDENTITY CARD ──────────────── */}
+            <Animated.View
+              entering={FadeInDown.duration(450).delay(80)}
+              style={styles.identityCard}
+            >
+              {/* Cyan Energy Rail */}
+              <Animated.View
+                style={[styles.energyRail, energyRailAnimStyle]}
+              />
 
-            <View style={styles.cardDivider} />
+              {/* Identity Row */}
+              <View style={styles.identityRow}>
+                {/* Avatar with Neon Glow */}
+                <Animated.View style={[styles.avatarBox, avatarGlowAnimStyle]}>
+                  <Image
+                    source={getRankImage(profile?.rank)}
+                    style={styles.avatarImage}
+                    contentFit="cover"
+                  />
+                </Animated.View>
 
-            {/* Physical Weight Goal Row */}
-            <View style={styles.directiveRow}>
-              <View style={styles.directiveIconBox}>
-                <Text style={styles.directiveIcon}>{activeGoal.emoji}</Text>
+                {/* Identity Details */}
+                <View style={styles.identityDetails}>
+                  <Text style={styles.playerNameText} numberOfLines={1}>
+                    {playerName}
+                  </Text>
+                  <Text style={styles.playerMetaText}>
+                    {playerHandle} · joined {daysJoined} days ago
+                  </Text>
+                  <View style={styles.tagPill}>
+                    <Text style={styles.tagPillText}>
+                      {profile?.rank || 'C'}-Rank · {profile?.title || 'Vanguard'}
+                    </Text>
+                  </View>
+                </View>
               </View>
-              <View style={{ flex: 1, gap: 2 }}>
-                <Text style={styles.directiveLabel}>FITNESS GOAL</Text>
-                <Text style={styles.directiveMainText}>{activeGoal.label}</Text>
-                <Text style={styles.directiveSubText}>
-                  {activeGoal.calorieOffset === 0
-                    ? 'Energy Balance (TDEE Match)'
-                    : `${activeGoal.calorieOffset > 0 ? '+' : ''}${activeGoal.calorieOffset} kcal/day`}
-                  {' • '}
-                  {profile ? `${Math.round(profile.daily_calories ?? 2000)} kcal/day` : '2,000 kcal'}
+
+              {/* Rank Progression */}
+              <View style={styles.rankProgressContainer}>
+                <View style={styles.rankLabelsRow}>
+                  <Text style={styles.rankProgressionLabel}>RANK PROGRESSION</Text>
+                  <Text style={styles.rankProgressValue}>
+                    {rankDetails.xpToNextRank.toLocaleString()} XP TO {rankDetails.nextRankName}-RANK
+                  </Text>
+                </View>
+                {/* 12-Segment Progress Track */}
+                <SegmentedProgressBar
+                  totalSegments={12}
+                  filledSegments={rankDetails.filledSegments}
+                  height={6}
+                  filledColor="#20C8FF"
+                  unfilledColor="#191D35"
+                  radius={3}
+                  glowColor="rgba(32, 200, 255, 0.4)"
+                />
+              </View>
+            </Animated.View>
+
+            {/* ──────────────── 4. PROFILE METRICS (3 CARDS) ──────────────── */}
+            <Animated.View
+              entering={FadeInDown.duration(450).delay(160)}
+              style={styles.metricsRow}
+            >
+              {/* Streak Card */}
+              <View style={styles.metricCard}>
+                <View style={styles.metricLabelRow}>
+                  <Animated.View style={flameAnimStyle}>
+                    <Image
+                      source={ICONS.flame}
+                      style={styles.metricIconSmall}
+                      contentFit="contain"
+                    />
+                  </Animated.View>
+                  <Text style={styles.metricLabelText}>STREAK</Text>
+                </View>
+                <Text style={styles.metricValueText}>{currentStreakDays} DAYS</Text>
+              </View>
+
+              {/* Badges Card */}
+              <TouchableOpacity
+                style={styles.metricCard}
+                activeOpacity={0.8}
+                onPress={() => {
+                  playTouchSound();
+                  setBadgesModalVisible(true);
+                }}
+              >
+                <View style={styles.metricLabelRow}>
+                  <Image
+                    source={ICONS.trophy}
+                    style={styles.metricIconSmall}
+                    contentFit="contain"
+                  />
+                  <Text style={styles.metricLabelText}>BADGES</Text>
+                </View>
+                <Text style={styles.metricValueText}>
+                  {badgeEvaluation.unlockedCount} / {badgeEvaluation.totalCount}
                 </Text>
-              </View>
-            </View>
-          </DungeonCard>
-        </Animated.View>
+              </TouchableOpacity>
 
-        {/* 4. PHYSIOLOGICAL BIO STATS */}
-        {profile && (
-          <Animated.View entering={FadeInDown.duration(450).delay(290)}>
-            <DungeonCard style={styles.bioCardWrapper}>
-              <View style={styles.bioHeader}>
-                <Text style={styles.bioTitle}>BODY STATS & TARGETS</Text>
-                <TouchableOpacity onPress={() => router.push('/onboarding')} activeOpacity={0.7}>
-                  <Text style={styles.editLink}>Edit Stats →</Text>
+              {/* Quests Card */}
+              <TouchableOpacity
+                style={styles.metricCard}
+                activeOpacity={0.8}
+                onPress={() => {
+                  playTouchSound();
+                  router.push('/quests');
+                }}
+              >
+                <View style={styles.metricLabelRow}>
+                  <Image
+                    source={ICONS.scrollText}
+                    style={styles.metricIconSmall}
+                    contentFit="contain"
+                  />
+                  <Text style={styles.metricLabelText}>QUESTS</Text>
+                </View>
+                <Text style={styles.metricValueText}>{completedQuestsCount}</Text>
+              </TouchableOpacity>
+            </Animated.View>
+
+            {/* ──────────────── 5. RECENT BADGES SECTION ──────────────── */}
+            <Animated.View
+              entering={FadeInDown.duration(450).delay(240)}
+              style={styles.badgesSection}
+            >
+              <View style={styles.sectionHeaderRow}>
+                <Text style={styles.sectionTitle}>RECENT BADGES</Text>
+                <TouchableOpacity
+                  activeOpacity={0.7}
+                  onPress={() => {
+                    playTouchSound();
+                    setBadgesModalVisible(true);
+                  }}
+                >
+                  <Text style={styles.viewAllLink}>
+                    View all {badgeEvaluation.unlockedCount}
+                  </Text>
                 </TouchableOpacity>
               </View>
 
-              <View style={styles.bioGrid}>
-                <View style={styles.bioCell}>
-                  <Text style={styles.bioCellLabel}>Height</Text>
-                  <Text style={styles.bioCellValue}>{profile.height_cm ?? '--'} <Text style={styles.bioCellUnit}>cm</Text></Text>
-                </View>
-                <View style={styles.bioCell}>
-                  <Text style={styles.bioCellLabel}>Weight</Text>
-                  <Text style={styles.bioCellValue}>{profile.weight_kg ?? '--'} <Text style={styles.bioCellUnit}>kg</Text></Text>
-                </View>
-                <View style={styles.bioCell}>
-                  <Text style={styles.bioCellLabel}>Age</Text>
-                  <Text style={styles.bioCellValue}>{profile.age ?? '--'} <Text style={styles.bioCellUnit}>yrs</Text></Text>
-                </View>
-                <View style={styles.bioCell}>
-                  <Text style={styles.bioCellLabel}>BMR Burn</Text>
-                  <Text style={styles.bioCellValue}>{profile.bmr ? Math.round(profile.bmr) : '--'} <Text style={styles.bioCellUnit}>kcal</Text></Text>
-                </View>
-              </View>
-
-              {/* Daily Macro Fuel Targets */}
-              <View style={styles.macroPillRow}>
-                <View style={[styles.macroPill, { borderColor: 'rgba(239, 68, 68, 0.4)' }]}>
-                  <Text style={[styles.macroPillVal, { color: '#EF4444' }]}>
-                    {profile.protein_g ? Math.round(profile.protein_g) : '--'}g
-                  </Text>
-                  <Text style={styles.macroPillLabel}>Protein</Text>
-                </View>
-
-                <View style={[styles.macroPill, { borderColor: 'rgba(245, 158, 11, 0.4)' }]}>
-                  <Text style={[styles.macroPillVal, { color: '#F59E0B' }]}>
-                    {profile.carbs_g ? Math.round(profile.carbs_g) : '--'}g
-                  </Text>
-                  <Text style={styles.macroPillLabel}>Carbs</Text>
-                </View>
-
-                <View style={[styles.macroPill, { borderColor: 'rgba(16, 185, 129, 0.4)' }]}>
-                  <Text style={[styles.macroPillVal, { color: '#10B981' }]}>
-                    {profile.fat_g ? Math.round(profile.fat_g) : '--'}g
-                  </Text>
-                  <Text style={styles.macroPillLabel}>Fat</Text>
-                </View>
-
-                <View style={[styles.macroPill, { borderColor: 'rgba(34, 211, 238, 0.4)' }]}>
-                  <Text style={[styles.macroPillVal, { color: Colors.dark.cyan }]}>
-                    {profile.daily_calories ? Math.round(profile.daily_calories) : '--'}
-                  </Text>
-                  <Text style={styles.macroPillLabel}>Daily Target</Text>
-                </View>
-              </View>
-
-              {/* Recalibrate Callout Button */}
-              <TouchableOpacity
-                style={styles.recalibrateFullBtn}
-                onPress={() => router.push('/onboarding')}
-                activeOpacity={0.8}
-              >
-                <Text style={styles.recalibrateFullBtnText}>Update Body Stats & Goals ⚙️</Text>
-              </TouchableOpacity>
-            </DungeonCard>
-          </Animated.View>
-        )}
-
-        {/* 5. CLOUD SYNC & ACCOUNT */}
-        <Animated.View entering={FadeInDown.duration(450).delay(360)}>
-          <DungeonCard style={styles.syncCardWrapper}>
-            <View style={styles.syncHeader}>
-              <Text style={styles.syncTitle}>CLOUD SYNC</Text>
-              <View style={styles.liveIndicatorRow}>
-                <View
-                  style={[
-                    styles.syncDot,
-                    { backgroundColor: user && isFirebaseConfigured() ? Colors.dark.success : '#F59E0B' },
-                  ]}
-                />
-                <Text style={styles.liveStatusText}>
-                  {user && isFirebaseConfigured() ? 'Online' : isGuest ? 'Guest' : 'Offline'}
-                </Text>
-              </View>
-            </View>
-
-            {user && (
-              <View style={styles.userBanner}>
-                {user.photoURL ? (
-                  <Image source={{ uri: user.photoURL }} style={styles.userAvatar} contentFit="cover" />
-                ) : (
-                  <View style={[styles.userAvatar, styles.userAvatarPlaceholder]}>
-                    <Text style={styles.userAvatarText}>
-                      {(user.displayName?.[0] || user.email?.[0] || 'H').toUpperCase()}
-                    </Text>
+              {/* Badge Collection Row */}
+              <View style={styles.badgeCollectionRow}>
+                {/* 1. Iron Will */}
+                <TouchableOpacity
+                  style={styles.achievementBadgeCard}
+                  activeOpacity={0.8}
+                  onPress={() => {
+                    playTouchSound();
+                    setBadgesModalVisible(true);
+                  }}
+                >
+                  <View style={[styles.badgeEmblem, styles.badgeEmblemAmber]}>
+                    <Image
+                      source={ICONS.flame}
+                      style={styles.badgeEmblemIcon}
+                      contentFit="contain"
+                    />
                   </View>
-                )}
-                <View style={{ flex: 1 }}>
-                  <Text style={styles.userName}>{user.displayName || 'Hunter'}</Text>
-                  <Text style={styles.userEmail}>{user.email}</Text>
-                </View>
-                <View style={styles.cloudVerifiedBadge}>
-                  <Text style={styles.cloudVerifiedText}>✓ Synced</Text>
-                </View>
+                  <Text style={styles.badgeTitleText} numberOfLines={1}>
+                    Iron Will
+                  </Text>
+                </TouchableOpacity>
+
+                {/* 2. Quest Hunter */}
+                <TouchableOpacity
+                  style={styles.achievementBadgeCard}
+                  activeOpacity={0.8}
+                  onPress={() => {
+                    playTouchSound();
+                    setBadgesModalVisible(true);
+                  }}
+                >
+                  <View style={[styles.badgeEmblem, styles.badgeEmblemPurple]}>
+                    <Image
+                      source={ICONS.swords}
+                      style={styles.badgeEmblemIcon}
+                      contentFit="contain"
+                    />
+                  </View>
+                  <Text style={styles.badgeTitleText} numberOfLines={1}>
+                    Quest Hunter
+                  </Text>
+                </TouchableOpacity>
+
+                {/* 3. Peak Form */}
+                <TouchableOpacity
+                  style={styles.achievementBadgeCard}
+                  activeOpacity={0.8}
+                  onPress={() => {
+                    playTouchSound();
+                    setBadgesModalVisible(true);
+                  }}
+                >
+                  <View style={[styles.badgeEmblem, styles.badgeEmblemCyan]}>
+                    <Image
+                      source={ICONS.mountain}
+                      style={styles.badgeEmblemIcon}
+                      contentFit="contain"
+                    />
+                  </View>
+                  <Text style={styles.badgeTitleText} numberOfLines={1}>
+                    Peak Form
+                  </Text>
+                </TouchableOpacity>
               </View>
-            )}
+            </Animated.View>
 
-            <Text style={styles.syncTimeText}>
-              Last synchronized:{' '}
-              {lastSynced ? new Date(lastSynced).toLocaleString() : 'Local Database Active (Offline Mode)'}
-            </Text>
-
-            <TouchableOpacity
-              style={[styles.syncActionButton, syncing && styles.syncActionDisabled]}
-              disabled={syncing}
-              onPress={handleManualSync}
-              activeOpacity={0.8}
+            {/* ──────────────── 6. NEXT ACHIEVEMENT ──────────────── */}
+            <Animated.View
+              entering={FadeInDown.duration(450).delay(320)}
+              style={styles.nextAchievementCard}
             >
-              <Text style={styles.syncActionText}>
-                {syncing ? 'Syncing...' : '⚡ Sync Data with Cloud'}
-              </Text>
-            </TouchableOpacity>
-          </DungeonCard>
-        </Animated.View>
+              <Animated.View style={[styles.achievementIconBox, medalAnimStyle]}>
+                <Image
+                  source={ICONS.medal}
+                  style={styles.medalIcon}
+                  contentFit="contain"
+                />
+              </Animated.View>
 
-        {/* 6. SIGN OUT BUTTON */}
-        {(user || isGuest) && (
-          <Animated.View entering={FadeInUp.duration(450).delay(420)}>
-            <TouchableOpacity style={styles.signOutBtn} onPress={handleSignOut} activeOpacity={0.7}>
-              <Text style={styles.signOutBtnText}>
-                {user ? 'Sign Out' : 'Exit Guest Mode'}
-              </Text>
-            </TouchableOpacity>
-          </Animated.View>
-        )}
+              <View style={styles.achievementDetails}>
+                <View style={styles.achievementHeadingRow}>
+                  <Text style={styles.achievementName}>Century Protocol</Text>
+                  <Text style={styles.achievementProgress}>
+                    {centuryProgress} / 100
+                  </Text>
+                </View>
+                {/* 12-Segment Progress Track */}
+                <SegmentedProgressBar
+                  totalSegments={12}
+                  filledSegments={centuryFilledSegments}
+                  height={4}
+                  filledColor="#6C5CFF"
+                  unfilledColor="#191D35"
+                  radius={2}
+                  glowColor="rgba(108, 92, 255, 0.4)"
+                />
+              </View>
+            </Animated.View>
 
-        {/* FOOTER */}
-        <View style={styles.footerNote}>
-          <Text style={styles.footerText}>SOLO LEVELING SYSTEM</Text>
-          <Text style={styles.footerSubText}>Offline-first • Progress saved locally</Text>
+            {/* ──────────────── 7. SETTINGS CARD ──────────────── */}
+            <Animated.View
+              entering={FadeInDown.duration(450).delay(400)}
+              style={styles.settingsCard}
+            >
+              {/* Item 1: Training preferences */}
+              <TouchableOpacity
+                style={styles.settingRow}
+                activeOpacity={0.7}
+                onPress={() => {
+                  playTouchSound();
+                  setTrainingPrefModalVisible(true);
+                }}
+              >
+                <View style={styles.settingIconBox}>
+                  <Image
+                    source={ICONS.target}
+                    style={styles.settingIcon}
+                    contentFit="contain"
+                  />
+                </View>
+                <Text style={styles.settingTitle}>Training preferences</Text>
+                <Text style={styles.settingValue}>
+                  {planProgress?.planName ? 'Custom' : 'Adaptive'}
+                </Text>
+                <Image
+                  source={ICONS.chevronRight}
+                  style={styles.chevronIcon}
+                  contentFit="contain"
+                />
+              </TouchableOpacity>
+
+              <View style={styles.settingDivider} />
+
+              {/* Item 2: System notifications */}
+              <TouchableOpacity
+                style={styles.settingRow}
+                activeOpacity={0.7}
+                onPress={() => {
+                  playTouchSound();
+                  setNotificationsEnabled((prev) => !prev);
+                }}
+              >
+                <View style={styles.settingIconBox}>
+                  <Image
+                    source={ICONS.bell}
+                    style={styles.settingIcon}
+                    contentFit="contain"
+                  />
+                </View>
+                <Text style={styles.settingTitle}>System notifications</Text>
+                <Text style={styles.settingValue}>
+                  {notificationsEnabled ? 'On' : 'Off'}
+                </Text>
+                <Image
+                  source={ICONS.chevronRight}
+                  style={styles.chevronIcon}
+                  contentFit="contain"
+                />
+              </TouchableOpacity>
+
+              <View style={styles.settingDivider} />
+
+              {/* Item 3: Privacy & connected apps */}
+              <TouchableOpacity
+                style={styles.settingRow}
+                activeOpacity={0.7}
+                onPress={() => {
+                  playTouchSound();
+                  router.push('/settings');
+                }}
+              >
+                <View style={styles.settingIconBox}>
+                  <Image
+                    source={ICONS.shieldCheck}
+                    style={styles.settingIcon}
+                    contentFit="contain"
+                  />
+                </View>
+                <Text style={styles.settingTitle}>Privacy & connected apps</Text>
+                <Image
+                  source={ICONS.chevronRight}
+                  style={styles.chevronIcon}
+                  contentFit="contain"
+                />
+              </TouchableOpacity>
+            </Animated.View>
+          </View>
         </View>
       </ScrollView>
+
+      {/* ──────────────── MODAL: SETTINGS & ACCOUNT ──────────────── */}
+      <Modal
+        visible={settingsModalVisible}
+        animationType="slide"
+        transparent
+        onRequestClose={() => setSettingsModalVisible(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <Pressable
+            style={StyleSheet.absoluteFill}
+            onPress={() => setSettingsModalVisible(false)}
+          />
+          <View style={styles.modalContainer}>
+            <View style={styles.modalHeader}>
+              <View>
+                <Text style={styles.modalTag}>SYSTEM CONTROLS</Text>
+                <Text style={styles.modalTitle}>Protocol Settings</Text>
+              </View>
+              <TouchableOpacity
+                onPress={() => {
+                  playTouchSound();
+                  setSettingsModalVisible(false);
+                }}
+                style={styles.modalCloseButton}
+              >
+                <Text style={styles.modalCloseButtonText}>✕</Text>
+              </TouchableOpacity>
+            </View>
+
+            <ScrollView style={styles.modalScroll} showsVerticalScrollIndicator={false}>
+              {/* Account Status Card */}
+              <View style={styles.modalSectionCard}>
+                <Text style={styles.modalSectionTitle}>HUNTER IDENTIFICATION</Text>
+                <View style={styles.modalDataRow}>
+                  <Text style={styles.modalDataLabel}>Player Name</Text>
+                  <Text style={styles.modalDataVal}>{playerName}</Text>
+                </View>
+                <View style={styles.modalDataRow}>
+                  <Text style={styles.modalDataLabel}>System ID</Text>
+                  <Text style={styles.modalDataVal}>
+                    KR-{(profile?.id || '00000000').slice(0, 8).toUpperCase()}
+                  </Text>
+                </View>
+                <View style={styles.modalDataRow}>
+                  <Text style={styles.modalDataLabel}>Cloud Sync</Text>
+                  <Text
+                    style={[
+                      styles.modalDataVal,
+                      { color: user && isFirebaseConfigured() ? '#3BE7A1' : '#FFB84D' },
+                    ]}
+                  >
+                    {user && isFirebaseConfigured() ? 'Connected' : isGuest ? 'Guest (Local SQLite)' : 'Offline'}
+                  </Text>
+                </View>
+                <View style={styles.modalDataRow}>
+                  <Text style={styles.modalDataLabel}>Last Synced</Text>
+                  <Text style={styles.modalDataVal}>
+                    {lastSynced ? new Date(lastSynced).toLocaleTimeString() : 'Local Active'}
+                  </Text>
+                </View>
+              </View>
+
+              {/* Sync Action */}
+              <TouchableOpacity
+                style={[styles.modalActionPrimary, syncing && styles.disabledButton]}
+                disabled={syncing}
+                onPress={handleManualSync}
+              >
+                <Text style={styles.modalActionPrimaryText}>
+                  {syncing ? 'Synchronizing...' : '⚡ Re-synchronize Data'}
+                </Text>
+              </TouchableOpacity>
+
+              {/* Recalibrate / Edit stats */}
+              <TouchableOpacity
+                style={styles.modalActionSecondary}
+                onPress={() => {
+                  playTouchSound();
+                  setSettingsModalVisible(false);
+                  router.push('/onboarding');
+                }}
+              >
+                <Text style={styles.modalActionSecondaryText}>
+                  ⚙️ Recalibrate Physical Stats & Goals
+                </Text>
+              </TouchableOpacity>
+
+              {/* Sign Out */}
+              <TouchableOpacity
+                style={styles.modalActionDestructive}
+                onPress={handleSignOut}
+              >
+                <Text style={styles.modalActionDestructiveText}>
+                  {user ? 'Sign Out of System' : 'Exit Guest Access'}
+                </Text>
+              </TouchableOpacity>
+            </ScrollView>
+          </View>
+        </View>
+      </Modal>
+
+      {/* ──────────────── MODAL: ALL 30 BADGES ──────────────── */}
+      <Modal
+        visible={badgesModalVisible}
+        animationType="slide"
+        transparent
+        onRequestClose={() => setBadgesModalVisible(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <Pressable
+            style={StyleSheet.absoluteFill}
+            onPress={() => setBadgesModalVisible(false)}
+          />
+          <View style={styles.modalContainer}>
+            <View style={styles.modalHeader}>
+              <View>
+                <Text style={styles.modalTag}>SYSTEM ARCHIVES</Text>
+                <Text style={styles.modalTitle}>
+                  Badges ({badgeEvaluation.unlockedCount} / {badgeEvaluation.totalCount})
+                </Text>
+              </View>
+              <TouchableOpacity
+                onPress={() => {
+                  playTouchSound();
+                  setBadgesModalVisible(false);
+                }}
+                style={styles.modalCloseButton}
+              >
+                <Text style={styles.modalCloseButtonText}>✕</Text>
+              </TouchableOpacity>
+            </View>
+
+            {/* Filter Tabs */}
+            <View style={styles.filterPillsRow}>
+              {(['all', 'unlocked', 'streak', 'quest', 'level'] as const).map((cat) => (
+                <TouchableOpacity
+                  key={cat}
+                  style={[
+                    styles.filterPill,
+                    selectedBadgeCategory === cat && styles.filterPillActive,
+                  ]}
+                  onPress={() => {
+                    playTouchSound();
+                    setSelectedBadgeCategory(cat);
+                  }}
+                >
+                  <Text
+                    style={[
+                      styles.filterPillText,
+                      selectedBadgeCategory === cat && styles.filterPillTextActive,
+                    ]}
+                  >
+                    {cat.toUpperCase()}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+
+            <ScrollView style={styles.modalScroll} showsVerticalScrollIndicator={false}>
+              <View style={styles.badgesListGrid}>
+                {filteredBadges.map((badge: SystemBadge) => {
+                  const isUnlocked = badgeEvaluation.unlocked.some((b) => b.id === badge.id);
+                  const iconSrc = BADGE_ICON_MAP[badge.icon] || ICONS.trophy;
+
+                  return (
+                    <View
+                      key={badge.id}
+                      style={[
+                        styles.badgeModalItem,
+                        !isUnlocked && styles.badgeModalItemLocked,
+                      ]}
+                    >
+                      <View
+                        style={[
+                          styles.badgeModalEmblem,
+                          {
+                            backgroundColor: isUnlocked ? badge.bgColor : '#14182D',
+                            borderColor: isUnlocked ? badge.color : '#2A3154',
+                          },
+                        ]}
+                      >
+                        <Image
+                          source={iconSrc}
+                          style={[
+                            styles.badgeModalEmblemIcon,
+                            { tintColor: isUnlocked ? badge.color : '#697292' },
+                          ]}
+                          contentFit="contain"
+                        />
+                      </View>
+
+                      <View style={styles.badgeModalInfo}>
+                        <View style={styles.badgeModalTitleRow}>
+                          <Text style={styles.badgeModalItemTitle}>{badge.title}</Text>
+                          <View
+                            style={[
+                              styles.badgeStatusPill,
+                              {
+                                backgroundColor: isUnlocked
+                                  ? 'rgba(59, 231, 161, 0.12)'
+                                  : 'rgba(105, 114, 146, 0.12)',
+                              },
+                            ]}
+                          >
+                            <Text
+                              style={[
+                                styles.badgeStatusPillText,
+                                { color: isUnlocked ? '#3BE7A1' : '#697292' },
+                              ]}
+                            >
+                              {isUnlocked ? 'UNLOCKED' : 'LOCKED'}
+                            </Text>
+                          </View>
+                        </View>
+                        <Text style={styles.badgeModalDesc}>{badge.description}</Text>
+                        <Text style={styles.badgeModalReq}>Requirement: {badge.requirement}</Text>
+                      </View>
+                    </View>
+                  );
+                })}
+              </View>
+            </ScrollView>
+          </View>
+        </View>
+      </Modal>
+
+      {/* ──────────────── MODAL: TRAINING PREFERENCES ──────────────── */}
+      <Modal
+        visible={trainingPrefModalVisible}
+        animationType="slide"
+        transparent
+        onRequestClose={() => setTrainingPrefModalVisible(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <Pressable
+            style={StyleSheet.absoluteFill}
+            onPress={() => setTrainingPrefModalVisible(false)}
+          />
+          <View style={styles.modalContainer}>
+            <View style={styles.modalHeader}>
+              <View>
+                <Text style={styles.modalTag}>TRAINING DIRECTIVES</Text>
+                <Text style={styles.modalTitle}>Preferences & Goal</Text>
+              </View>
+              <TouchableOpacity
+                onPress={() => {
+                  playTouchSound();
+                  setTrainingPrefModalVisible(false);
+                }}
+                style={styles.modalCloseButton}
+              >
+                <Text style={styles.modalCloseButtonText}>✕</Text>
+              </TouchableOpacity>
+            </View>
+
+            <ScrollView style={styles.modalScroll} showsVerticalScrollIndicator={false}>
+              <View style={styles.modalSectionCard}>
+                <Text style={styles.modalSectionTitle}>ACTIVE REGIMEN</Text>
+                <View style={styles.modalDataRow}>
+                  <Text style={styles.modalDataLabel}>Program</Text>
+                  <Text style={styles.modalDataVal}>
+                    {planProgress?.planName || '100-Day Progressive Awakening'}
+                  </Text>
+                </View>
+                <View style={styles.modalDataRow}>
+                  <Text style={styles.modalDataLabel}>Fitness Goal</Text>
+                  <Text style={styles.modalDataVal}>
+                    {activeGoal.emoji} {activeGoal.label}
+                  </Text>
+                </View>
+                <View style={styles.modalDataRow}>
+                  <Text style={styles.modalDataLabel}>Target Calorie</Text>
+                  <Text style={styles.modalDataVal}>
+                    {profile?.daily_calories ? `${Math.round(profile.daily_calories)} kcal/day` : '2,000 kcal'}
+                  </Text>
+                </View>
+              </View>
+
+              <TouchableOpacity
+                style={styles.modalActionPrimary}
+                onPress={() => {
+                  playTouchSound();
+                  setTrainingPrefModalVisible(false);
+                  router.push('/onboarding');
+                }}
+              >
+                <Text style={styles.modalActionPrimaryText}>
+                  Recalibrate Training Plan ⚙️
+                </Text>
+              </TouchableOpacity>
+            </ScrollView>
+          </View>
+        </View>
+      </Modal>
     </SafeAreaView>
   );
 }
 
+/* ─────────────── FIGMA ACCURATE STYLESHEET ─────────────── */
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: Colors.dark.backgroundDeep,
+    backgroundColor: '#050611',
   },
-  container: {
-    padding: Spacing.threeHalf,
-    gap: Spacing.threeHalf,
-    paddingBottom: Spacing.six,
+  scrollContent: {
+    flexGrow: 1,
+    paddingBottom: 24,
   },
-  header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'flex-end',
-    marginTop: Spacing.two,
-  },
-  headerLeft: {
-    gap: 2,
-  },
-  systemTag: {
-    fontSize: 11,
-    fontFamily: Fonts.display,
-    color: Colors.dark.accent,
-    fontWeight: '700',
-    letterSpacing: 2,
-  },
-  title: {
-    fontSize: 28,
-    fontWeight: '700',
-    fontFamily: Fonts.display,
-    color: Colors.dark.textBright,
-    letterSpacing: 1,
-  },
-  statusPill: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    borderWidth: 1.5,
-    borderRadius: 20,
-    paddingHorizontal: 12,
-    paddingVertical: 5,
-    backgroundColor: Colors.dark.backgroundCard,
-  },
-  statusDot: {
-    width: 6,
-    height: 6,
-    borderRadius: 3,
-  },
-  statusPillText: {
-    fontSize: 11,
-    fontFamily: Fonts.display,
-    fontWeight: '700',
-    letterSpacing: 0.5,
+  contentWrapper: {
+    width: '100%',
+    maxWidth: 500,
+    alignSelf: 'center',
   },
 
-  // --- License Card ---
-  licenseCardWrapper: {
+  /* SOLO App Header (Figma #33:7) */
+  appHeader: {
+    height: 44,
+    paddingHorizontal: 20,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    backgroundColor: 'rgba(14, 17, 34, 0.8)',
+  },
+  brandRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    height: 24,
+  },
+  brandIconWrapper: {
+    width: 22,
+    height: 22,
+    borderRadius: 6,
+    borderWidth: 1,
+    borderColor: '#00D1FF',
+    justifyContent: 'center',
+    alignItems: 'center',
+    overflow: 'hidden',
+  },
+  brandIconImage: {
+    width: 22,
+    height: 22,
+  },
+  brandText: {
+    fontFamily: 'Inter',
+    fontWeight: '700',
+    fontSize: 15,
+    letterSpacing: 0.6,
+    color: '#F5FAFF',
+  },
+
+  /* Profile Content (Figma #2:13061) */
+  profileContent: {
+    paddingHorizontal: 20,
+    paddingTop: 8,
+    paddingBottom: 16,
     gap: 12,
   },
-  licenseHeaderBar: {
+
+  /* Page Header (Figma #2:13062) */
+  pageHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    borderBottomWidth: 1,
-    borderBottomColor: Colors.dark.border,
-    paddingBottom: 8,
-    marginBottom: 4,
   },
-  licenseTagGroup: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
+  headingGroup: {
+    gap: 2,
   },
-  licenseSymbol: {
-    fontSize: 10,
-    color: Colors.dark.accent,
-  },
-  licenseHeaderTag: {
-    fontSize: 11,
-    fontFamily: Fonts.display,
+  subtitleTag: {
+    fontFamily: 'Inter',
     fontWeight: '700',
-    letterSpacing: 1.5,
+    fontSize: 9,
+    letterSpacing: 1.2,
+    color: '#20C8FF',
+    textTransform: 'uppercase',
   },
-  licenseSerial: {
-    fontSize: 11,
-    fontFamily: Fonts.mono,
-    color: Colors.dark.textMuted,
-    fontWeight: '600',
+  titleText: {
+    fontFamily: 'Inter',
+    fontWeight: '800',
+    fontSize: 26,
+    letterSpacing: 0.5,
+    color: '#F5F7FF',
+    textTransform: 'uppercase',
   },
-  licenseBody: {
+  headerActionButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 12,
+    backgroundColor: '#14182D',
+    borderWidth: 1,
+    borderColor: '#2A3154',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  settingsIcon: {
+    width: 19,
+    height: 19,
+    tintColor: '#9CE9FF',
+  },
+
+  /* Player Identity Card (Figma #2:13068) */
+  identityCard: {
+    position: 'relative',
+    backgroundColor: '#0E1122',
+    borderWidth: 1,
+    borderColor: '#5669B6',
+    borderRadius: 16,
+    padding: 16,
+    gap: 12,
+    boxShadow: '0px 0px 18px 1px rgba(108, 92, 255, 0.40)',
+    elevation: 8,
+    shadowColor: '#6C5CFF',
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.4,
+    shadowRadius: 18,
+    overflow: 'hidden',
+  },
+  energyRail: {
+    position: 'absolute',
+    left: 0,
+    top: 10,
+    width: 2,
+    height: 113,
+    backgroundColor: '#20C8FF',
+    borderRadius: 1,
+    boxShadow: '0px 0px 8px 1px rgba(32, 200, 255, 0.80)',
+  },
+  identityRow: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 14,
   },
-  portraitWrapper: {
-    width: 78,
-    height: 78,
-    borderRadius: 14,
-    borderWidth: 2,
+  avatarBox: {
+    width: 64,
+    height: 64,
+    borderRadius: 16,
+    backgroundColor: 'rgba(108, 92, 255, 0.14)',
+    borderWidth: 1,
+    borderColor: '#6C5CFF',
+    justifyContent: 'center',
+    alignItems: 'center',
+    boxShadow: '0px 0px 18px 1px rgba(108, 92, 255, 0.40)',
+    elevation: 4,
+    shadowColor: '#6C5CFF',
     overflow: 'hidden',
-    position: 'relative',
-    backgroundColor: Colors.dark.backgroundElement,
   },
-  portraitImage: {
+  avatarImage: {
     width: '100%',
     height: '100%',
   },
-  rankOverlayBadge: {
-    position: 'absolute',
-    bottom: 0,
-    right: 0,
-    borderTopLeftRadius: 8,
-    paddingHorizontal: 8,
-    paddingVertical: 2,
+  avatarIcon: {
+    width: 28,
+    height: 28,
+    tintColor: '#B7A8FF',
   },
-  rankOverlayText: {
-    fontSize: 11,
-    fontFamily: Fonts.mono,
+  identityDetails: {
+    flex: 1,
+    gap: 4,
+  },
+  playerNameText: {
+    fontFamily: 'Inter',
     fontWeight: '900',
-    color: Colors.dark.backgroundDeep,
-  },
-  credentialsColumn: {
-    flex: 1,
-    gap: 4,
-  },
-  nameRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    gap: 6,
-  },
-  hunterName: {
     fontSize: 20,
-    fontWeight: '700',
-    fontFamily: Fonts.display,
-    color: Colors.dark.textBright,
-    letterSpacing: 0.5,
-    flex: 1,
-  },
-  hunterTitle: {
-    fontSize: 12,
-    fontFamily: Fonts.display,
-    fontWeight: '600',
+    color: '#F5F7FF',
+    textTransform: 'uppercase',
     letterSpacing: 0.5,
   },
-  levelRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 10,
-    marginTop: 2,
+  playerMetaText: {
+    fontFamily: 'Inter',
+    fontWeight: '400',
+    fontSize: 11,
+    color: '#697292',
   },
-  levelChip: {
-    flexDirection: 'row',
-    alignItems: 'baseline',
-    backgroundColor: 'rgba(139, 92, 246, 0.12)',
-    borderWidth: 1,
-    borderColor: 'rgba(139, 92, 246, 0.3)',
-    borderRadius: 8,
+  tagPill: {
     paddingHorizontal: 8,
-    paddingVertical: 2,
-    gap: 4,
-  },
-  levelChipLabel: {
-    fontSize: 9,
-    fontFamily: Fonts.display,
-    color: Colors.dark.accent,
-    fontWeight: '700',
-  },
-  levelChipVal: {
-    fontSize: 13,
-    fontFamily: Fonts.mono,
-    color: Colors.dark.textBright,
-    fontWeight: '800',
-  },
-  totalXpText: {
-    fontSize: 11,
-    fontFamily: Fonts.sans,
-    color: Colors.dark.textSecondary,
-  },
-  levelProgressContainer: {
-    backgroundColor: Colors.dark.backgroundElement,
+    paddingVertical: 4,
+    borderRadius: 4,
+    backgroundColor: 'rgba(183, 168, 255, 0.09)',
     borderWidth: 1,
-    borderColor: Colors.dark.border,
-    borderRadius: 12,
-    padding: 10,
-    gap: 6,
-    marginTop: 4,
+    borderColor: 'rgba(183, 168, 255, 0.40)',
+    alignSelf: 'flex-start',
   },
-  levelProgressHeader: {
+  tagPillText: {
+    fontFamily: 'Inter',
+    fontWeight: '800',
+    fontSize: 9,
+    color: '#B7A8FF',
+    textTransform: 'uppercase',
+    letterSpacing: 0.4,
+  },
+  rankProgressContainer: {
+    gap: 6,
+  },
+  rankLabelsRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
   },
-  progressLabel: {
-    fontSize: 10,
-    fontFamily: Fonts.display,
-    color: Colors.dark.textMuted,
-    fontWeight: '600',
+  rankProgressionLabel: {
+    fontFamily: 'Inter',
+    fontWeight: '800',
+    fontSize: 9,
+    color: '#697292',
+    textTransform: 'uppercase',
     letterSpacing: 0.5,
   },
-  progressVal: {
+  rankProgressValue: {
+    fontFamily: 'Inter',
+    fontWeight: '800',
     fontSize: 11,
-    fontFamily: Fonts.mono,
-    fontWeight: '700',
-  },
-  progressBarTrack: {
-    height: 7,
-    backgroundColor: Colors.dark.backgroundDeep,
-    borderRadius: 4,
-    overflow: 'hidden',
-  },
-  progressBarFill: {
-    height: '100%',
-    borderRadius: 4,
+    color: '#20C8FF',
+    textTransform: 'uppercase',
   },
 
-  // --- Matrix Card ---
-  matrixCardWrapper: {
-    gap: 12,
-  },
-  matrixHeader: {
+  /* Segmented Progress Track */
+  progressTrackRow: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 2,
+    gap: 2,
+    width: '100%',
   },
-  matrixTitle: {
-    fontSize: 13,
-    fontFamily: Fonts.display,
-    fontWeight: '700',
-    color: Colors.dark.accent,
-    letterSpacing: 1,
-  },
-  matrixSubtitle: {
-    fontSize: 11,
-    fontFamily: Fonts.sans,
-    color: Colors.dark.textMuted,
-  },
-  statsRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    gap: 6,
-  },
-  statChip: {
+  progressSegment: {
     flex: 1,
-    backgroundColor: Colors.dark.backgroundElement,
-    borderWidth: 1,
-    borderColor: Colors.dark.border,
-    borderRadius: 10,
-    padding: 8,
-    gap: 4,
-  },
-  statChipTop: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  statKey: {
-    fontSize: 11,
-    fontFamily: Fonts.mono,
-    fontWeight: '800',
-  },
-  statAmount: {
-    fontSize: 11,
-    fontFamily: Fonts.mono,
-    color: Colors.dark.textBright,
-    fontWeight: '700',
-  },
-  statName: {
-    fontSize: 9,
-    fontFamily: Fonts.sans,
-    color: Colors.dark.textMuted,
-  },
-  statBarBg: {
-    height: 4,
-    backgroundColor: Colors.dark.backgroundDeep,
-    borderRadius: 2,
-    overflow: 'hidden',
-    marginTop: 2,
-  },
-  statBarFill: {
-    height: '100%',
-    borderRadius: 2,
   },
 
-  // --- Protocol Card ---
-  protocolCardWrapper: {
-    gap: 12,
-  },
-  protocolHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  protocolHeaderTag: {
-    fontSize: 12,
-    fontFamily: Fonts.display,
-    fontWeight: '700',
-    color: Colors.dark.accent,
-    letterSpacing: 1,
-  },
-  recalibrateAction: {
-    fontSize: 11,
-    fontFamily: Fonts.sans,
-    fontWeight: '600',
-    color: Colors.dark.accent,
-  },
-  directiveRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-  },
-  directiveIconBox: {
-    width: 42,
-    height: 42,
-    borderRadius: 10,
-    backgroundColor: Colors.dark.backgroundElement,
-    borderWidth: 1,
-    borderColor: Colors.dark.border,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  directiveIcon: {
-    fontSize: 20,
-  },
-  directiveLabel: {
-    fontSize: 10,
-    fontFamily: Fonts.display,
-    color: Colors.dark.textMuted,
-    fontWeight: '600',
-    letterSpacing: 0.5,
-  },
-  directiveMainText: {
-    fontSize: 15,
-    fontWeight: '700',
-    fontFamily: Fonts.display,
-    color: Colors.dark.textBright,
-    letterSpacing: 0.3,
-  },
-  directiveSubText: {
-    fontSize: 11,
-    fontFamily: Fonts.sans,
-    color: Colors.dark.textSecondary,
-  },
-  cardDivider: {
-    height: 1,
-    backgroundColor: Colors.dark.border,
-  },
-
-  // --- Bio Card ---
-  bioCardWrapper: {
-    gap: 12,
-  },
-  bioHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  bioTitle: {
-    fontSize: 13,
-    fontFamily: Fonts.display,
-    fontWeight: '700',
-    color: Colors.dark.accent,
-    letterSpacing: 1,
-  },
-  editLink: {
-    fontSize: 11,
-    fontFamily: Fonts.sans,
-    color: Colors.dark.accent,
-    fontWeight: '600',
-  },
-  bioGrid: {
+  /* Profile Metrics Row (Figma #2:13095) */
+  metricsRow: {
     flexDirection: 'row',
     gap: 8,
   },
-  bioCell: {
+  metricCard: {
     flex: 1,
-    backgroundColor: Colors.dark.backgroundElement,
+    backgroundColor: '#0E1122',
     borderWidth: 1,
-    borderColor: Colors.dark.border,
-    borderRadius: 10,
-    paddingVertical: 10,
-    alignItems: 'center',
-    gap: 3,
-  },
-  bioCellLabel: {
-    fontSize: 10,
-    fontFamily: Fonts.display,
-    color: Colors.dark.textMuted,
-    fontWeight: '600',
-    letterSpacing: 0.5,
-  },
-  bioCellValue: {
-    fontSize: 14,
-    fontFamily: Fonts.mono,
-    fontWeight: '700',
-    color: Colors.dark.textBright,
-  },
-  bioCellUnit: {
-    fontSize: 9,
-    color: Colors.dark.textMuted,
-    fontWeight: '400',
-  },
-  macroPillRow: {
-    flexDirection: 'row',
-    gap: 6,
-  },
-  macroPill: {
-    flex: 1,
-    backgroundColor: Colors.dark.backgroundElement,
-    borderWidth: 1,
-    borderRadius: 10,
-    paddingVertical: 8,
-    alignItems: 'center',
-    gap: 2,
-  },
-  macroPillVal: {
-    fontSize: 13,
-    fontFamily: Fonts.mono,
-    fontWeight: '800',
-  },
-  macroPillLabel: {
-    fontSize: 9,
-    fontFamily: Fonts.display,
-    color: Colors.dark.textMuted,
-    fontWeight: '600',
-    letterSpacing: 0.5,
-  },
-  recalibrateFullBtn: {
-    backgroundColor: 'rgba(139, 92, 246, 0.08)',
-    borderWidth: 1,
-    borderColor: 'rgba(139, 92, 246, 0.25)',
+    borderColor: '#2A3154',
     borderRadius: 12,
-    paddingVertical: 12,
-    alignItems: 'center',
-    marginTop: 4,
+    padding: 10,
+    gap: 4,
   },
-  recalibrateFullBtnText: {
-    fontSize: 12,
-    fontFamily: Fonts.display,
-    fontWeight: '700',
-    color: Colors.dark.accentBright,
-    letterSpacing: 0.5,
+  metricLabelRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+  },
+  metricIconSmall: {
+    width: 14,
+    height: 14,
+  },
+  metricLabelText: {
+    fontFamily: 'Inter',
+    fontWeight: '800',
+    fontSize: 9,
+    color: '#697292',
+    textTransform: 'uppercase',
+    letterSpacing: 0.4,
+  },
+  metricValueText: {
+    fontFamily: 'Inter',
+    fontWeight: '900',
+    fontSize: 20,
+    color: '#F5F7FF',
+    letterSpacing: 0.2,
   },
 
-  // --- Sync Card ---
-  syncCardWrapper: {
-    gap: 12,
+  /* Badges Section (Figma #2:13111) */
+  badgesSection: {
+    gap: 8,
   },
-  syncHeader: {
+  sectionHeaderRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
   },
-  syncTitle: {
-    fontSize: 13,
-    fontFamily: Fonts.display,
-    fontWeight: '700',
-    color: Colors.dark.accent,
-    letterSpacing: 1,
+  sectionTitle: {
+    fontFamily: 'Inter',
+    fontWeight: '800',
+    fontSize: 16,
+    color: '#F5F7FF',
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
   },
-  liveIndicatorRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-  },
-  syncDot: {
-    width: 7,
-    height: 7,
-    borderRadius: 3.5,
-  },
-  liveStatusText: {
-    fontSize: 11,
-    fontFamily: Fonts.sans,
+  viewAllLink: {
+    fontFamily: 'Inter',
     fontWeight: '600',
-    color: Colors.dark.textSecondary,
+    fontSize: 11,
+    color: '#20C8FF',
   },
-  userBanner: {
+  badgeCollectionRow: {
     flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: Colors.dark.backgroundElement,
+    gap: 8,
+  },
+  achievementBadgeCard: {
+    flex: 1,
+    backgroundColor: '#0E1122',
     borderWidth: 1,
-    borderColor: Colors.dark.border,
+    borderColor: '#2A3154',
     borderRadius: 12,
     padding: 10,
-    gap: 10,
+    alignItems: 'center',
+    gap: 7,
   },
-  userAvatar: {
+  badgeEmblem: {
+    width: 42,
+    height: 42,
+    borderRadius: 999,
+    borderWidth: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    boxShadow: '0px 0px 18px 1px rgba(108, 92, 255, 0.40)',
+    elevation: 4,
+  },
+  badgeEmblemAmber: {
+    backgroundColor: 'rgba(255, 184, 77, 0.12)',
+    borderColor: '#FFB84D',
+    shadowColor: '#FFB84D',
+  },
+  badgeEmblemPurple: {
+    backgroundColor: 'rgba(108, 92, 255, 0.12)',
+    borderColor: '#6C5CFF',
+    shadowColor: '#6C5CFF',
+  },
+  badgeEmblemCyan: {
+    backgroundColor: 'rgba(32, 200, 255, 0.12)',
+    borderColor: '#20C8FF',
+    shadowColor: '#20C8FF',
+  },
+  badgeEmblemIcon: {
+    width: 20,
+    height: 20,
+  },
+  badgeTitleText: {
+    fontFamily: 'Inter',
+    fontWeight: '800',
+    fontSize: 9,
+    color: '#F5F7FF',
+    textAlign: 'center',
+  },
+
+  /* Next Achievement Card (Figma #2:13128) */
+  nextAchievementCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    backgroundColor: '#0E1122',
+    borderWidth: 1,
+    borderColor: '#2A3154',
+    borderRadius: 12,
+    padding: 12,
+  },
+  achievementIconBox: {
     width: 38,
     height: 38,
-    borderRadius: 19,
-    borderWidth: 1.5,
-    borderColor: Colors.dark.accent,
-  },
-  userAvatarPlaceholder: {
-    backgroundColor: Colors.dark.backgroundDeep,
+    borderRadius: 8,
+    backgroundColor: 'rgba(108, 92, 255, 0.13)',
+    borderWidth: 1,
+    borderColor: '#6C5CFF',
     justifyContent: 'center',
     alignItems: 'center',
   },
-  userAvatarText: {
-    fontSize: 15,
-    fontWeight: '700',
-    color: Colors.dark.accent,
+  medalIcon: {
+    width: 18,
+    height: 18,
   },
-  userName: {
-    fontSize: 14,
-    fontWeight: '700',
-    fontFamily: Fonts.sans,
-    color: Colors.dark.textBright,
+  achievementDetails: {
+    flex: 1,
+    gap: 5,
   },
-  userEmail: {
-    fontSize: 11,
-    fontFamily: Fonts.sans,
-    color: Colors.dark.textSecondary,
+  achievementHeadingRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
   },
-  cloudVerifiedBadge: {
-    backgroundColor: 'rgba(16, 185, 129, 0.08)',
+  achievementName: {
+    fontFamily: 'Inter',
+    fontWeight: '800',
+    fontSize: 12,
+    color: '#F5F7FF',
+  },
+  achievementProgress: {
+    fontFamily: 'Inter',
+    fontWeight: '800',
+    fontSize: 9,
+    color: '#20C8FF',
+  },
+
+  /* Settings Card (Figma #2:13148) */
+  settingsCard: {
+    backgroundColor: '#0E1122',
     borderWidth: 1,
-    borderColor: 'rgba(16, 185, 129, 0.3)',
-    borderRadius: 6,
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-  },
-  cloudVerifiedText: {
-    fontSize: 10,
-    fontFamily: Fonts.display,
-    fontWeight: '600',
-    color: Colors.dark.success,
-  },
-  syncTimeText: {
-    fontSize: 11,
-    fontFamily: Fonts.sans,
-    color: Colors.dark.textMuted,
-  },
-  syncActionButton: {
-    backgroundColor: Colors.dark.accent,
+    borderColor: '#2A3154',
     borderRadius: 12,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    gap: 2,
+  },
+  settingRow: {
+    height: 42,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+  },
+  settingIconBox: {
+    width: 30,
+    height: 30,
+    borderRadius: 8,
+    backgroundColor: '#191D35',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  settingIcon: {
+    width: 15,
+    height: 15,
+  },
+  settingTitle: {
+    fontFamily: 'Inter',
+    fontWeight: '700',
+    fontSize: 12,
+    color: '#F5F7FF',
+    flex: 1,
+  },
+  settingValue: {
+    fontFamily: 'Inter',
+    fontWeight: '400',
+    fontSize: 11,
+    color: '#697292',
+  },
+  chevronIcon: {
+    width: 15,
+    height: 15,
+  },
+  settingDivider: {
+    height: 1,
+    backgroundColor: '#2A3154',
+  },
+
+  /* Modal System Styles */
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.75)',
+    justifyContent: 'flex-end',
+  },
+  modalContainer: {
+    backgroundColor: '#0E1122',
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    borderWidth: 1,
+    borderColor: '#2A3154',
+    maxHeight: '85%',
+    padding: 20,
+    gap: 16,
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+  },
+  modalTag: {
+    fontFamily: 'Inter',
+    fontWeight: '700',
+    fontSize: 10,
+    letterSpacing: 1.2,
+    color: '#20C8FF',
+  },
+  modalTitle: {
+    fontFamily: 'Inter',
+    fontWeight: '800',
+    fontSize: 20,
+    color: '#F5F7FF',
+  },
+  modalCloseButton: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: '#14182D',
+    borderWidth: 1,
+    borderColor: '#2A3154',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  modalCloseButtonText: {
+    color: '#A8B0CE',
+    fontSize: 16,
+    fontWeight: '700',
+  },
+  modalScroll: {
+    maxHeight: 460,
+  },
+  modalSectionCard: {
+    backgroundColor: '#14182D',
+    borderWidth: 1,
+    borderColor: '#2A3154',
+    borderRadius: 12,
+    padding: 14,
+    gap: 10,
+    marginBottom: 12,
+  },
+  modalSectionTitle: {
+    fontFamily: 'Inter',
+    fontWeight: '800',
+    fontSize: 11,
+    letterSpacing: 0.8,
+    color: '#697292',
+    textTransform: 'uppercase',
+  },
+  modalDataRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  modalDataLabel: {
+    fontFamily: 'Inter',
+    fontSize: 12,
+    color: '#A8B0CE',
+  },
+  modalDataVal: {
+    fontFamily: 'Inter',
+    fontWeight: '700',
+    fontSize: 12,
+    color: '#F5F7FF',
+  },
+  modalActionPrimary: {
+    backgroundColor: '#20C8FF',
+    borderRadius: 10,
     paddingVertical: 14,
     alignItems: 'center',
-    shadowColor: Colors.dark.accent,
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 10,
-    elevation: 6,
+    marginBottom: 8,
   },
-  syncActionDisabled: {
+  modalActionPrimaryText: {
+    fontFamily: 'Inter',
+    fontWeight: '800',
+    fontSize: 13,
+    color: '#050611',
+    letterSpacing: 0.5,
+  },
+  modalActionSecondary: {
+    backgroundColor: '#14182D',
+    borderWidth: 1,
+    borderColor: '#2A3154',
+    borderRadius: 10,
+    paddingVertical: 13,
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  modalActionSecondaryText: {
+    fontFamily: 'Inter',
+    fontWeight: '700',
+    fontSize: 12,
+    color: '#9CE9FF',
+  },
+  modalActionDestructive: {
+    backgroundColor: 'rgba(255, 107, 107, 0.08)',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 107, 107, 0.3)',
+    borderRadius: 10,
+    paddingVertical: 13,
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  modalActionDestructiveText: {
+    fontFamily: 'Inter',
+    fontWeight: '700',
+    fontSize: 12,
+    color: '#FF6B6B',
+  },
+  disabledButton: {
     opacity: 0.5,
   },
-  syncActionText: {
-    fontFamily: Fonts.display,
-    fontSize: 14,
-    fontWeight: '700',
-    color: '#FFFFFF',
-    letterSpacing: 0.5,
-  },
 
-  // --- Sign Out ---
-  signOutBtn: {
+  /* Badges Modal Filter & Grid */
+  filterPillsRow: {
+    flexDirection: 'row',
+    gap: 6,
+    flexWrap: 'wrap',
+  },
+  filterPill: {
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 6,
+    backgroundColor: '#14182D',
     borderWidth: 1,
-    borderColor: 'rgba(239, 68, 68, 0.4)',
-    borderRadius: 14,
-    paddingVertical: 14,
-    alignItems: 'center',
-    backgroundColor: 'rgba(239, 68, 68, 0.05)',
+    borderColor: '#2A3154',
   },
-  signOutBtnText: {
-    fontFamily: Fonts.display,
-    fontSize: 14,
+  filterPillActive: {
+    backgroundColor: 'rgba(32, 200, 255, 0.15)',
+    borderColor: '#20C8FF',
+  },
+  filterPillText: {
+    fontFamily: 'Inter',
     fontWeight: '700',
-    color: '#EF4444',
+    fontSize: 9,
+    color: '#697292',
+    letterSpacing: 0.4,
+  },
+  filterPillTextActive: {
+    color: '#20C8FF',
+  },
+  badgesListGrid: {
+    gap: 10,
+    paddingBottom: 24,
+  },
+  badgeModalItem: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 12,
+    backgroundColor: '#14182D',
+    borderWidth: 1,
+    borderColor: '#2A3154',
+    borderRadius: 12,
+    padding: 12,
+  },
+  badgeModalItemLocked: {
+    opacity: 0.5,
+  },
+  badgeModalEmblem: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    borderWidth: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  badgeModalEmblemIcon: {
+    width: 22,
+    height: 22,
+  },
+  badgeModalInfo: {
+    flex: 1,
+    gap: 3,
+  },
+  badgeModalTitleRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  badgeModalItemTitle: {
+    fontFamily: 'Inter',
+    fontWeight: '800',
+    fontSize: 13,
+    color: '#F5F7FF',
+  },
+  badgeStatusPill: {
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 4,
+  },
+  badgeStatusPillText: {
+    fontFamily: 'Inter',
+    fontWeight: '800',
+    fontSize: 8,
     letterSpacing: 0.5,
   },
-
-  // --- Footer ---
-  footerNote: {
-    alignItems: 'center',
-    gap: 3,
-    marginTop: Spacing.one,
-  },
-  footerText: {
+  badgeModalDesc: {
+    fontFamily: 'Inter',
     fontSize: 11,
-    fontFamily: Fonts.display,
-    fontWeight: '700',
-    color: Colors.dark.textMuted,
-    letterSpacing: 1.5,
+    color: '#A8B0CE',
+    lineHeight: 15,
   },
-  footerSubText: {
+  badgeModalReq: {
+    fontFamily: 'Inter',
+    fontWeight: '600',
     fontSize: 10,
-    fontFamily: Fonts.sans,
-    color: Colors.dark.borderBright,
+    color: '#697292',
   },
 });

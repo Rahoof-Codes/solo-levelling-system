@@ -9,6 +9,7 @@ import { initializeDatabase, DATABASE_NAME } from '@/db/database';
 import { useNetworkSync } from '@/services/networkMonitor';
 import { AuthProvider, useAuth } from '@/contexts/AuthContext';
 import { AudioProvider, useAudio } from '@/contexts/AudioContext';
+import '../global.css';
 import { Fonts, Colors } from '@/constants/theme';
 import { SplashOverlay } from '@/components/splash-overlay';
 
@@ -59,9 +60,10 @@ function MainNavigation() {
   const userId = user?.uid ?? null;
   useNetworkSync(db, userId);
 
-  // Sync dashboard active state: BGM plays only when inside (tabs) AND opening animation has completed!
+  // Sync dashboard active state: BGM plays only when inside (tabs) or settings AND opening animation has completed!
   useEffect(() => {
-    const inDashboard = (segments[0] as string) === '(tabs)';
+    const route = (segments[0] as string) || '';
+    const inDashboard = route === '(tabs)' || route === 'settings';
     const isDashboardReady = inDashboard && !showOpeningAnimation;
     setDashboardActive(isDashboardReady);
   }, [segments, showOpeningAnimation, setDashboardActive]);
@@ -90,6 +92,9 @@ function MainNavigation() {
         <Stack.Screen name="login" options={{ headerShown: false }} />
         <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
         <Stack.Screen name="onboarding/index" options={{ headerShown: false }} />
+        <Stack.Screen name="workout-session" options={{ headerShown: false }} />
+        <Stack.Screen name="settings" options={{ headerShown: false }} />
+        <Stack.Screen name="add-meal" options={{ headerShown: false, animation: 'slide_from_bottom' }} />
       </Stack>
       {showOpeningAnimation && (
         <SplashOverlay

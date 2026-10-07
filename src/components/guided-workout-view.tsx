@@ -16,9 +16,7 @@ import {
   Alert,
   Vibration,
   Platform,
-  Dimensions,
   Modal,
-  TextInput,
 } from 'react-native';
 import { Image } from 'expo-image';
 import Animated, {
@@ -28,22 +26,20 @@ import Animated, {
   withRepeat,
   withSequence,
   Easing,
-  FadeIn,
-  FadeInDown,
 } from 'react-native-reanimated';
 import type { Exercise, Workout } from '@/types';
-import { Fonts, Colors } from '@/constants/theme';
+import { Fonts } from '@/constants/theme';
 import { useAudio } from '@/contexts/AudioContext';
 import { getExerciseMetadata } from '@/lib/workoutGifs';
 import { formatTimerDisplay } from '@/lib/calculations/workout-duration';
 import { speakVoiceGuidance } from '@/services/voiceGuidance';
-
-const { width: SCREEN_WIDTH } = Dimensions.get('window');
+import { WorkoutIntroOverlay } from '@/components/workout-intro-overlay';
 
 interface GuidedWorkoutViewProps {
   workout: Workout;
   onComplete: (durationActual: number) => void;
   onCancel: () => void;
+  autoPlayIntro?: boolean;
 }
 
 interface SetRecord {
@@ -57,8 +53,12 @@ export function GuidedWorkoutView({
   workout,
   onComplete,
   onCancel,
+  autoPlayIntro = true,
 }: GuidedWorkoutViewProps) {
   const { playTouchSound, playClaimSound } = useAudio();
+
+  // Intro video overlay state (plays before workout begins)
+  const [showIntro, setShowIntro] = useState(autoPlayIntro);
 
   // Parse exercises from workout
   const exercises: Exercise[] = useMemo(() => {
@@ -84,9 +84,9 @@ export function GuidedWorkoutView({
   // Initialize set data for all exercises
   const [allSetsData, setAllSetsData] = useState<Record<number, SetRecord[]>>({});
 
-  // Session elapsed timer (counts up)
+  // Session elapsed timer (counts up) — paused while intro video plays, starts automatically once intro ends
   const [elapsedSeconds, setElapsedSeconds] = useState(0);
-  const [isPaused, setIsPaused] = useState(false);
+  const [isPaused, setIsPaused] = useState(autoPlayIntro);
   const sessionTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   // Rest timer (counts down after each set) - 2 minutes (120s)
@@ -99,7 +99,6 @@ export function GuidedWorkoutView({
   const [menuVisible, setMenuVisible] = useState(false);
 
   // Animation values
-  const pauseBtnScale = useSharedValue(1);
   const completeBtnGlow = useSharedValue(0);
   const nowPulse = useSharedValue(1);
 
@@ -131,11 +130,18 @@ export function GuidedWorkoutView({
   // Next exercise data for 'Up next' card
   const hasNextExercise = currentExerciseIdx < exercises.length - 1;
   const nextExercise = hasNextExercise ? exercises[currentExerciseIdx + 1] : null;
-  const nextMetadata = nextExercise ? getExerciseMetadata(nextExercise.name) : null;
 
-  // Session timer ticker
+  // Intro video completion handler — auto-starts timer and announces exercise
+  const handleIntroFinish = useCallback(() => {
+    setShowIntro(false);
+    setIsPaused(false);
+    speakVoiceGuidance(`Protocol initiated. Exercise 1: ${currentExercise.name}`);
+    playTouchSound();
+  }, [currentExercise.name, playTouchSound]);
+
+  // Session timer ticker — starts automatically and ticks every second
   useEffect(() => {
-    if (!isPaused) {
+    if (!isPaused && !showIntro) {
       sessionTimerRef.current = setInterval(() => {
         setElapsedSeconds((prev) => prev + 1);
       }, 1000);
@@ -143,7 +149,7 @@ export function GuidedWorkoutView({
     return () => {
       if (sessionTimerRef.current) clearInterval(sessionTimerRef.current);
     };
-  }, [isPaused]);
+  }, [isPaused, showIntro]);
 
   // Rest timer ticker
   useEffect(() => {
@@ -314,9 +320,9 @@ export function GuidedWorkoutView({
   }, [elapsedSeconds, onCancel, playTouchSound]);
 
   // Circular timer progress calculation (0 to 1)
-  const restProgress = isResting && restDurationTotal > 0
-    ? Math.max(0, Math.min(1, restSecondsRemaining / restDurationTotal))
-    : 1;
+  const timerRingProgress = isResting
+    ? (restDurationTotal > 0 ? Math.max(0, Math.min(1, restSecondsRemaining / restDurationTotal)) : 1)
+    : Math.max(0, Math.min(1, elapsedSeconds / 1800)); // 30m target progress
 
   // Format rest display
   const restMinutes = Math.floor(restSecondsRemaining / 60);
@@ -324,10 +330,8 @@ export function GuidedWorkoutView({
   const restDisplay = `${String(restMinutes).padStart(2, '0')}:${String(restSecs).padStart(2, '0')}`;
 
   // GIF / Media source resolution
-  // Check if custom GIF exists or fallback to exercise-demo.png
-  const mediaSource = metadata.gifPath
-    ? { uri: metadata.gifPath }
-    : require('@/../public/exercise-demo.png');
+  // Uses offline bundled local GIF asset to avoid black screens on phones
+  const mediaSource = metadata.gifSource || require('@/assets/images/exercise-demo.png');
 
   return (
     <SafeAreaView style={styles.safeContainer}>
@@ -505,7 +509,7 @@ export function GuidedWorkoutView({
                         stroke="#20C8FF"
                         strokeWidth="5"
                         strokeDasharray={2 * Math.PI * 37}
-                        strokeDashoffset={2 * Math.PI * 37 * (1 - restProgress)}
+                        strokeDashoffset={2 * Math.PI * 37 * (1 - timerRingProgress)}
                         strokeLinecap="round"
                         fill="none"
                         style={{
@@ -523,24 +527,28 @@ export function GuidedWorkoutView({
                         styles.nativeProgressRing,
                         {
                           borderColor: '#20C8FF',
-                          opacity: restProgress > 0 ? 1 : 0.4,
+                          opacity: timerRingProgress > 0 ? 1 : 0.4,
                         },
                       ]}
                     />
                   </View>
                 )}
 
-                {/* Centered time display */}
+                {/* Centered time display — shows running workout elapsed timer when active, or rest countdown when resting */}
                 <Text style={styles.timerTimeText}>
-                  {isResting ? restDisplay : '02:00'}
+                  {isResting ? restDisplay : formatTimerDisplay(elapsedSeconds)}
                 </Text>
               </View>
 
               <Text style={styles.restRemainingLabel}>
-                {isResting ? 'Rest remaining' : 'Rest interval'}
+                {isResting
+                  ? 'Rest remaining'
+                  : isPaused
+                  ? 'Session paused'
+                  : 'Active workout time'}
               </Text>
 
-              {/* Timer extension button (+ 15 SEC) (#2:12892) */}
+              {/* Timer extension / rest button */}
               <TouchableOpacity
                 style={styles.timerExtensionBtn}
                 onPress={handleAddRestTime}
@@ -551,7 +559,9 @@ export function GuidedWorkoutView({
                   style={styles.plusIcon}
                   contentFit="contain"
                 />
-                <Text style={styles.timerExtensionText}>15 SEC</Text>
+                <Text style={styles.timerExtensionText}>
+                  {isResting ? '15 SEC' : 'START REST'}
+                </Text>
               </TouchableOpacity>
             </View>
 
@@ -773,6 +783,11 @@ export function GuidedWorkoutView({
             </View>
           </View>
         </Modal>
+
+        {/* ────────── WORKOUT INTRO VIDEO OVERLAY ────────── */}
+        {showIntro && (
+          <WorkoutIntroOverlay onFinish={handleIntroFinish} />
+        )}
       </View>
     </SafeAreaView>
   );

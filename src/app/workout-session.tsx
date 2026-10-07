@@ -6,7 +6,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { View, StyleSheet, ActivityIndicator, Text } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { useSQLiteContext } from 'expo-sqlite';
-import type { Workout, Profile, Stat } from '@/types';
+import type { Workout, Stat } from '@/types';
 import {
   getWorkoutById,
   getTodayWorkout,

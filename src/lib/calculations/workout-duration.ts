@@ -8,13 +8,43 @@ import type { Exercise } from '@/types';
 export const DEFAULT_TRAINING_MINUTES = 30;
 export const DEFAULT_TRAINING_SECONDS = 30 * 60; // 1800 seconds
 
+export const DEFAULT_STUDY_MINUTES = 45;
+export const DEFAULT_STUDY_SECONDS = 45 * 60; // 2700 seconds (45 minutes)
+
 export const MINIMUM_SESSION_MINUTES = 10;
 export const MINIMUM_SESSION_SECONDS = 10 * 60; // 600 seconds (minimum lock time before completion unlocks)
 
 /**
- * Workout duration in minutes (defaults to 30 minutes).
+ * Determine whether a quest is a Study / Deep Work focus session
  */
-export function estimateWorkoutDuration(_exercises?: Exercise[]): number {
+export function isStudyQuest(quest?: { title: string; category?: string } | null): boolean {
+  if (!quest) return false;
+  const category = (quest.category || '').toLowerCase();
+  const titleLower = (quest.title || '').toLowerCase();
+  return (
+    category === 'study' ||
+    titleLower.includes('study') ||
+    titleLower.includes('deep work') ||
+    titleLower.includes('focus') ||
+    titleLower.includes('read') ||
+    titleLower.includes('learn')
+  );
+}
+
+/**
+ * Get target duration in seconds for a timed quest (45m for study, 30m for workout)
+ */
+export function getQuestTargetDuration(quest?: { title: string; category?: string } | null): number {
+  if (isStudyQuest(quest)) {
+    return DEFAULT_STUDY_SECONDS;
+  }
+  return DEFAULT_TRAINING_SECONDS;
+}
+
+/**
+ * Workout duration in minutes (defaults to 30 minutes, or 45 for study).
+ */
+export function estimateWorkoutDuration(exercises?: Exercise[]): number {
   return DEFAULT_TRAINING_MINUTES;
 }
 

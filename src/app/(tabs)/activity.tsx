@@ -992,11 +992,17 @@ export default function ActivityScreen() {
                 ActivityType.LIFTING,
                 ActivityType.HIIT,
                 ActivityType.CYCLING,
+                ActivityType.STUDY,
               ].map((t) => (
                 <TouchableOpacity
                   key={t}
                   style={[styles.typeChip, activityType === t && styles.typeChipActive]}
-                  onPress={() => setActivityType(t)}
+                  onPress={() => {
+                    setActivityType(t);
+                    if (t === ActivityType.STUDY) {
+                      setDurationMin('45');
+                    }
+                  }}
                 >
                   <Text style={[styles.typeChipText, activityType === t && styles.typeChipTextActive]}>
                     {t.toUpperCase()}

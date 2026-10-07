@@ -10,7 +10,9 @@ import { Modal, StyleSheet, View } from 'react-native';
 import { useSQLiteContext } from 'expo-sqlite';
 import type { Quest, Workout, Exercise } from '@/types';
 import { GuidedWorkoutView } from '@/components/guided-workout-view';
+import { StudyFocusView } from '@/components/study-focus-view';
 import { getProfile, getTodayWorkout } from '@/db/operations';
+import { isStudyQuest } from '@/lib/calculations/workout-duration';
 
 interface QuestSessionModalProps {
   visible: boolean;
@@ -141,7 +143,10 @@ export function QuestSessionModal({
     return convertQuestToWorkout(quest, todayWorkout);
   }, [quest, todayWorkout]);
 
-  if (!visible || !quest || !workout) return null;
+  if (!visible || !quest) return null;
+
+  const isStudy = isStudyQuest(quest);
+  if (!isStudy && !workout) return null;
 
   return (
     <Modal
@@ -152,11 +157,21 @@ export function QuestSessionModal({
       onRequestClose={onCancel}
     >
       <View style={styles.container}>
-        <GuidedWorkoutView
-          workout={workout}
-          onComplete={onComplete}
-          onCancel={onCancel}
-        />
+        {isStudy ? (
+          <StudyFocusView
+            quest={quest}
+            onComplete={onComplete}
+            onCancel={onCancel}
+          />
+        ) : (
+          workout && (
+            <GuidedWorkoutView
+              workout={workout}
+              onComplete={onComplete}
+              onCancel={onCancel}
+            />
+          )
+        )}
       </View>
     </Modal>
   );

@@ -8,6 +8,7 @@ export interface ExerciseMetadata {
   formCue: string;
   defaultLoad: string;
   gifPath: string;
+  gifSource: any;
 }
 
 export const EXERCISE_METADATA_MAP: Record<string, Partial<ExerciseMetadata>> = {
@@ -435,6 +436,51 @@ export const EXERCISE_METADATA_MAP: Record<string, Partial<ExerciseMetadata>> = 
 };
 
 /**
+ * Static map of all bundled exercise GIFs for offline & native mobile playback
+ */
+export const WORKOUT_GIF_MAP: Record<string, any> = {
+  'archer-push-ups': require('@/assets/workouts/gifs/archer-push-ups.gif'),
+  'back-extensions-floor': require('@/assets/workouts/gifs/back-extensions-floor.gif'),
+  'bicycle-crunches': require('@/assets/workouts/gifs/bicycle-crunches.gif'),
+  'bodyweight-squats': require('@/assets/workouts/gifs/bodyweight-squats.gif'),
+  'burpees': require('@/assets/workouts/gifs/burpees.gif'),
+  'calf-raises': require('@/assets/workouts/gifs/calf-raises.gif'),
+  'crunches': require('@/assets/workouts/gifs/crunches.gif'),
+  'dead-bug': require('@/assets/workouts/gifs/dead-bug.gif'),
+  'decline-push-ups': require('@/assets/workouts/gifs/decline-push-ups.gif'),
+  'diamond-push-ups': require('@/assets/workouts/gifs/diamond-push-ups.gif'),
+  'doorframe-rows': require('@/assets/workouts/gifs/doorframe-rows.gif'),
+  'explosive-push-ups': require('@/assets/workouts/gifs/explosive-push-ups.gif'),
+  'flutter-kicks': require('@/assets/workouts/gifs/flutter-kicks.gif'),
+  'glute-bridges': require('@/assets/workouts/gifs/glute-bridges.gif'),
+  'incline-dumbbell-press': require('@/assets/workouts/gifs/incline-dumbbell-press.gif'),
+  'jump-squats': require('@/assets/workouts/gifs/jump-squats.gif'),
+  'jumping-jacks': require('@/assets/workouts/gifs/jumping-jacks.gif'),
+  'knee-push-ups': require('@/assets/workouts/gifs/knee-push-ups.gif'),
+  'leg-raises': require('@/assets/workouts/gifs/leg-raises.gif'),
+  'lunges': require('@/assets/workouts/gifs/lunges.gif'),
+  'mountain-climbers': require('@/assets/workouts/gifs/mountain-climbers.gif'),
+  'pike-hold': require('@/assets/workouts/gifs/pike-hold.gif'),
+  'pike-push-ups': require('@/assets/workouts/gifs/pike-push-ups.gif'),
+  'plank': require('@/assets/workouts/gifs/plank.gif'),
+  'prone-t-raises': require('@/assets/workouts/gifs/prone-t-raises.gif'),
+  'prone-y-raises': require('@/assets/workouts/gifs/prone-y-raises.gif'),
+  'push-ups': require('@/assets/workouts/gifs/push-ups.gif'),
+  'reverse-snow-angels': require('@/assets/workouts/gifs/reverse-snow-angels.gif'),
+  'shoulder-taps-plank': require('@/assets/workouts/gifs/shoulder-taps-plank.gif'),
+  'single-arm-cable-row': require('@/assets/workouts/gifs/single-arm-cable-row.gif'),
+  'superman-hold': require('@/assets/workouts/gifs/superman-hold.gif'),
+  'superman-pulses': require('@/assets/workouts/gifs/superman-pulses.gif'),
+  'towel-rows-door': require('@/assets/workouts/gifs/towel-rows-door.gif'),
+  'tricep-dips-chair': require('@/assets/workouts/gifs/tricep-dips-chair.gif'),
+  'walking-lunges': require('@/assets/workouts/gifs/walking-lunges.gif'),
+  'wall-push-ups': require('@/assets/workouts/gifs/wall-push-ups.gif'),
+  'wall-sit': require('@/assets/workouts/gifs/wall-sit.gif'),
+};
+
+export const FALLBACK_EXERCISE_IMAGE = require('@/assets/images/exercise-demo.png');
+
+/**
  * Convert exercise name to file slug (e.g. 'Superman Hold' -> 'superman-hold')
  */
 export function exerciseToSlug(name: string): string {
@@ -446,11 +492,42 @@ export function exerciseToSlug(name: string): string {
 }
 
 /**
+ * Resolve bundled gif asset for an exercise with robust alias matching
+ */
+export function getExerciseGifSource(nameOrSlug: string): any {
+  if (!nameOrSlug) return FALLBACK_EXERCISE_IMAGE;
+  const slug = exerciseToSlug(nameOrSlug);
+  if (WORKOUT_GIF_MAP[slug]) return WORKOUT_GIF_MAP[slug];
+
+  // Common aliases & partials
+  if (slug.includes('pushup') || slug.includes('push-up')) return WORKOUT_GIF_MAP['push-ups'];
+  if (slug.includes('squat')) return WORKOUT_GIF_MAP['bodyweight-squats'];
+  if (slug.includes('lunge')) return WORKOUT_GIF_MAP['lunges'] || WORKOUT_GIF_MAP['walking-lunges'];
+  if (slug.includes('plank')) return WORKOUT_GIF_MAP['plank'];
+  if (slug.includes('crunch')) return WORKOUT_GIF_MAP['crunches'];
+  if (slug.includes('burpee')) return WORKOUT_GIF_MAP['burpees'];
+  if (slug.includes('jack')) return WORKOUT_GIF_MAP['jumping-jacks'];
+  if (slug.includes('climber')) return WORKOUT_GIF_MAP['mountain-climbers'];
+  if (slug.includes('superman')) return WORKOUT_GIF_MAP['superman-hold'];
+  if (slug.includes('row')) return WORKOUT_GIF_MAP['doorframe-rows'] || WORKOUT_GIF_MAP['towel-rows-door'];
+  if (slug.includes('dip')) return WORKOUT_GIF_MAP['tricep-dips-chair'];
+  if (slug.includes('raise')) return WORKOUT_GIF_MAP['leg-raises'] || WORKOUT_GIF_MAP['prone-y-raises'];
+  if (slug.includes('bridge')) return WORKOUT_GIF_MAP['glute-bridges'];
+  if (slug.includes('extension')) return WORKOUT_GIF_MAP['back-extensions-floor'];
+
+  const match = Object.keys(WORKOUT_GIF_MAP).find((k) => slug.includes(k) || k.includes(slug));
+  if (match) return WORKOUT_GIF_MAP[match];
+
+  return FALLBACK_EXERCISE_IMAGE;
+}
+
+/**
  * Return comprehensive metadata for an exercise
  */
 export function getExerciseMetadata(name: string): ExerciseMetadata {
   const meta = EXERCISE_METADATA_MAP[name];
   const slug = exerciseToSlug(name);
+  const gifSource = getExerciseGifSource(name);
 
   return {
     slug,
@@ -458,5 +535,6 @@ export function getExerciseMetadata(name: string): ExerciseMetadata {
     formCue: meta?.formCue ?? 'Maintain steady rhythm and correct posture',
     defaultLoad: meta?.defaultLoad ?? 'BW',
     gifPath: `/workouts/gifs/${slug}.gif`,
+    gifSource,
   };
 }

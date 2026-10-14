@@ -1,6 +1,6 @@
 {
   "name": "solo-levelling-system",
-  "version": "2.0.1",
+  "version": "2.0.2",
   "description": "Solo Leveling inspired real-life gamified RPG fitness, workout tracker, and daily quest mobile app built with Expo and React Native.",
   "author": "Abdul (Rahoof-Codes)",
   "license": "MIT",
@@ -77,6 +77,7 @@
     "android": "expo run:android",
     "ios": "expo run:ios",
     "web": "expo start --web",
+    "sync-videos": "node ./scripts/sync-videos.js",
     "lint": "expo lint"
   },
   "private": true

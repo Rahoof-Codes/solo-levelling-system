@@ -32,14 +32,17 @@ import { Fonts } from '@/constants/theme';
 import { useAudio } from '@/contexts/AudioContext';
 import { getExerciseMetadata } from '@/lib/workoutGifs';
 import { formatTimerDisplay } from '@/lib/calculations/workout-duration';
+import { calculateCaloriesBurned } from '@/lib/calculations/met';
 import { speakVoiceGuidance } from '@/services/voiceGuidance';
 import { WorkoutIntroOverlay } from '@/components/workout-intro-overlay';
+import { isRecoveryWorkout } from '@/lib/workoutVideos';
 
 interface GuidedWorkoutViewProps {
   workout: Workout;
   onComplete: (durationActual: number) => void;
   onCancel: () => void;
   autoPlayIntro?: boolean;
+  isRecovery?: boolean;
 }
 
 interface SetRecord {
@@ -49,13 +52,27 @@ interface SetRecord {
   isDone: boolean;
 }
 
+interface CompletedSetLog {
+  exerciseName: string;
+  setNumber: number;
+  durationSec: number;
+  caloriesBurned: number;
+}
+
 export function GuidedWorkoutView({
   workout,
   onComplete,
   onCancel,
   autoPlayIntro = true,
+  isRecovery: isRecoveryProp,
 }: GuidedWorkoutViewProps) {
   const { playTouchSound, playClaimSound } = useAudio();
+
+  // Determine whether this is an active recovery day or regular training session
+  const isRecovery = useMemo(() => {
+    if (typeof isRecoveryProp === 'boolean') return isRecoveryProp;
+    return isRecoveryWorkout(workout);
+  }, [isRecoveryProp, workout]);
 
   // Intro video overlay state (plays before workout begins)
   const [showIntro, setShowIntro] = useState(autoPlayIntro);
@@ -77,23 +94,35 @@ export function GuidedWorkoutView({
     ];
   }, [workout?.exercises_json]);
 
-  // Current exercise & set index state
+  // ── Circuit-rotation state ──
+  // Instead of finishing all sets of one exercise before moving on,
+  // we rotate: 1 set of Ex A → rest → 1 set of Ex B → rest → … → loop.
+  // `currentExerciseIdx` = which exercise is active right now
+  // `completedSetsPerExercise` tracks how many sets each exercise has finished
   const [currentExerciseIdx, setCurrentExerciseIdx] = useState(0);
-  const [currentSetIdx, setCurrentSetIdx] = useState(0);
 
-  // Initialize set data for all exercises
+  // Initialize set data for ALL exercises up-front so the circuit can jump between them
   const [allSetsData, setAllSetsData] = useState<Record<number, SetRecord[]>>({});
+  const [completedSetsPerExercise, setCompletedSetsPerExercise] = useState<Record<number, number>>({});
+
+  // Derived: which set number we're on for the *current* exercise
+  const currentSetIdx = completedSetsPerExercise[currentExerciseIdx] ?? 0;
 
   // Session elapsed timer (counts up) — paused while intro video plays, starts automatically once intro ends
   const [elapsedSeconds, setElapsedSeconds] = useState(0);
   const [isPaused, setIsPaused] = useState(autoPlayIntro);
   const sessionTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
-  // Rest timer (counts down after each set) - 2 minutes (120s)
+  // Rest timer (counts down after each set) — 20 seconds between circuit rotations
+  const REST_BETWEEN_CIRCUIT = 20;
   const [isResting, setIsResting] = useState(false);
-  const [restSecondsRemaining, setRestSecondsRemaining] = useState(120);
-  const [restDurationTotal, setRestDurationTotal] = useState(120);
+  const [restSecondsRemaining, setRestSecondsRemaining] = useState(REST_BETWEEN_CIRCUIT);
+  const [restDurationTotal, setRestDurationTotal] = useState(REST_BETWEEN_CIRCUIT);
   const restTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  // Per-set timer: tracks when the current set started so we can log duration
+  const setStartTimeRef = useRef<number>(Date.now());
+  const [completedSetLogs, setCompletedSetLogs] = useState<CompletedSetLog[]>([]);
 
   // Menu modal
   const [menuVisible, setMenuVisible] = useState(false);
@@ -112,24 +141,54 @@ export function GuidedWorkoutView({
   const totalSetsForCurrent = currentExercise?.sets || 3;
   const currentSets = allSetsData[currentExerciseIdx] || [];
 
-  // Initialize sets for current exercise
+  // Initialize sets for ALL exercises on mount so data is ready when circuit rotates
   useEffect(() => {
     setAllSetsData((prev) => {
-      if (prev[currentExerciseIdx]) return prev;
-      const defaultReps = currentExercise?.reps || (currentExercise?.duration_min ? Math.round(currentExercise.duration_min * 60) : 10);
-      const newSets: SetRecord[] = Array.from({ length: totalSetsForCurrent }, (_, i) => ({
-        setNumber: i + 1,
-        load: metadata.defaultLoad,
-        reps: defaultReps,
-        isDone: false,
-      }));
-      return { ...prev, [currentExerciseIdx]: newSets };
+      const updated = { ...prev };
+      exercises.forEach((ex, idx) => {
+        if (!updated[idx]) {
+          const exMeta = getExerciseMetadata(ex?.name || '');
+          const sets = ex?.sets || 3;
+          const defaultReps = ex?.reps || (ex?.duration_min ? Math.round(ex.duration_min * 60) : 10);
+          updated[idx] = Array.from({ length: sets }, (_, i) => ({
+            setNumber: i + 1,
+            load: exMeta.defaultLoad,
+            reps: defaultReps,
+            isDone: false,
+          }));
+        }
+      });
+      return updated;
     });
-  }, [currentExerciseIdx, totalSetsForCurrent, currentExercise, metadata.defaultLoad]);
+  }, [exercises]);
+
+  // ── Circuit helpers ──
+  // Total sets completed across all exercises
+  const totalSetsCompleted = useMemo(() =>
+    Object.values(completedSetsPerExercise).reduce((a, b) => a + b, 0),
+    [completedSetsPerExercise]
+  );
+  const totalSetsInWorkout = useMemo(() =>
+    exercises.reduce((sum, ex) => sum + (ex?.sets || 3), 0),
+    [exercises]
+  );
+
+  // Find the next exercise in the circuit that still has sets remaining
+  const findNextCircuitExercise = useCallback((afterIdx: number): number | null => {
+    const totalEx = exercises.length;
+    for (let offset = 1; offset <= totalEx; offset++) {
+      const candidate = (afterIdx + offset) % totalEx;
+      const doneSets = completedSetsPerExercise[candidate] ?? 0;
+      const maxSets = exercises[candidate]?.sets || 3;
+      if (doneSets < maxSets) return candidate;
+    }
+    return null; // all exercises done
+  }, [exercises, completedSetsPerExercise]);
 
   // Next exercise data for 'Up next' card
-  const hasNextExercise = currentExerciseIdx < exercises.length - 1;
-  const nextExercise = hasNextExercise ? exercises[currentExerciseIdx + 1] : null;
+  const nextCircuitIdx = useMemo(() => findNextCircuitExercise(currentExerciseIdx), [findNextCircuitExercise, currentExerciseIdx]);
+  const hasNextExercise = nextCircuitIdx !== null;
+  const nextExercise = hasNextExercise ? exercises[nextCircuitIdx!] : null;
 
   // Intro video completion handler — auto-starts timer and announces exercise
   const handleIntroFinish = useCallback(() => {
@@ -222,23 +281,55 @@ export function GuidedWorkoutView({
     setIsResting(true);
   }, [playTouchSound]);
 
-  // Complete current set
+  // Reset set start time when rest ends (new set begins) or exercise changes
+  useEffect(() => {
+    if (!isResting && !isPaused && !showIntro) {
+      setStartTimeRef.current = Date.now();
+    }
+  }, [isResting, isPaused, showIntro, currentExerciseIdx]);
+
+  // Complete current set — circuit rotation logic
   const handleCompleteSet = useCallback(() => {
     playTouchSound();
 
+    // Calculate time taken for this set
+    const setDurationSec = Math.round((Date.now() - setStartTimeRef.current) / 1000);
+    const setDurationMin = setDurationSec / 60;
+    // Estimate calories: MET 5.0 (moderate bodyweight exercise), 70kg default
+    const calsBurned = calculateCaloriesBurned(5.0, 70, setDurationMin);
+
     // Mark current set as completed
+    const setIdx = completedSetsPerExercise[currentExerciseIdx] ?? 0;
+
+    // Log this completed set
+    setCompletedSetLogs((prev) => [
+      ...prev,
+      {
+        exerciseName: currentExercise.name,
+        setNumber: setIdx + 1,
+        durationSec: setDurationSec,
+        caloriesBurned: Math.max(1, calsBurned),
+      },
+    ]);
+
     setAllSetsData((prev) => {
       const sets = prev[currentExerciseIdx] ? [...prev[currentExerciseIdx]] : [];
-      if (sets[currentSetIdx]) {
-        sets[currentSetIdx] = { ...sets[currentSetIdx], isDone: true };
+      if (sets[setIdx]) {
+        sets[setIdx] = { ...sets[setIdx], isDone: true };
       }
       return { ...prev, [currentExerciseIdx]: sets };
     });
 
-    const isLastSetOfExercise = currentSetIdx >= totalSetsForCurrent - 1;
-    const isLastExercise = currentExerciseIdx >= exercises.length - 1;
+    // Bump completed count for this exercise
+    const updatedCompleted = {
+      ...completedSetsPerExercise,
+      [currentExerciseIdx]: setIdx + 1,
+    };
+    setCompletedSetsPerExercise(updatedCompleted);
 
-    if (isLastSetOfExercise && isLastExercise) {
+    // Check if entire workout is done
+    const newTotalDone = Object.values(updatedCompleted).reduce((a, b) => a + b, 0);
+    if (newTotalDone >= totalSetsInWorkout) {
       // Workout completed!
       speakVoiceGuidance('System notification: Quest complete! Outstanding performance, Hunter.');
       playClaimSound();
@@ -249,49 +340,73 @@ export function GuidedWorkoutView({
       return;
     }
 
-    if (isLastSetOfExercise) {
-      // Advance to next exercise
-      speakVoiceGuidance('Exercise complete! Rest interval started.');
-      setCurrentExerciseIdx((prev) => prev + 1);
-      setCurrentSetIdx(0);
+    // Find next exercise in circuit that still has sets left
+    const totalEx = exercises.length;
+    let nextIdx: number | null = null;
+    for (let offset = 1; offset <= totalEx; offset++) {
+      const candidate = (currentExerciseIdx + offset) % totalEx;
+      const doneSets = updatedCompleted[candidate] ?? 0;
+      const maxSets = exercises[candidate]?.sets || 3;
+      if (doneSets < maxSets) {
+        nextIdx = candidate;
+        break;
+      }
+    }
+
+    if (nextIdx !== null) {
+      const nextEx = exercises[nextIdx];
+      speakVoiceGuidance(`Set complete! Switching to ${nextEx.name}. Rest 20 seconds.`);
+      setCurrentExerciseIdx(nextIdx);
       setIsResting(true);
-      setRestSecondsRemaining(120);
-      setRestDurationTotal(120);
-    } else {
-      // Advance to next set in current exercise
-      speakVoiceGuidance('Set complete! Rest interval started.');
-      setCurrentSetIdx((prev) => prev + 1);
-      setIsResting(true);
-      setRestSecondsRemaining(120);
-      setRestDurationTotal(120);
+      setRestSecondsRemaining(REST_BETWEEN_CIRCUIT);
+      setRestDurationTotal(REST_BETWEEN_CIRCUIT);
     }
   }, [
     currentExerciseIdx,
-    currentSetIdx,
-    totalSetsForCurrent,
-    exercises.length,
+    completedSetsPerExercise,
+    totalSetsInWorkout,
+    exercises,
     elapsedSeconds,
     onComplete,
     playTouchSound,
     playClaimSound,
+    REST_BETWEEN_CIRCUIT,
   ]);
 
-  // Skip back to previous set
+  // Skip back / undo last — in circuit mode, undo the last completed set
   const handlePrevious = useCallback(() => {
     playTouchSound();
     if (isResting) {
       setIsResting(false);
       return;
     }
-    if (currentSetIdx > 0) {
-      setCurrentSetIdx((prev) => prev - 1);
-    } else if (currentExerciseIdx > 0) {
-      const prevExIdx = currentExerciseIdx - 1;
-      const prevExSets = exercises[prevExIdx]?.sets || 3;
-      setCurrentExerciseIdx(prevExIdx);
-      setCurrentSetIdx(prevExSets - 1);
+    // Find the most recent exercise that had a set completed and undo it
+    // Try current exercise first, then scan backwards
+    const tryUndo = (idx: number) => {
+      const done = completedSetsPerExercise[idx] ?? 0;
+      if (done > 0) {
+        setCompletedSetsPerExercise((prev) => ({ ...prev, [idx]: done - 1 }));
+        setAllSetsData((prev) => {
+          const sets = prev[idx] ? [...prev[idx]] : [];
+          if (sets[done - 1]) {
+            sets[done - 1] = { ...sets[done - 1], isDone: false };
+          }
+          return { ...prev, [idx]: sets };
+        });
+        setCurrentExerciseIdx(idx);
+        return true;
+      }
+      return false;
+    };
+
+    // Try current, then scan backwards wrapping around
+    if (!tryUndo(currentExerciseIdx)) {
+      for (let offset = 1; offset < exercises.length; offset++) {
+        const candidate = (currentExerciseIdx - offset + exercises.length) % exercises.length;
+        if (tryUndo(candidate)) break;
+      }
     }
-  }, [currentSetIdx, currentExerciseIdx, exercises, isResting, playTouchSound]);
+  }, [currentExerciseIdx, completedSetsPerExercise, exercises, isResting, playTouchSound]);
 
   // Back / Quit button
   const handleBackPress = useCallback(() => {
@@ -397,22 +512,18 @@ export function GuidedWorkoutView({
           <View style={styles.sessionProgressContainer}>
             <View style={styles.progressLabels}>
               <Text style={styles.progressLabelLeft}>
-                EXERCISE {currentExerciseIdx + 1} OF {exercises.length}
+                ROUND {Math.min((completedSetsPerExercise[0] ?? 0) + 1, exercises[0]?.sets || 3)} · SET {totalSetsCompleted + 1} OF {totalSetsInWorkout}
               </Text>
               <Text style={styles.progressLabelRight}>
                 {formatTimerDisplay(elapsedSeconds)}
               </Text>
             </View>
 
-            {/* Segmented Progress Track (#2:12861) */}
+            {/* Segmented Progress Track — now based on total sets completed across all exercises */}
             <View style={styles.progressTrackRow}>
-              {Array.from({ length: 12 }, (_, i) => {
-                const stepPerSegment = 12 / exercises.length;
-                const completedSegments = Math.round(
-                  (currentExerciseIdx + (currentSetIdx / totalSetsForCurrent)) * stepPerSegment
-                );
-                const isActive = i < Math.max(1, completedSegments);
-                const isLeading = i === completedSegments - 1;
+              {Array.from({ length: totalSetsInWorkout }, (_, i) => {
+                const isActive = i < totalSetsCompleted;
+                const isLeading = i === totalSetsCompleted - 1;
 
                 return (
                   <View
@@ -575,10 +686,11 @@ export function GuidedWorkoutView({
                 <Text style={styles.labelColState}>STATE</Text>
               </View>
 
-              {/* Set rows */}
+              {/* Set rows — uses completedSetsPerExercise for circuit tracking */}
               {Array.from({ length: totalSetsForCurrent }).map((_, idx) => {
-                const isCompleted = idx < currentSetIdx;
-                const isCurrent = idx === currentSetIdx;
+                const doneSets = completedSetsPerExercise[currentExerciseIdx] ?? 0;
+                const isCompleted = idx < doneSets;
+                const isCurrent = idx === doneSets && doneSets < totalSetsForCurrent;
                 const setRecord = currentSets[idx];
                 const repsDisplay = setRecord?.reps ?? (currentExercise.reps || 10);
                 const loadDisplay = setRecord?.load || metadata.defaultLoad;
@@ -694,10 +806,10 @@ export function GuidedWorkoutView({
                   contentFit="contain"
                 />
                 <Text style={styles.completeBtnText}>
-                  {currentExerciseIdx === exercises.length - 1 && currentSetIdx === totalSetsForCurrent - 1
+                  {totalSetsCompleted + 1 >= totalSetsInWorkout
                     ? 'FINISH'
                     : isResting
-                    ? 'NEXT SET'
+                    ? 'SKIP REST'
                     : 'COMPLETE'}
                 </Text>
               </TouchableOpacity>
@@ -717,20 +829,64 @@ export function GuidedWorkoutView({
             <View style={styles.upNextContent}>
               <Text style={styles.upNextSub}>
                 {hasNextExercise
-                  ? `Up next · ${currentExerciseIdx + 2} of ${exercises.length}`
+                  ? `Up next · Set ${(completedSetsPerExercise[nextCircuitIdx!] ?? 0) + 1}`
                   : 'Final Protocol Sequence'}
               </Text>
               <Text style={styles.upNextName} numberOfLines={1}>
                 {hasNextExercise
-                  ? `${nextExercise?.name} · ${nextExercise?.sets || 3} sets`
+                  ? `${nextExercise?.name} · ${(nextExercise?.sets || 3) - (completedSetsPerExercise[nextCircuitIdx!] ?? 0)} sets left`
                   : 'Workout Ascension Complete Next'}
               </Text>
             </View>
 
             <Text style={styles.upNextEstimate}>
-              {hasNextExercise ? `~${Math.max(1, (exercises.length - currentExerciseIdx - 1) * 4)}m` : 'MAX XP'}
+              {hasNextExercise ? `${totalSetsInWorkout - totalSetsCompleted} left` : 'MAX XP'}
             </Text>
           </View>
+
+          {/* ────────── 8. COMPLETED SETS LOG ────────── */}
+          {completedSetLogs.length > 0 && (
+            <View style={styles.completedLogsCard}>
+              <Text style={styles.completedLogsTitle}>⚔️ BATTLE LOG</Text>
+              {completedSetLogs.map((log, idx) => {
+                const mins = Math.floor(log.durationSec / 60);
+                const secs = log.durationSec % 60;
+                const timeStr = mins > 0
+                  ? `${mins}m ${String(secs).padStart(2, '0')}s`
+                  : `${secs}s`;
+                const totalCalsSoFar = completedSetLogs
+                  .slice(0, idx + 1)
+                  .reduce((sum, l) => sum + l.caloriesBurned, 0);
+
+                return (
+                  <View key={idx} style={styles.logRow}>
+                    <View style={styles.logIndexBadge}>
+                      <Text style={styles.logIndexText}>{idx + 1}</Text>
+                    </View>
+                    <View style={styles.logContent}>
+                      <Text style={styles.logExerciseName} numberOfLines={1}>
+                        {log.exerciseName}
+                        <Text style={styles.logSetLabel}> — Set {log.setNumber}</Text>
+                      </Text>
+                      <View style={styles.logMetaRow}>
+                        <Text style={styles.logTimeBadge}>⏱ {timeStr}</Text>
+                        <Text style={styles.logCalBadge}>🔥 {log.caloriesBurned} kcal</Text>
+                      </View>
+                    </View>
+                    <Text style={styles.logRunningTotal}>{totalCalsSoFar}</Text>
+                  </View>
+                );
+              })}
+
+              {/* Total summary row */}
+              <View style={styles.logTotalRow}>
+                <Text style={styles.logTotalLabel}>TOTAL BURNED</Text>
+                <Text style={styles.logTotalValue}>
+                  🔥 {completedSetLogs.reduce((sum, l) => sum + l.caloriesBurned, 0)} kcal
+                </Text>
+              </View>
+            </View>
+          )}
         </ScrollView>
 
         {/* ────────── OPTIONS MODAL ────────── */}
@@ -744,9 +900,24 @@ export function GuidedWorkoutView({
                 onPress={() => {
                   playTouchSound();
                   setMenuVisible(false);
-                  if (hasNextExercise) {
-                    setCurrentExerciseIdx((prev) => prev + 1);
-                    setCurrentSetIdx(0);
+                  // Mark all remaining sets for current exercise as done
+                  const remainingSets = totalSetsForCurrent - (completedSetsPerExercise[currentExerciseIdx] ?? 0);
+                  if (remainingSets > 0) {
+                    setCompletedSetsPerExercise((prev) => ({
+                      ...prev,
+                      [currentExerciseIdx]: totalSetsForCurrent,
+                    }));
+                    setAllSetsData((prev) => {
+                      const sets = prev[currentExerciseIdx] ? [...prev[currentExerciseIdx]] : [];
+                      for (let i = 0; i < sets.length; i++) {
+                        sets[i] = { ...sets[i], isDone: true };
+                      }
+                      return { ...prev, [currentExerciseIdx]: sets };
+                    });
+                  }
+                  const next = findNextCircuitExercise(currentExerciseIdx);
+                  if (next !== null) {
+                    setCurrentExerciseIdx(next);
                   }
                 }}
               >
@@ -786,7 +957,10 @@ export function GuidedWorkoutView({
 
         {/* ────────── WORKOUT INTRO VIDEO OVERLAY ────────── */}
         {showIntro && (
-          <WorkoutIntroOverlay onFinish={handleIntroFinish} />
+          <WorkoutIntroOverlay
+            isRecovery={isRecovery}
+            onFinish={handleIntroFinish}
+          />
         )}
       </View>
     </SafeAreaView>
@@ -1346,6 +1520,111 @@ const styles = StyleSheet.create({
     fontWeight: '800',
     fontSize: 11,
     color: '#20C8FF',
+  },
+
+  // Completed sets log (Battle Log)
+  completedLogsCard: {
+    backgroundColor: '#0E1122',
+    borderWidth: 1,
+    borderColor: '#2A3154',
+    borderRadius: 16,
+    padding: 14,
+    gap: 8,
+  },
+  completedLogsTitle: {
+    fontFamily: Fonts.sans,
+    fontWeight: '900',
+    fontSize: 12,
+    color: '#3BE7A1',
+    textTransform: 'uppercase',
+    letterSpacing: 1,
+    textAlign: 'center',
+    marginBottom: 4,
+  },
+  logRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    paddingVertical: 8,
+    paddingHorizontal: 8,
+    borderRadius: 10,
+    backgroundColor: 'rgba(59, 231, 161, 0.04)',
+    borderWidth: 1,
+    borderColor: 'rgba(59, 231, 161, 0.12)',
+  },
+  logIndexBadge: {
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    backgroundColor: 'rgba(32, 200, 255, 0.15)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  logIndexText: {
+    fontFamily: Fonts.sans,
+    fontWeight: '900',
+    fontSize: 10,
+    color: '#20C8FF',
+  },
+  logContent: {
+    flex: 1,
+    gap: 3,
+  },
+  logExerciseName: {
+    fontFamily: Fonts.sans,
+    fontWeight: '800',
+    fontSize: 11,
+    color: '#F5F7FF',
+  },
+  logSetLabel: {
+    fontWeight: '600',
+    color: '#697292',
+  },
+  logMetaRow: {
+    flexDirection: 'row',
+    gap: 12,
+  },
+  logTimeBadge: {
+    fontFamily: Fonts.sans,
+    fontWeight: '700',
+    fontSize: 10,
+    color: '#9CE9FF',
+  },
+  logCalBadge: {
+    fontFamily: Fonts.sans,
+    fontWeight: '700',
+    fontSize: 10,
+    color: '#FFB347',
+  },
+  logRunningTotal: {
+    fontFamily: Fonts.sans,
+    fontWeight: '900',
+    fontSize: 14,
+    color: '#3BE7A1',
+    minWidth: 30,
+    textAlign: 'right',
+  },
+  logTotalRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingTop: 8,
+    marginTop: 4,
+    borderTopWidth: 1,
+    borderTopColor: 'rgba(59, 231, 161, 0.2)',
+  },
+  logTotalLabel: {
+    fontFamily: Fonts.sans,
+    fontWeight: '900',
+    fontSize: 10,
+    color: '#697292',
+    letterSpacing: 0.8,
+  },
+  logTotalValue: {
+    fontFamily: Fonts.sans,
+    fontWeight: '900',
+    fontSize: 13,
+    color: '#3BE7A1',
   },
 
   // Modal

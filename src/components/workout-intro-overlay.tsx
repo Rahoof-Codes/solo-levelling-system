@@ -4,7 +4,7 @@
 // Auto-dismisses upon completion or when SKIP is pressed.
 // ============================================================
 
-import React, { useEffect, useState, useCallback, useRef } from 'react';
+import React, { useEffect, useState, useCallback, useRef, useMemo } from 'react';
 import {
   StyleSheet,
   View,
@@ -22,18 +22,32 @@ import Animated, {
 import { useVideoPlayer, VideoView } from 'expo-video';
 import { useAudio } from '@/contexts/AudioContext';
 import { Fonts } from '@/constants/theme';
+import {
+  WorkoutVideoAsset,
+  getRandomWorkoutVideo,
+} from '@/lib/workoutVideos';
 
 interface WorkoutIntroOverlayProps {
   onFinish?: () => void;
+  isRecovery?: boolean;
+  videoAsset?: WorkoutVideoAsset;
 }
 
-const INTRO_VIDEO_ASSET = require('@/assets/videos/intro.mp4');
-
-export function WorkoutIntroOverlay({ onFinish }: WorkoutIntroOverlayProps) {
+export function WorkoutIntroOverlay({
+  onFinish,
+  isRecovery = false,
+  videoAsset,
+}: WorkoutIntroOverlayProps) {
   const [visible, setVisible] = useState(true);
   const finishTriggered = useRef(false);
   const onFinishRef = useRef(onFinish);
   const { setOpeningAnimationActive } = useAudio();
+
+  // Stable video selection for this session
+  const selectedVideo = useMemo(
+    () => videoAsset || getRandomWorkoutVideo(isRecovery),
+    [videoAsset, isRecovery]
+  );
 
   useEffect(() => {
     onFinishRef.current = onFinish;
@@ -42,8 +56,8 @@ export function WorkoutIntroOverlay({ onFinish }: WorkoutIntroOverlayProps) {
   // Reanimated fade-out for smooth dismissal
   const opacity = useSharedValue(1);
 
-  // Initialize expo-video player
-  const player = useVideoPlayer(INTRO_VIDEO_ASSET, (p) => {
+  // Initialize expo-video player with selected video
+  const player = useVideoPlayer(selectedVideo.nativeSource, (p) => {
     try {
       p.loop = false;
       p.volume = 1.0;
@@ -84,7 +98,9 @@ export function WorkoutIntroOverlay({ onFinish }: WorkoutIntroOverlayProps) {
 
   useEffect(() => {
     try {
-      player.play();
+      if (!player.playing) {
+        player.play();
+      }
     } catch {}
   }, [player]);
 
@@ -97,7 +113,7 @@ export function WorkoutIntroOverlay({ onFinish }: WorkoutIntroOverlayProps) {
     });
 
     const statusSub = player.addListener('statusChange', ({ status, error }) => {
-      if (status === 'readyToPlay') {
+      if (status === 'readyToPlay' && !player.playing) {
         try {
           player.play();
         } catch {}
@@ -116,11 +132,12 @@ export function WorkoutIntroOverlay({ onFinish }: WorkoutIntroOverlayProps) {
     };
   }, [player]);
 
-  // Fallback safety timeout so user is never stuck
+  // Fallback safety timeout so user is never stuck (dynamic up to video duration or 25s max)
   useEffect(() => {
+    const timeoutMs = player.duration > 0 ? Math.max(6500, (player.duration + 2) * 1000) : 25000;
     const fallbackTimer = setTimeout(() => {
       handleFinishRef.current();
-    }, 6500);
+    }, timeoutMs);
 
     return () => {
       clearTimeout(fallbackTimer);
@@ -128,7 +145,7 @@ export function WorkoutIntroOverlay({ onFinish }: WorkoutIntroOverlayProps) {
         player.pause();
       } catch {}
     };
-  }, [player]);
+  }, [player, player.duration]);
 
   const containerAnimStyle = useAnimatedStyle(() => ({
     opacity: opacity.value,
@@ -147,11 +164,19 @@ export function WorkoutIntroOverlay({ onFinish }: WorkoutIntroOverlayProps) {
         allowsPictureInPicture={false}
         nativeControls={false}
         contentFit="cover"
+        surfaceType={Platform.OS === 'android' ? 'textureView' : 'surfaceView'}
       />
 
-      {/* Solo System top badge */}
-      <View style={styles.topBadgeContainer}>
-        <Text style={styles.topBadgeText}>⟨ SYSTEM AWAKENING ⟩</Text>
+      {/* Solo System top badge with dynamic color & text */}
+      <View
+        style={[
+          styles.topBadgeContainer,
+          { borderColor: selectedVideo.badgeColor ? `${selectedVideo.badgeColor}66` : 'rgba(32, 200, 255, 0.4)' },
+        ]}
+      >
+        <Text style={[styles.topBadgeText, { color: selectedVideo.badgeColor || '#20C8FF' }]}>
+          {selectedVideo.badgeText}
+        </Text>
       </View>
 
       {/* Skip button for quick skipping */}

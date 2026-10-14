@@ -97,11 +97,11 @@ export function SplashOverlay({ onFinish }: SplashOverlayProps) {
     };
   }, []);
 
-  // Safety fallback timeout: transition automatically after 7s
+  // Safety fallback timeout: transition automatically after 6s
   useEffect(() => {
     const fallbackTimer = setTimeout(() => {
       handleFinishRef.current();
-    }, 7000);
+    }, 6000);
 
     return () => {
       clearTimeout(fallbackTimer);
@@ -117,7 +117,7 @@ export function SplashOverlay({ onFinish }: SplashOverlayProps) {
       {/* Native HTML5 Video Element (served statically from public/intro.mp4 on web) */}
       <video
         ref={videoRef}
-        src="/intro.mp4?v=2"
+        src="/intro.mp4?v=4"
         autoPlay
         playsInline
         preload="auto"

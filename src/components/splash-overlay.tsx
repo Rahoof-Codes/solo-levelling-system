@@ -84,7 +84,9 @@ export function SplashOverlay({ onFinish }: SplashOverlayProps) {
 
   useEffect(() => {
     try {
-      player.play();
+      if (!player.playing) {
+        player.play();
+      }
     } catch {}
   }, [player]);
 
@@ -99,7 +101,7 @@ export function SplashOverlay({ onFinish }: SplashOverlayProps) {
 
     // Handle any playback error gracefully so app never freezes
     const statusSub = player.addListener('statusChange', ({ status, error }) => {
-      if (status === 'readyToPlay') {
+      if (status === 'readyToPlay' && !player.playing) {
         try {
           player.play();
         } catch {}
@@ -118,11 +120,11 @@ export function SplashOverlay({ onFinish }: SplashOverlayProps) {
     };
   }, [player]);
 
-  // Safety fallback timeout: if the video stalls or reaches beyond 7s, proceed automatically
+  // Safety fallback timeout: if the video stalls or reaches beyond 6s, proceed automatically
   useEffect(() => {
     const fallbackTimer = setTimeout(() => {
       handleFinishRef.current();
-    }, 7000);
+    }, 6000);
 
     return () => {
       clearTimeout(fallbackTimer);
@@ -151,6 +153,7 @@ export function SplashOverlay({ onFinish }: SplashOverlayProps) {
         allowsPictureInPicture={false}
         nativeControls={false}
         contentFit="cover"
+        surfaceType={Platform.OS === 'android' ? 'textureView' : 'surfaceView'}
       />
 
       {/* Skip button for quick skipping */}

@@ -1,12 +1,45 @@
 import os
-import cv2
-import numpy as np
-from PIL import Image
+import cv2  # type: ignore
+import numpy as np  # type: ignore
+from PIL import Image  # type: ignore
 
 GIF_DIR = r"d:\SOLO\public\workouts\gifs"
 
 # Do not overwrite custom animations created directly from user's uploaded sample
 EXCLUDE_LIST = ["superman-hold.gif", "superman-pulses.gif"]
+
+def get_normal_frame_durations(filename, n_frames):
+    if "superman-hold" in filename:
+        return [60] * n_frames
+    if "superman-pulses" in filename:
+        return [50] * n_frames
+    if "pike-hold" in filename:
+        return [80] * n_frames
+    if "plank" in filename:
+        return [100] * n_frames
+        
+    if n_frames <= 14:
+        durs = [100] * n_frames
+        durs[0] = 250
+        mid = n_frames // 2
+        durs[mid] = 250
+        return durs
+    elif n_frames <= 20:
+        durs = [80] * n_frames
+        durs[0] = 180
+        mid = n_frames // 2
+        durs[mid] = 180
+        return durs
+    elif n_frames <= 26:
+        durs = [80] * n_frames
+        durs[0] = 160
+        mid = n_frames // 2
+        durs[mid] = 160
+        return durs
+    else:
+        durs = [75] * n_frames
+        durs[0] = 180
+        return durs
 
 def process_single_gif(filename):
     if filename in EXCLUDE_LIST:
@@ -21,9 +54,7 @@ def process_single_gif(filename):
         return
 
     n_frames = getattr(im, "n_frames", 1)
-    duration = im.info.get("duration", 80)
-    if duration == 0:
-        duration = 80
+    durations = get_normal_frame_durations(filename, n_frames)
         
     target_w, target_h = 640, 360
     card_color = np.array([14, 17, 34], dtype=float) # #0E1122
@@ -77,25 +108,16 @@ def process_single_gif(filename):
     
     out_frames = []
     for f_arr in cached_frames:
-        # Recolor red to cyan
-        is_red = (f_arr[:, :, 0] > 140) & (f_arr[:, :, 0].astype(int) - f_arr[:, :, 1].astype(int) > 35) & (f_arr[:, :, 0].astype(int) - f_arr[:, :, 2].astype(int) > 35)
-        recolored = f_arr.copy()
-        if np.any(is_red):
-            red_intensity = f_arr[is_red, 0].astype(float) / 255.0
-            recolored[is_red, 0] = np.clip(30 * (1.0 - red_intensity), 15, 60).astype(np.uint8)
-            recolored[is_red, 1] = np.clip(160 + 55 * red_intensity, 160, 225).astype(np.uint8)
-            recolored[is_red, 2] = np.clip(210 + 45 * red_intensity, 210, 255).astype(np.uint8)
-            
-        cropped = recolored[y1:y2, x1:x2]
+        cropped = f_arr[y1:y2, x1:x2]
         resized = cv2.resize(cropped, (new_w, new_h), interpolation=cv2.INTER_LANCZOS4)
         
         canvas = studio_bg.copy()
         roi = canvas[start_y:start_y+new_h, start_x:start_x+new_w]
         multiplied = (resized.astype(float) / 255.0) * roi
         
-        # Preserve cyan/blue glow
-        is_blue = (resized[:, :, 2].astype(int) - resized[:, :, 0].astype(int) > 35) & (resized[:, :, 2] > 120)
-        multiplied[is_blue] = resized[is_blue]
+        # Preserve original red muscle highlights
+        is_red = (resized[:, :, 0] > 130) & (resized[:, :, 0].astype(int) - resized[:, :, 1].astype(int) > 25) & (resized[:, :, 0].astype(int) - resized[:, :, 2].astype(int) > 25)
+        multiplied[is_red] = resized[is_red]
         
         canvas[start_y:start_y+new_h, start_x:start_x+new_w] = multiplied
         out_frames.append(Image.fromarray(np.clip(canvas, 0, 255).astype(np.uint8)))
@@ -105,13 +127,20 @@ def process_single_gif(filename):
         tmp_out,
         save_all=True,
         append_images=out_frames[1:],
-        duration=duration,
+        duration=durations,
         loop=0,
         optimize=True
     )
     im.close()
     os.replace(tmp_out, full_path)
-    print(f"Successfully updated {filename} ({new_w}x{new_h} in 640x360 canvas)")
+    
+    # Also sync to assets/workouts/gifs
+    assets_dest = os.path.join(r"d:\SOLO\assets\workouts\gifs", filename)
+    if os.path.exists(r"d:\SOLO\assets\workouts\gifs"):
+        import shutil
+        shutil.copyfile(full_path, assets_dest)
+        
+    print(f"Successfully updated {filename} ({new_w}x{new_h} in 640x360 canvas, normal speed)")
 
 if __name__ == "__main__":
     files = [f for f in os.listdir(GIF_DIR) if f.endswith(".gif")]

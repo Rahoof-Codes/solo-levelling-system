@@ -3,5 +3,9 @@
     "source.fixAll": "explicit",
     "source.organizeImports": "explicit",
     "source.sortMembers": "explicit"
-  }
+  },
+  "python.defaultInterpreterPath": "C:\\Users\\User\\AppData\\Local\\Python\\bin\\python.exe",
+  "python.analysis.extraPaths": [
+    "C:\\Users\\User\\AppData\\Local\\Python\\pythoncore-3.14-64\\Lib\\site-packages"
+  ]
 }

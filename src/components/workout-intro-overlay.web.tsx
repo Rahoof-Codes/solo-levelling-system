@@ -3,21 +3,37 @@
 // Plays custom intro video before guided workout begins on Web
 // ============================================================
 
-import React, { useEffect, useState, useCallback, useRef } from 'react';
+import React, { useEffect, useState, useCallback, useRef, useMemo } from 'react';
 import { StyleSheet, View, Text, TouchableOpacity } from 'react-native';
 import { useAudio } from '@/contexts/AudioContext';
 import { Fonts } from '@/constants/theme';
+import {
+  WorkoutVideoAsset,
+  getRandomWorkoutVideo,
+} from '@/lib/workoutVideos';
 
 interface WorkoutIntroOverlayProps {
   onFinish?: () => void;
+  isRecovery?: boolean;
+  videoAsset?: WorkoutVideoAsset;
 }
 
-export function WorkoutIntroOverlay({ onFinish }: WorkoutIntroOverlayProps) {
+export function WorkoutIntroOverlay({
+  onFinish,
+  isRecovery = false,
+  videoAsset,
+}: WorkoutIntroOverlayProps) {
   const [visible, setVisible] = useState(true);
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const finishTriggered = useRef(false);
   const onFinishRef = useRef(onFinish);
   const { setOpeningAnimationActive } = useAudio();
+
+  // Stable video selection for this session
+  const selectedVideo = useMemo(
+    () => videoAsset || getRandomWorkoutVideo(isRecovery),
+    [videoAsset, isRecovery]
+  );
 
   useEffect(() => {
     onFinishRef.current = onFinish;
@@ -87,13 +103,36 @@ export function WorkoutIntroOverlay({ onFinish }: WorkoutIntroOverlayProps) {
     };
   }, []);
 
+  // Adaptive fallback safety timeout (up to video duration or 25s max)
   useEffect(() => {
-    const fallbackTimer = setTimeout(() => {
-      handleFinishRef.current();
-    }, 6500);
+    let timer: ReturnType<typeof setTimeout>;
+
+    const scheduleTimeout = (durationSec?: number) => {
+      const ms = durationSec && durationSec > 0 ? Math.max(6500, (durationSec + 2) * 1000) : 25000;
+      clearTimeout(timer);
+      timer = setTimeout(() => {
+        handleFinishRef.current();
+      }, ms);
+    };
+
+    scheduleTimeout();
+
+    const video = videoRef.current;
+    if (video) {
+      const onMeta = () => {
+        if (video.duration && !isNaN(video.duration)) {
+          scheduleTimeout(video.duration);
+        }
+      };
+      video.addEventListener('loadedmetadata', onMeta, { once: true });
+      return () => {
+        clearTimeout(timer);
+        video.removeEventListener('loadedmetadata', onMeta);
+      };
+    }
 
     return () => {
-      clearTimeout(fallbackTimer);
+      clearTimeout(timer);
     };
   }, []);
 
@@ -103,7 +142,7 @@ export function WorkoutIntroOverlay({ onFinish }: WorkoutIntroOverlayProps) {
     <View style={styles.container}>
       <video
         ref={videoRef}
-        src="/intro.mp4?v=2"
+        src={`${selectedVideo.webSource}?v=3`}
         autoPlay
         playsInline
         preload="auto"
@@ -123,8 +162,15 @@ export function WorkoutIntroOverlay({ onFinish }: WorkoutIntroOverlayProps) {
         }}
       />
 
-      <View style={styles.topBadgeContainer}>
-        <Text style={styles.topBadgeText}>⟨ SYSTEM AWAKENING ⟩</Text>
+      <View
+        style={[
+          styles.topBadgeContainer,
+          { borderColor: selectedVideo.badgeColor ? `${selectedVideo.badgeColor}66` : 'rgba(32, 200, 255, 0.4)' },
+        ]}
+      >
+        <Text style={[styles.topBadgeText, { color: selectedVideo.badgeColor || '#20C8FF' }]}>
+          {selectedVideo.badgeText}
+        </Text>
       </View>
 
       <TouchableOpacity
